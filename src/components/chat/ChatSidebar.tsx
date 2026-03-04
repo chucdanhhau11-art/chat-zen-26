@@ -1,24 +1,58 @@
 import React from 'react';
-import { Search, Menu, Moon, Sun } from 'lucide-react';
+import { Search, Menu, Moon, Sun, Plus } from 'lucide-react';
 import { useChatContext } from '@/context/ChatContext';
-import { Conversation } from '@/data/mockData';
+import { useAuth } from '@/context/AuthContext';
 import ChatAvatar from './ChatAvatar';
 import { formatTime } from '@/lib/chatUtils';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
+import type { Tables } from '@/integrations/supabase/types';
+import NewChatDialog from './NewChatDialog';
+
+type ConversationMember = Tables<'conversation_members'>;
+type Profile = Tables<'profiles'>;
+
+interface ConversationWithDetails {
+  id: string;
+  type: string;
+  name: string | null;
+  members: (ConversationMember & { profile?: Profile })[];
+  lastMessage?: any;
+  unreadCount: number;
+  pinned?: boolean | null;
+}
 
 const ChatSidebar: React.FC = () => {
   const {
     conversations, activeConversationId, setActiveConversation,
     searchQuery, setSearchQuery, darkMode, toggleDarkMode,
+    loadingConversations, profiles,
   } = useChatContext();
+  const { user, signOut, isAdmin } = useAuth();
+  const [showNewChat, setShowNewChat] = React.useState(false);
+
+  const getConversationName = (conv: ConversationWithDetails) => {
+    if (conv.name) return conv.name;
+    if (conv.type === 'private' && user) {
+      const other = conv.members.find(m => m.user_id !== user.id);
+      if (other) {
+        const p = profiles[other.user_id];
+        return p?.display_name || 'Unknown';
+      }
+    }
+    return 'Chat';
+  };
+
+  const getOtherMemberOnline = (conv: ConversationWithDetails) => {
+    if (conv.type !== 'private' || !user) return undefined;
+    const other = conv.members.find(m => m.user_id !== user.id);
+    if (other) return profiles[other.user_id]?.online ?? false;
+    return undefined;
+  };
 
   const filtered = conversations.filter(c =>
-    c.name.toLowerCase().includes(searchQuery.toLowerCase())
+    getConversationName(c).toLowerCase().includes(searchQuery.toLowerCase())
   );
-
-  const pinned = filtered.filter(c => c.pinned);
-  const unpinned = filtered.filter(c => !c.pinned);
 
   return (
     <div className="flex flex-col h-full bg-tg-sidebar border-r border-border">
@@ -42,90 +76,91 @@ const ChatSidebar: React.FC = () => {
         </button>
       </div>
 
+      {/* New Chat Button */}
+      <div className="px-4 py-2">
+        <button
+          onClick={() => setShowNewChat(true)}
+          className="w-full flex items-center gap-2 px-3 py-2 rounded-xl bg-primary/10 text-primary text-sm font-medium hover:bg-primary/20 transition-colors"
+        >
+          <Plus className="h-4 w-4" />
+          Cuộc trò chuyện mới
+        </button>
+      </div>
+
       {/* Conversation List */}
       <div className="flex-1 overflow-y-auto scrollbar-thin">
-        {pinned.length > 0 && (
-          <div>
-            {pinned.map(c => (
-              <ConversationItem
-                key={c.id}
-                conversation={c}
-                active={c.id === activeConversationId}
-                onClick={() => setActiveConversation(c.id)}
-              />
-            ))}
-            <div className="mx-4 border-b border-border" />
+        {loadingConversations ? (
+          <div className="flex items-center justify-center py-8">
+            <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full" />
           </div>
+        ) : filtered.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground text-sm">
+            {searchQuery ? 'Không tìm thấy' : 'Chưa có cuộc trò chuyện'}
+          </div>
+        ) : (
+          <AnimatePresence>
+            {filtered.map(c => (
+              <motion.div
+                key={c.id}
+                layout
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setActiveConversation(c.id)}
+                className={cn(
+                  'flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors',
+                  c.id === activeConversationId ? 'bg-primary/10' : 'hover:bg-tg-hover'
+                )}
+              >
+                <ChatAvatar
+                  name={getConversationName(c)}
+                  online={getOtherMemberOnline(c)}
+                  size="md"
+                />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium text-sm truncate">
+                      {c.type === 'group' ? '👥 ' : c.type === 'channel' ? '📢 ' : ''}
+                      {getConversationName(c)}
+                    </span>
+                    {c.lastMessage && (
+                      <span className="text-xs text-muted-foreground flex-shrink-0 ml-2">
+                        {formatTime(new Date(c.lastMessage.created_at))}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground truncate mt-0.5">
+                    {c.lastMessage?.content || 'Chưa có tin nhắn'}
+                  </p>
+                </div>
+                {c.unreadCount > 0 && (
+                  <span className="bg-tg-unread text-primary-foreground text-xs font-medium rounded-full min-w-[20px] h-5 flex items-center justify-center px-1.5">
+                    {c.unreadCount}
+                  </span>
+                )}
+              </motion.div>
+            ))}
+          </AnimatePresence>
         )}
-        <AnimatePresence>
-          {unpinned.map(c => (
-            <ConversationItem
-              key={c.id}
-              conversation={c}
-              active={c.id === activeConversationId}
-              onClick={() => setActiveConversation(c.id)}
-            />
-          ))}
-        </AnimatePresence>
       </div>
+
+      {/* Footer - user info */}
+      <div className="border-t border-border px-4 py-3 flex items-center gap-3">
+        <ChatAvatar name={profiles[user?.id || '']?.display_name || 'User'} online={true} size="sm" />
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium truncate">{profiles[user?.id || '']?.display_name || 'User'}</p>
+          <p className="text-xs text-muted-foreground truncate">@{profiles[user?.id || '']?.username}</p>
+        </div>
+        {isAdmin && (
+          <a href="/admin" className="text-xs text-primary hover:underline">Admin</a>
+        )}
+        <button onClick={signOut} className="text-xs text-muted-foreground hover:text-destructive transition-colors">
+          Đăng xuất
+        </button>
+      </div>
+
+      {showNewChat && <NewChatDialog onClose={() => setShowNewChat(false)} />}
     </div>
-  );
-};
-
-const ConversationItem: React.FC<{
-  conversation: Conversation;
-  active: boolean;
-  onClick: () => void;
-}> = ({ conversation, active, onClick }) => {
-  const otherMember = conversation.type === 'private'
-    ? conversation.members.find(m => m.id !== '1')
-    : undefined;
-
-  const typeIcon = conversation.type === 'group' ? '👥' : conversation.type === 'channel' ? '📢' : '';
-
-  return (
-    <motion.div
-      layout
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      onClick={onClick}
-      className={cn(
-        'flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors',
-        active ? 'bg-primary/10' : 'hover:bg-tg-hover'
-      )}
-    >
-      <ChatAvatar
-        name={conversation.name}
-        online={otherMember?.online}
-        size="md"
-      />
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center justify-between">
-          <span className="font-medium text-sm truncate">
-            {typeIcon} {conversation.name}
-          </span>
-          {conversation.lastMessage && (
-            <span className="text-xs text-muted-foreground flex-shrink-0 ml-2">
-              {formatTime(conversation.lastMessage.timestamp)}
-            </span>
-          )}
-        </div>
-        <div className="flex items-center justify-between mt-0.5">
-          <p className="text-xs text-muted-foreground truncate">
-            {conversation.lastMessage?.text || 'Chưa có tin nhắn'}
-          </p>
-          {conversation.unreadCount > 0 && (
-            <span className="flex-shrink-0 ml-2 bg-tg-unread text-primary-foreground text-xs font-medium rounded-full min-w-[20px] h-5 flex items-center justify-center px-1.5">
-              {conversation.unreadCount}
-            </span>
-          )}
-          {conversation.muted && conversation.unreadCount === 0 && (
-            <span className="text-muted-foreground text-xs">🔇</span>
-          )}
-        </div>
-      </div>
-    </motion.div>
   );
 };
 
