@@ -1,13 +1,31 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import React from 'react';
+import ChatSidebar from '@/components/chat/ChatSidebar';
+import MessageArea from '@/components/chat/MessageArea';
+import InfoPanel from '@/components/chat/InfoPanel';
+import { ChatProvider, useChatContext } from '@/context/ChatContext';
+
+const ChatLayout: React.FC = () => {
+  return (
+    <div className="flex h-screen w-full overflow-hidden">
+      {/* Sidebar */}
+      <div className="w-80 flex-shrink-0 h-full">
+        <ChatSidebar />
+      </div>
+
+      {/* Message Area */}
+      <MessageArea />
+
+      {/* Info Panel */}
+      <InfoPanel />
+    </div>
+  );
+};
 
 const Index = () => {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="mb-4 text-4xl font-bold">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
-      </div>
-    </div>
+    <ChatProvider>
+      <ChatLayout />
+    </ChatProvider>
   );
 };
 
