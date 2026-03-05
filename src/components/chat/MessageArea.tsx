@@ -12,6 +12,30 @@ import { toast } from 'sonner';
 const isImageType = (type: string) => type.startsWith('image/');
 const isVideoType = (type: string) => type.startsWith('video/');
 
+// Notification sound
+const playNotificationSound = () => {
+  try {
+    const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    // Telegram-like notification: two quick ascending tones
+    const playTone = (freq: number, startTime: number, duration: number) => {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, audioCtx.currentTime + startTime);
+      gain.gain.setValueAtTime(0.15, audioCtx.currentTime + startTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + startTime + duration);
+      osc.start(audioCtx.currentTime + startTime);
+      osc.stop(audioCtx.currentTime + startTime + duration);
+    };
+    playTone(800, 0, 0.1);
+    playTone(1200, 0.08, 0.12);
+  } catch (e) {
+    // Silently fail if audio not supported
+  }
+};
+
 const MessageBubbleFile: React.FC<{ msg: any; isOwn: boolean }> = ({ msg, isOwn }) => {
   const fileUrl = msg.file_url;
   const fileName = msg.file_name || 'file';
@@ -73,17 +97,45 @@ const renderContent = (content: string | null) => {
 };
 
 const MessageArea: React.FC = () => {
-  const { activeConversation, messages, sendMessage, toggleInfoPanel, profiles, loadingMessages } = useChatContext();
+  const { activeConversation, messages, sendMessage, toggleInfoPanel, profiles, loadingMessages, deleteConversation } = useChatContext();
   const { user } = useAuth();
   const [input, setInput] = useState('');
   const [uploading, setUploading] = useState(false);
   const [previewFile, setPreviewFile] = useState<{ file: File; url: string } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const prevMessagesLenRef = useRef(0);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages.length]);
+
+  // Play sound on new incoming message
+  useEffect(() => {
+    if (messages.length > prevMessagesLenRef.current && prevMessagesLenRef.current > 0) {
+      const lastMsg = messages[messages.length - 1];
+      if (lastMsg && lastMsg.sender_id !== user?.id) {
+        playNotificationSound();
+      }
+    }
+    prevMessagesLenRef.current = messages.length;
+  }, [messages.length, user?.id]);
+
+  // Mark messages as read when viewing
+  useEffect(() => {
+    if (!activeConversation || !user || messages.length === 0) return;
+    const unreadFromOthers = messages.filter(
+      m => m.sender_id !== user.id && m.status !== 'read'
+    );
+    if (unreadFromOthers.length > 0) {
+      const ids = unreadFromOthers.map(m => m.id);
+      supabase
+        .from('messages')
+        .update({ status: 'read' })
+        .in('id', ids)
+        .then();
+    }
+  }, [messages, activeConversation, user]);
 
   const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -94,7 +146,6 @@ const MessageArea: React.FC = () => {
     }
     const url = URL.createObjectURL(file);
     setPreviewFile({ file, url });
-    // Reset input so same file can be selected again
     if (fileInputRef.current) fileInputRef.current.value = '';
   }, []);
 
@@ -165,6 +216,14 @@ const MessageArea: React.FC = () => {
     }
   };
 
+  const handleDeleteConversation = async () => {
+    if (!activeConversation) return;
+    const confirmText = activeConversation.type === 'private' ? 'Xoá cuộc trò chuyện này?' : 'Xoá nhóm trò chuyện này?';
+    if (window.confirm(confirmText)) {
+      await deleteConversation(activeConversation.id);
+    }
+  };
+
   if (!activeConversation) {
     return (
       <div className="flex-1 flex items-center justify-center bg-tg-chat">
@@ -218,11 +277,15 @@ const MessageArea: React.FC = () => {
             {getStatusText()}
           </p>
         </div>
+        {/* App name */}
+        <span className="text-[10px] font-display font-semibold text-muted-foreground/60 tracking-wider uppercase mr-1 hidden sm:inline">TeleChat</span>
         <div className="flex items-center gap-1">
           <button className="p-2 rounded-lg hover:bg-tg-hover transition-colors"><Search className="h-4 w-4 text-muted-foreground" /></button>
           <button className="p-2 rounded-lg hover:bg-tg-hover transition-colors"><Phone className="h-4 w-4 text-muted-foreground" /></button>
           <button onClick={toggleInfoPanel} className="p-2 rounded-lg hover:bg-tg-hover transition-colors"><Info className="h-4 w-4 text-muted-foreground" /></button>
-          <button className="p-2 rounded-lg hover:bg-tg-hover transition-colors"><MoreVertical className="h-4 w-4 text-muted-foreground" /></button>
+          <button onClick={handleDeleteConversation} className="p-2 rounded-lg hover:bg-tg-hover transition-colors" title="Xoá cuộc trò chuyện">
+            <MoreVertical className="h-4 w-4 text-muted-foreground" />
+          </button>
         </div>
       </div>
 
@@ -273,7 +336,14 @@ const MessageArea: React.FC = () => {
                     )}
                     <div className={cn('flex items-center gap-1 mt-1', isOwn ? 'justify-end' : 'justify-start')}>
                       <span className="text-[10px] text-muted-foreground">{formatTime(new Date(msg.created_at))}</span>
-                      {isOwn && <span className="text-[10px]">{msg.status === 'read' ? '✓✓' : msg.status === 'delivered' ? '✓✓' : '✓'}</span>}
+                      {isOwn && (
+                        <span className={cn('text-[10px]', msg.status === 'read' ? 'text-primary' : 'text-muted-foreground')}>
+                          {msg.status === 'read' ? '✓✓' : msg.status === 'delivered' ? '✓✓' : '✓'}
+                        </span>
+                      )}
+                      {isOwn && msg.status === 'read' && (
+                        <span className="text-[9px] text-primary/70 ml-0.5">Đã xem</span>
+                      )}
                     </div>
                   </div>
                 </motion.div>

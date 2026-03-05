@@ -6,7 +6,7 @@ import ChatAvatar from './ChatAvatar';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const InfoPanel: React.FC = () => {
-  const { activeConversation, showInfoPanel, toggleInfoPanel, profiles } = useChatContext();
+  const { activeConversation, showInfoPanel, toggleInfoPanel, profiles, deleteConversation } = useChatContext();
   const { user } = useAuth();
 
   if (!activeConversation) return null;
@@ -85,9 +85,16 @@ const InfoPanel: React.FC = () => {
             )}
 
             <div className="mt-auto px-2 pb-4 pt-4">
-              <button className="flex items-center gap-3 w-full px-4 py-2.5 rounded-lg hover:bg-destructive/10 text-destructive transition-colors text-sm">
+              <button
+                onClick={async () => {
+                  if (window.confirm(activeConversation.type === 'private' ? 'Xoá cuộc trò chuyện này?' : 'Xoá nhóm trò chuyện này?')) {
+                    await deleteConversation(activeConversation.id);
+                  }
+                }}
+                className="flex items-center gap-3 w-full px-4 py-2.5 rounded-lg hover:bg-destructive/10 text-destructive transition-colors text-sm"
+              >
                 <Trash2 className="h-4 w-4" />
-                <span>{activeConversation.type === 'private' ? 'Xoá cuộc trò chuyện' : 'Rời nhóm'}</span>
+                <span>{activeConversation.type === 'private' ? 'Xoá cuộc trò chuyện' : 'Xoá nhóm'}</span>
               </button>
             </div>
           </div>

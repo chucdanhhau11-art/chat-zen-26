@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, Menu, Moon, Sun, Plus } from 'lucide-react';
+import { Search, Menu, Moon, Sun, Plus, Shield, Mail } from 'lucide-react';
 import { useChatContext } from '@/context/ChatContext';
 import { useAuth } from '@/context/AuthContext';
 import ChatAvatar from './ChatAvatar';
@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { Tables } from '@/integrations/supabase/types';
 import NewChatDialog from './NewChatDialog';
+import AdminEmailApproval from './AdminEmailApproval';
 
 type ConversationMember = Tables<'conversation_members'>;
 type Profile = Tables<'profiles'>;
@@ -30,6 +31,8 @@ const ChatSidebar: React.FC = () => {
   } = useChatContext();
   const { user, signOut, isAdmin } = useAuth();
   const [showNewChat, setShowNewChat] = React.useState(false);
+  const [showMenu, setShowMenu] = React.useState(false);
+  const [showEmailApproval, setShowEmailApproval] = React.useState(false);
 
   const getConversationName = (conv: ConversationWithDetails) => {
     if (conv.name) return conv.name;
@@ -58,9 +61,56 @@ const ChatSidebar: React.FC = () => {
     <div className="flex flex-col h-full bg-tg-sidebar border-r border-border">
       {/* Header */}
       <div className="flex items-center gap-2 px-4 py-3 border-b border-border">
-        <button className="p-2 rounded-lg hover:bg-tg-hover transition-colors">
-          <Menu className="h-5 w-5 text-muted-foreground" />
-        </button>
+        <div className="relative">
+          <button
+            onClick={() => setShowMenu(p => !p)}
+            className="p-2 rounded-lg hover:bg-tg-hover transition-colors"
+          >
+            <Menu className="h-5 w-5 text-muted-foreground" />
+          </button>
+          {/* Dropdown menu */}
+          <AnimatePresence>
+            {showMenu && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: -5 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: -5 }}
+                transition={{ duration: 0.12 }}
+                className="absolute top-full left-0 mt-1 w-56 bg-popover border border-border rounded-xl shadow-lg z-50 overflow-hidden"
+              >
+                {isAdmin && (
+                  <>
+                    <button
+                      onClick={() => { setShowMenu(false); setShowEmailApproval(true); }}
+                      className="flex items-center gap-3 w-full px-4 py-2.5 text-sm hover:bg-tg-hover transition-colors text-left"
+                    >
+                      <Mail className="h-4 w-4 text-primary" />
+                      <span>Duyệt email đăng ký</span>
+                    </button>
+                    <a
+                      href="/admin"
+                      onClick={() => setShowMenu(false)}
+                      className="flex items-center gap-3 w-full px-4 py-2.5 text-sm hover:bg-tg-hover transition-colors text-left"
+                    >
+                      <Shield className="h-4 w-4 text-primary" />
+                      <span>Admin Dashboard</span>
+                    </a>
+                    <div className="border-t border-border" />
+                  </>
+                )}
+                <button
+                  onClick={() => { toggleDarkMode(); setShowMenu(false); }}
+                  className="flex items-center gap-3 w-full px-4 py-2.5 text-sm hover:bg-tg-hover transition-colors text-left"
+                >
+                  {darkMode ? <Sun className="h-4 w-4 text-muted-foreground" /> : <Moon className="h-4 w-4 text-muted-foreground" />}
+                  <span>{darkMode ? 'Chế độ sáng' : 'Chế độ tối'}</span>
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+          {/* Overlay to close menu */}
+          {showMenu && <div className="fixed inset-0 z-40" onClick={() => setShowMenu(false)} />}
+        </div>
         <div className="flex-1 relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <input
@@ -151,15 +201,13 @@ const ChatSidebar: React.FC = () => {
           <p className="text-sm font-medium truncate">{profiles[user?.id || '']?.display_name || 'User'}</p>
           <p className="text-xs text-muted-foreground truncate">@{profiles[user?.id || '']?.username}</p>
         </div>
-        {isAdmin && (
-          <a href="/admin" className="text-xs text-primary hover:underline">Admin</a>
-        )}
         <button onClick={signOut} className="text-xs text-muted-foreground hover:text-destructive transition-colors">
           Đăng xuất
         </button>
       </div>
 
       {showNewChat && <NewChatDialog onClose={() => setShowNewChat(false)} />}
+      {showEmailApproval && <AdminEmailApproval onClose={() => setShowEmailApproval(false)} />}
     </div>
   );
 };
