@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Send, Smile, Paperclip, Mic, MoreVertical, Phone, Search, Info, X, FileText, Film, Image as ImageIcon } from 'lucide-react';
+import { Send, Smile, Paperclip, Mic, MoreVertical, Phone, Search, Info, X, FileText, Film, Image as ImageIcon, Reply, Trash2, RotateCcw, Eye, ImageIcon as GalleryIcon } from 'lucide-react';
 import { useChatContext } from '@/context/ChatContext';
 import { useAuth } from '@/context/AuthContext';
 import ChatAvatar from './ChatAvatar';
@@ -8,15 +8,15 @@ import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import ProfileViewDialog from './ProfileViewDialog';
+import MediaGalleryDialog from './MediaGalleryDialog';
 
 const isImageType = (type: string) => type.startsWith('image/');
 const isVideoType = (type: string) => type.startsWith('video/');
 
-// Notification sound
 const playNotificationSound = () => {
   try {
     const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
-    // Telegram-like notification: two quick ascending tones
     const playTone = (freq: number, startTime: number, duration: number) => {
       const osc = audioCtx.createOscillator();
       const gain = audioCtx.createGain();
@@ -31,9 +31,7 @@ const playNotificationSound = () => {
     };
     playTone(800, 0, 0.1);
     playTone(1200, 0.08, 0.12);
-  } catch (e) {
-    // Silently fail if audio not supported
-  }
+  } catch (e) {}
 };
 
 const MessageBubbleFile: React.FC<{ msg: any; isOwn: boolean }> = ({ msg, isOwn }) => {
@@ -50,7 +48,6 @@ const MessageBubbleFile: React.FC<{ msg: any; isOwn: boolean }> = ({ msg, isOwn 
       </div>
     );
   }
-
   if (msgType === 'video' && fileUrl) {
     return (
       <div className="max-w-xs">
@@ -59,7 +56,6 @@ const MessageBubbleFile: React.FC<{ msg: any; isOwn: boolean }> = ({ msg, isOwn 
       </div>
     );
   }
-
   if (msgType === 'file' && fileUrl) {
     const sizeStr = fileSize ? `${(fileSize / 1024).toFixed(1)} KB` : '';
     return (
@@ -75,33 +71,32 @@ const MessageBubbleFile: React.FC<{ msg: any; isOwn: boolean }> = ({ msg, isOwn 
       </div>
     );
   }
-
   return <p className="whitespace-pre-wrap break-words">{msg.content}</p>;
 };
 
-// Link detection
 const renderContent = (content: string | null) => {
   if (!content) return null;
   const urlRegex = /(https?:\/\/[^\s]+)/g;
   const parts = content.split(urlRegex);
   return parts.map((part, i) => {
     if (urlRegex.test(part)) {
-      return (
-        <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="text-blue-400 underline hover:text-blue-300 break-all">
-          {part}
-        </a>
-      );
+      return <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="text-blue-400 underline hover:text-blue-300 break-all">{part}</a>;
     }
     return part;
   });
 };
 
 const MessageArea: React.FC = () => {
-  const { activeConversation, messages, sendMessage, toggleInfoPanel, profiles, loadingMessages, deleteConversation } = useChatContext();
+  const { activeConversation, messages, sendMessage, toggleInfoPanel, profiles, loadingMessages, deleteConversation, leaveGroup } = useChatContext();
   const { user } = useAuth();
   const [input, setInput] = useState('');
   const [uploading, setUploading] = useState(false);
   const [previewFile, setPreviewFile] = useState<{ file: File; url: string } | null>(null);
+  const [replyTo, setReplyTo] = useState<any>(null);
+  const [contextMenu, setContextMenu] = useState<{ msg: any; x: number; y: number } | null>(null);
+  const [headerMenu, setHeaderMenu] = useState(false);
+  const [viewProfileId, setViewProfileId] = useState<string | null>(null);
+  const [showMediaGallery, setShowMediaGallery] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const prevMessagesLenRef = useRef(0);
@@ -110,7 +105,6 @@ const MessageArea: React.FC = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages.length]);
 
-  // Play sound on new incoming message
   useEffect(() => {
     if (messages.length > prevMessagesLenRef.current && prevMessagesLenRef.current > 0) {
       const lastMsg = messages[messages.length - 1];
@@ -121,39 +115,32 @@ const MessageArea: React.FC = () => {
     prevMessagesLenRef.current = messages.length;
   }, [messages.length, user?.id]);
 
-  // Mark messages as read when viewing
   useEffect(() => {
     if (!activeConversation || !user || messages.length === 0) return;
-    const unreadFromOthers = messages.filter(
-      m => m.sender_id !== user.id && m.status !== 'read'
-    );
+    const unreadFromOthers = messages.filter(m => m.sender_id !== user.id && m.status !== 'read');
     if (unreadFromOthers.length > 0) {
-      const ids = unreadFromOthers.map(m => m.id);
-      supabase
-        .from('messages')
-        .update({ status: 'read' })
-        .in('id', ids)
-        .then();
+      supabase.from('messages').update({ status: 'read' }).in('id', unreadFromOthers.map(m => m.id)).then();
     }
   }, [messages, activeConversation, user]);
+
+  // Close context menu on click outside
+  useEffect(() => {
+    if (!contextMenu) return;
+    const handler = () => setContextMenu(null);
+    window.addEventListener('click', handler);
+    return () => window.removeEventListener('click', handler);
+  }, [contextMenu]);
 
   const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 20 * 1024 * 1024) {
-      toast.error('File quá lớn. Tối đa 20MB.');
-      return;
-    }
-    const url = URL.createObjectURL(file);
-    setPreviewFile({ file, url });
+    if (file.size > 20 * 1024 * 1024) { toast.error('File quá lớn. Tối đa 20MB.'); return; }
+    setPreviewFile({ file, url: URL.createObjectURL(file) });
     if (fileInputRef.current) fileInputRef.current.value = '';
   }, []);
 
   const cancelPreview = useCallback(() => {
-    if (previewFile) {
-      URL.revokeObjectURL(previewFile.url);
-      setPreviewFile(null);
-    }
+    if (previewFile) { URL.revokeObjectURL(previewFile.url); setPreviewFile(null); }
   }, [previewFile]);
 
   const uploadAndSend = useCallback(async () => {
@@ -163,65 +150,89 @@ const MessageArea: React.FC = () => {
       const file = previewFile.file;
       const ext = file.name.split('.').pop();
       const path = `${user.id}/${Date.now()}.${ext}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('chat-files')
-        .upload(path, file);
-
+      const { error: uploadError } = await supabase.storage.from('chat-files').upload(path, file);
       if (uploadError) throw uploadError;
-
       const { data: urlData } = supabase.storage.from('chat-files').getPublicUrl(path);
-      const fileUrl = urlData.publicUrl;
-
       let messageType = 'file';
       if (isImageType(file.type)) messageType = 'image';
       else if (isVideoType(file.type)) messageType = 'video';
-
       await supabase.from('messages').insert({
         conversation_id: activeConversation.id,
         sender_id: user.id,
         content: input.trim() || null,
         message_type: messageType,
-        file_url: fileUrl,
+        file_url: urlData.publicUrl,
         file_name: file.name,
         file_size: file.size,
+        reply_to: replyTo?.id || null,
       });
-
       await supabase.from('conversations').update({ updated_at: new Date().toISOString() }).eq('id', activeConversation.id);
-
       setInput('');
+      setReplyTo(null);
       cancelPreview();
     } catch (err: any) {
       toast.error('Lỗi upload: ' + (err.message || 'Unknown'));
     } finally {
       setUploading(false);
     }
-  }, [previewFile, user, activeConversation, input, cancelPreview]);
+  }, [previewFile, user, activeConversation, input, cancelPreview, replyTo]);
 
   const handleSend = async () => {
-    if (previewFile) {
-      await uploadAndSend();
-      return;
-    }
-    if (!input.trim()) return;
+    if (previewFile) { await uploadAndSend(); return; }
+    if (!input.trim() || !activeConversation || !user) return;
     const text = input;
     setInput('');
-    await sendMessage(text);
+    const reply = replyTo?.id || null;
+    setReplyTo(null);
+    await supabase.from('messages').insert({
+      conversation_id: activeConversation.id,
+      sender_id: user.id,
+      content: text.trim(),
+      message_type: 'text',
+      reply_to: reply,
+    });
+    await supabase.from('conversations').update({ updated_at: new Date().toISOString() }).eq('id', activeConversation.id);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }
+  };
+
+  const handleDeleteForMe = async (msgId: string) => {
+    if (!user) return;
+    const msg = messages.find(m => m.id === msgId);
+    if (!msg) return;
+    const currentDeletedFor = (msg.deleted_for as string[]) || [];
+    await supabase.from('messages').update({ deleted_for: [...currentDeletedFor, user.id] }).eq('id', msgId);
+    toast.success('Đã xoá ở phía bạn');
+    setContextMenu(null);
+  };
+
+  const handleRecall = async (msgId: string) => {
+    await supabase.from('messages').update({ deleted: true, content: null, file_url: null }).eq('id', msgId);
+    toast.success('Đã thu hồi tin nhắn');
+    setContextMenu(null);
   };
 
   const handleDeleteConversation = async () => {
     if (!activeConversation) return;
-    const confirmText = activeConversation.type === 'private' ? 'Xoá cuộc trò chuyện này?' : 'Xoá nhóm trò chuyện này?';
-    if (window.confirm(confirmText)) {
+    if (window.confirm('Xoá cuộc trò chuyện này?')) {
       await deleteConversation(activeConversation.id);
     }
+    setHeaderMenu(false);
+  };
+
+  const handleLeaveGroup = async () => {
+    if (!activeConversation) return;
+    if (window.confirm('Rời khỏi nhóm này?')) {
+      await leaveGroup(activeConversation.id);
+    }
+    setHeaderMenu(false);
+  };
+
+  const handleMessageContextMenu = (e: React.MouseEvent, msg: any) => {
+    e.preventDefault();
+    setContextMenu({ msg, x: e.clientX, y: e.clientY });
   };
 
   if (!activeConversation) {
@@ -229,9 +240,9 @@ const MessageArea: React.FC = () => {
       <div className="flex-1 flex items-center justify-center bg-tg-chat">
         <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="text-center">
           <div className="w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-6">
-            <Send className="h-10 w-10 text-primary" />
+            <Send className="h-10 w-10 text-foreground" />
           </div>
-          <h2 className="text-xl font-display font-semibold mb-2">TeleChat</h2>
+          <h2 className="text-xl font-display font-semibold mb-2">Chim Cu Gáy</h2>
           <p className="text-muted-foreground text-sm max-w-xs">Chọn một cuộc trò chuyện để bắt đầu nhắn tin</p>
         </motion.div>
       </div>
@@ -266,26 +277,76 @@ const MessageArea: React.FC = () => {
     return other ? profiles[other.user_id]?.online ?? false : false;
   };
 
+  const handleAvatarClick = () => {
+    if (activeConversation.type === 'private' && user) {
+      const other = activeConversation.members.find(m => m.user_id !== user.id);
+      if (other) setViewProfileId(other.user_id);
+    }
+  };
+
+  // Find replied message
+  const getReplyMsg = (replyId: string | null) => {
+    if (!replyId) return null;
+    return messages.find(m => m.id === replyId) || null;
+  };
+
+  // Filter visible messages (not deleted_for me, not recalled)
+  const visibleMessages = messages.filter(m => {
+    if (m.deleted && m.sender_id !== user?.id) return true; // show "recalled" placeholder
+    if (m.deleted_for && user && (m.deleted_for as string[]).includes(user.id)) return false;
+    return true;
+  });
+
   return (
     <div className="flex-1 flex flex-col bg-tg-chat h-full">
       {/* Header */}
       <div className="flex items-center gap-3 px-4 py-3 border-b border-border bg-tg-sidebar">
-        <ChatAvatar name={getConvName()} online={getOtherOnline()} size="sm" />
+        <div className="cursor-pointer" onClick={handleAvatarClick}>
+          <ChatAvatar name={getConvName()} online={getOtherOnline()} size="sm" />
+        </div>
         <div className="flex-1 min-w-0 cursor-pointer" onClick={toggleInfoPanel}>
           <h3 className="font-semibold text-sm truncate">{getConvName()}</h3>
-          <p className={cn('text-xs', getOtherOnline() ? 'text-tg-online' : 'text-muted-foreground')}>
-            {getStatusText()}
-          </p>
+          <p className={cn('text-xs', getOtherOnline() ? 'text-tg-online' : 'text-muted-foreground')}>{getStatusText()}</p>
         </div>
-        {/* App name */}
-        <span className="text-[10px] font-display font-semibold text-muted-foreground/60 tracking-wider uppercase mr-1 hidden sm:inline">TeleChat</span>
+        <span className="text-[10px] font-display font-semibold text-muted-foreground/60 tracking-wider uppercase mr-1 hidden sm:inline">Chim Cu Gáy</span>
         <div className="flex items-center gap-1">
           <button className="p-2 rounded-lg hover:bg-tg-hover transition-colors"><Search className="h-4 w-4 text-muted-foreground" /></button>
           <button className="p-2 rounded-lg hover:bg-tg-hover transition-colors"><Phone className="h-4 w-4 text-muted-foreground" /></button>
           <button onClick={toggleInfoPanel} className="p-2 rounded-lg hover:bg-tg-hover transition-colors"><Info className="h-4 w-4 text-muted-foreground" /></button>
-          <button onClick={handleDeleteConversation} className="p-2 rounded-lg hover:bg-tg-hover transition-colors" title="Xoá cuộc trò chuyện">
-            <MoreVertical className="h-4 w-4 text-muted-foreground" />
-          </button>
+          <div className="relative">
+            <button onClick={() => setHeaderMenu(p => !p)} className="p-2 rounded-lg hover:bg-tg-hover transition-colors">
+              <MoreVertical className="h-4 w-4 text-muted-foreground" />
+            </button>
+            <AnimatePresence>
+              {headerMenu && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setHeaderMenu(false)} />
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95, y: -5 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95, y: -5 }}
+                    className="absolute top-full right-0 mt-1 w-56 bg-popover border border-border rounded-xl shadow-lg z-50 overflow-hidden"
+                  >
+                    <button onClick={() => { setShowMediaGallery(true); setHeaderMenu(false); }} className="flex items-center gap-3 w-full px-4 py-2.5 text-sm hover:bg-tg-hover transition-colors text-left">
+                      <ImageIcon className="h-4 w-4 text-muted-foreground" />
+                      <span>Ảnh & File đã gửi</span>
+                    </button>
+                    {activeConversation.type !== 'private' && (
+                      <button onClick={handleLeaveGroup} className="flex items-center gap-3 w-full px-4 py-2.5 text-sm hover:bg-tg-hover transition-colors text-left">
+                        <X className="h-4 w-4 text-muted-foreground" />
+                        <span>Rời nhóm</span>
+                      </button>
+                    )}
+                    <div className="border-t border-border" />
+                    <button onClick={handleDeleteConversation} className="flex items-center gap-3 w-full px-4 py-2.5 text-sm hover:bg-tg-hover transition-colors text-left text-destructive">
+                      <Trash2 className="h-4 w-4" />
+                      <span>Xoá cuộc trò chuyện</span>
+                    </button>
+                  </motion.div>
+                </>
+              )}
+            </AnimatePresence>
+          </div>
         </div>
       </div>
 
@@ -295,16 +356,29 @@ const MessageArea: React.FC = () => {
           <div className="flex items-center justify-center py-8">
             <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full" />
           </div>
-        ) : messages.length === 0 ? (
+        ) : visibleMessages.length === 0 ? (
           <div className="flex items-center justify-center py-8 text-muted-foreground text-sm">
             Chưa có tin nhắn. Hãy bắt đầu cuộc trò chuyện!
           </div>
         ) : (
           <AnimatePresence initial={false}>
-            {messages.map((msg, i) => {
+            {visibleMessages.map((msg, i) => {
               const isOwn = msg.sender_id === user?.id;
-              const showAvatar = !isOwn && (i === 0 || messages[i - 1].sender_id !== msg.sender_id);
+              const showAvatar = !isOwn && (i === 0 || visibleMessages[i - 1].sender_id !== msg.sender_id);
               const sender = profiles[msg.sender_id];
+              const repliedMsg = getReplyMsg(msg.reply_to);
+
+              // Recalled message
+              if (msg.deleted) {
+                return (
+                  <motion.div key={msg.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className={cn('flex gap-2', isOwn ? 'justify-end' : 'justify-start')}>
+                    {!isOwn && <div className="w-8 flex-shrink-0" />}
+                    <div className="max-w-[70%] px-3 py-2 rounded-2xl text-sm bg-muted/50 italic text-muted-foreground">
+                      🚫 Tin nhắn đã được thu hồi
+                    </div>
+                  </motion.div>
+                );
+              }
 
               return (
                 <motion.div
@@ -315,7 +389,7 @@ const MessageArea: React.FC = () => {
                   className={cn('flex gap-2', isOwn ? 'justify-end' : 'justify-start')}
                 >
                   {!isOwn && (
-                    <div className="w-8 flex-shrink-0">
+                    <div className="w-8 flex-shrink-0 cursor-pointer" onClick={() => setViewProfileId(msg.sender_id)}>
                       {showAvatar && sender && <ChatAvatar name={sender.display_name} size="sm" />}
                     </div>
                   )}
@@ -325,9 +399,17 @@ const MessageArea: React.FC = () => {
                       isOwn ? 'bg-tg-message-out rounded-br-md' : 'bg-tg-message-in rounded-bl-md'
                     )}
                     style={{ boxShadow: 'var(--tg-bubble-shadow)' }}
+                    onContextMenu={(e) => handleMessageContextMenu(e, msg)}
                   >
                     {!isOwn && activeConversation.type !== 'private' && showAvatar && (
-                      <p className="text-xs font-medium text-primary mb-0.5">{sender?.display_name}</p>
+                      <p className="text-xs font-medium text-primary mb-0.5 cursor-pointer" onClick={() => setViewProfileId(msg.sender_id)}>{sender?.display_name}</p>
+                    )}
+                    {/* Reply preview */}
+                    {repliedMsg && (
+                      <div className="mb-1 px-2 py-1 rounded-lg bg-background/30 border-l-2 border-primary text-xs">
+                        <p className="font-medium text-primary truncate">{profiles[repliedMsg.sender_id]?.display_name || 'Unknown'}</p>
+                        <p className="truncate text-muted-foreground">{repliedMsg.content || '📎 File'}</p>
+                      </div>
                     )}
                     {msg.message_type === 'text' ? (
                       <p className="whitespace-pre-wrap break-words">{renderContent(msg.content)}</p>
@@ -345,6 +427,12 @@ const MessageArea: React.FC = () => {
                         <span className="text-[9px] text-primary/70 ml-0.5">Đã xem</span>
                       )}
                     </div>
+                    {/* Hover action buttons */}
+                    <div className={cn('absolute top-0 opacity-0 group-hover:opacity-100 transition-opacity flex gap-0.5', isOwn ? 'left-0 -translate-x-full pr-1' : 'right-0 translate-x-full pl-1')}>
+                      <button onClick={() => setReplyTo(msg)} className="p-1 rounded bg-secondary hover:bg-tg-hover" title="Trả lời">
+                        <Reply className="h-3.5 w-3.5 text-muted-foreground" />
+                      </button>
+                    </div>
                   </div>
                 </motion.div>
               );
@@ -354,6 +442,47 @@ const MessageArea: React.FC = () => {
         <div ref={messagesEndRef} />
       </div>
 
+      {/* Context menu for messages */}
+      <AnimatePresence>
+        {contextMenu && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="fixed z-50 bg-popover border border-border rounded-xl shadow-lg overflow-hidden"
+            style={{ left: contextMenu.x, top: contextMenu.y }}
+            onClick={e => e.stopPropagation()}
+          >
+            <button onClick={() => { setReplyTo(contextMenu.msg); setContextMenu(null); }} className="flex items-center gap-3 w-full px-4 py-2.5 text-sm hover:bg-tg-hover transition-colors text-left">
+              <Reply className="h-4 w-4 text-muted-foreground" /> Trả lời
+            </button>
+            <button onClick={() => handleDeleteForMe(contextMenu.msg.id)} className="flex items-center gap-3 w-full px-4 py-2.5 text-sm hover:bg-tg-hover transition-colors text-left">
+              <Trash2 className="h-4 w-4 text-muted-foreground" /> Xoá ở phía bạn
+            </button>
+            {contextMenu.msg.sender_id === user?.id && (
+              <button onClick={() => handleRecall(contextMenu.msg.id)} className="flex items-center gap-3 w-full px-4 py-2.5 text-sm hover:bg-tg-hover transition-colors text-left text-destructive">
+                <RotateCcw className="h-4 w-4" /> Thu hồi
+              </button>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Reply preview */}
+      {replyTo && (
+        <div className="px-4 py-2 border-t border-border bg-tg-sidebar">
+          <div className="flex items-center gap-3 p-2 rounded-lg bg-secondary">
+            <div className="border-l-2 border-primary pl-2 flex-1 min-w-0">
+              <p className="text-xs font-medium text-primary">{profiles[replyTo.sender_id]?.display_name || 'Unknown'}</p>
+              <p className="text-xs text-muted-foreground truncate">{replyTo.content || '📎 File'}</p>
+            </div>
+            <button onClick={() => setReplyTo(null)} className="p-1 rounded-full hover:bg-background/50">
+              <X className="h-4 w-4 text-muted-foreground" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* File Preview */}
       {previewFile && (
         <div className="px-4 py-2 border-t border-border bg-tg-sidebar">
@@ -361,41 +490,25 @@ const MessageArea: React.FC = () => {
             {isImageType(previewFile.file.type) ? (
               <img src={previewFile.url} alt="preview" className="h-16 w-16 object-cover rounded-lg" />
             ) : isVideoType(previewFile.file.type) ? (
-              <div className="h-16 w-16 rounded-lg bg-background/50 flex items-center justify-center">
-                <Film className="h-6 w-6 text-primary" />
-              </div>
+              <div className="h-16 w-16 rounded-lg bg-background/50 flex items-center justify-center"><Film className="h-6 w-6 text-primary" /></div>
             ) : (
-              <div className="h-16 w-16 rounded-lg bg-background/50 flex items-center justify-center">
-                <FileText className="h-6 w-6 text-primary" />
-              </div>
+              <div className="h-16 w-16 rounded-lg bg-background/50 flex items-center justify-center"><FileText className="h-6 w-6 text-primary" /></div>
             )}
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium truncate">{previewFile.file.name}</p>
               <p className="text-xs text-muted-foreground">{(previewFile.file.size / 1024).toFixed(1)} KB</p>
             </div>
-            <button onClick={cancelPreview} className="p-1.5 rounded-full hover:bg-background/50 transition-colors">
-              <X className="h-4 w-4 text-muted-foreground" />
-            </button>
+            <button onClick={cancelPreview} className="p-1.5 rounded-full hover:bg-background/50 transition-colors"><X className="h-4 w-4 text-muted-foreground" /></button>
           </div>
         </div>
       )}
 
-      {/* Hidden file input */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar"
-        className="hidden"
-        onChange={handleFileSelect}
-      />
+      <input ref={fileInputRef} type="file" accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar" className="hidden" onChange={handleFileSelect} />
 
       {/* Input */}
       <div className="px-4 py-3 border-t border-border bg-tg-sidebar">
         <div className="flex items-end gap-2">
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            className="p-2 rounded-lg hover:bg-tg-hover transition-colors flex-shrink-0"
-          >
+          <button onClick={() => fileInputRef.current?.click()} className="p-2 rounded-lg hover:bg-tg-hover transition-colors flex-shrink-0">
             <Paperclip className="h-5 w-5 text-muted-foreground" />
           </button>
           <div className="flex-1">
@@ -418,17 +531,16 @@ const MessageArea: React.FC = () => {
               disabled={uploading}
               className="p-2.5 rounded-full bg-primary hover:bg-primary/90 transition-colors flex-shrink-0 disabled:opacity-50"
             >
-              {uploading ? (
-                <div className="h-4 w-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <Send className="h-4 w-4 text-primary-foreground" />
-              )}
+              {uploading ? <div className="h-4 w-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" /> : <Send className="h-4 w-4 text-primary-foreground" />}
             </motion.button>
           ) : (
             <button className="p-2 rounded-lg hover:bg-tg-hover transition-colors flex-shrink-0"><Mic className="h-5 w-5 text-muted-foreground" /></button>
           )}
         </div>
       </div>
+
+      {viewProfileId && <ProfileViewDialog userId={viewProfileId} onClose={() => setViewProfileId(null)} />}
+      {showMediaGallery && <MediaGalleryDialog onClose={() => setShowMediaGallery(false)} />}
     </div>
   );
 };

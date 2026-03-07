@@ -1,13 +1,15 @@
-import React from 'react';
-import { X, Bell, Trash2, Users, Image, FileText, Link } from 'lucide-react';
+import React, { useState } from 'react';
+import { X, Bell, Trash2, Users, Image, FileText, Link, LogOut } from 'lucide-react';
 import { useChatContext } from '@/context/ChatContext';
 import { useAuth } from '@/context/AuthContext';
 import ChatAvatar from './ChatAvatar';
+import ProfileViewDialog from './ProfileViewDialog';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const InfoPanel: React.FC = () => {
-  const { activeConversation, showInfoPanel, toggleInfoPanel, profiles, deleteConversation } = useChatContext();
+  const { activeConversation, showInfoPanel, toggleInfoPanel, profiles, deleteConversation, leaveGroup, messages } = useChatContext();
   const { user } = useAuth();
+  const [viewProfileId, setViewProfileId] = useState<string | null>(null);
 
   if (!activeConversation) return null;
 
@@ -25,6 +27,9 @@ const InfoPanel: React.FC = () => {
     const other = activeConversation.members.find(m => m.user_id !== user.id);
     return other ? profiles[other.user_id]?.online ?? false : false;
   };
+
+  const mediaCount = messages.filter(m => m.message_type === 'image' || m.message_type === 'video').length;
+  const fileCount = messages.filter(m => m.message_type === 'file').length;
 
   return (
     <AnimatePresence>
@@ -57,9 +62,8 @@ const InfoPanel: React.FC = () => {
               {activeConversation.type !== 'private' && (
                 <InfoButton icon={Users} label="Thành viên" detail={`${activeConversation.members.length}`} />
               )}
-              <InfoButton icon={Image} label="Ảnh & Video" detail="0" />
-              <InfoButton icon={FileText} label="Tệp" detail="0" />
-              <InfoButton icon={Link} label="Liên kết" detail="0" />
+              <InfoButton icon={Image} label="Ảnh & Video" detail={`${mediaCount}`} />
+              <InfoButton icon={FileText} label="Tệp" detail={`${fileCount}`} />
             </div>
 
             {activeConversation.type !== 'private' && (
@@ -70,7 +74,7 @@ const InfoPanel: React.FC = () => {
                     const p = profiles[m.user_id];
                     if (!p) return null;
                     return (
-                      <div key={m.user_id} className="flex items-center gap-3 py-2 px-2 rounded-lg hover:bg-tg-hover transition-colors cursor-pointer">
+                      <div key={m.user_id} onClick={() => setViewProfileId(m.user_id)} className="flex items-center gap-3 py-2 px-2 rounded-lg hover:bg-tg-hover transition-colors cursor-pointer">
                         <ChatAvatar name={p.display_name} online={p.online ?? false} size="sm" />
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium truncate">{p.display_name}</p>
@@ -84,12 +88,21 @@ const InfoPanel: React.FC = () => {
               </div>
             )}
 
-            <div className="mt-auto px-2 pb-4 pt-4">
+            <div className="mt-auto px-2 pb-4 pt-4 space-y-1">
+              {activeConversation.type !== 'private' && (
+                <button
+                  onClick={async () => {
+                    if (window.confirm('Rời khỏi nhóm này?')) await leaveGroup(activeConversation.id);
+                  }}
+                  className="flex items-center gap-3 w-full px-4 py-2.5 rounded-lg hover:bg-muted text-muted-foreground transition-colors text-sm"
+                >
+                  <LogOut className="h-4 w-4" />
+                  <span>Rời nhóm</span>
+                </button>
+              )}
               <button
                 onClick={async () => {
-                  if (window.confirm(activeConversation.type === 'private' ? 'Xoá cuộc trò chuyện này?' : 'Xoá nhóm trò chuyện này?')) {
-                    await deleteConversation(activeConversation.id);
-                  }
+                  if (window.confirm('Xoá cuộc trò chuyện này?')) await deleteConversation(activeConversation.id);
                 }}
                 className="flex items-center gap-3 w-full px-4 py-2.5 rounded-lg hover:bg-destructive/10 text-destructive transition-colors text-sm"
               >
@@ -98,6 +111,7 @@ const InfoPanel: React.FC = () => {
               </button>
             </div>
           </div>
+          {viewProfileId && <ProfileViewDialog userId={viewProfileId} onClose={() => setViewProfileId(null)} />}
         </motion.div>
       )}
     </AnimatePresence>

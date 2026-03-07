@@ -35,19 +35,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
 
   const fetchProfile = useCallback(async (userId: string) => {
-    const { data } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .single();
+    const { data } = await supabase.from('profiles').select('*').eq('id', userId).single();
     setProfile(data);
   }, []);
 
   const fetchRoles = useCallback(async (userId: string) => {
-    const { data } = await supabase
-      .from('user_roles')
-      .select('*')
-      .eq('user_id', userId);
+    const { data } = await supabase.from('user_roles').select('*').eq('user_id', userId);
     setRoles(data || []);
   }, []);
 
@@ -57,7 +50,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setSession(session);
         setUser(session?.user ?? null);
         if (session?.user) {
-          // Use setTimeout to avoid potential deadlock with Supabase client
           setTimeout(() => {
             fetchProfile(session.user.id);
             fetchRoles(session.user.id);
@@ -83,29 +75,50 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => subscription.unsubscribe();
   }, [fetchProfile, fetchRoles]);
 
-  // Update online status
+  // Update online status with interval
   useEffect(() => {
     if (!user) return;
-    supabase.from('profiles').update({ online: true, last_seen: new Date().toISOString() }).eq('id', user.id).then();
+    
+    const setOnline = () => {
+      supabase.from('profiles').update({ online: true, last_seen: new Date().toISOString() }).eq('id', user.id).then();
+    };
+    
+    setOnline();
+    
+    // Heartbeat every 30s
+    const interval = setInterval(setOnline, 30000);
     
     const handleBeforeUnload = () => {
+      // Use sendBeacon for reliable offline update
+      const url = `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/profiles?id=eq.${user.id}`;
+      const body = JSON.stringify({ online: false, last_seen: new Date().toISOString() });
+      navigator.sendBeacon?.(url); // fallback
       supabase.from('profiles').update({ online: false, last_seen: new Date().toISOString() }).eq('id', user.id);
     };
+    
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        supabase.from('profiles').update({ online: false, last_seen: new Date().toISOString() }).eq('id', user.id).then();
+      } else {
+        setOnline();
+      }
+    };
+    
     window.addEventListener('beforeunload', handleBeforeUnload);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
     return () => {
-      handleBeforeUnload();
+      clearInterval(interval);
+      supabase.from('profiles').update({ online: false, last_seen: new Date().toISOString() }).eq('id', user.id).then();
       window.removeEventListener('beforeunload', handleBeforeUnload);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [user]);
 
   const signUp = async (email: string, password: string, username: string, displayName: string) => {
     const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { username, display_name: displayName },
-        emailRedirectTo: window.location.origin,
-      },
+      email, password,
+      options: { data: { username, display_name: displayName }, emailRedirectTo: window.location.origin },
     });
     return { error };
   };
@@ -126,11 +139,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const isAdmin = roles.some(r => r.role === 'admin' || r.role === 'super_admin');
 
   return (
-    <AuthContext.Provider value={{
-      user, session, profile, roles, loading,
-      isSuperAdmin, isAdmin,
-      signUp, signIn, signOut,
-    }}>
+    <AuthContext.Provider value={{ user, session, profile, roles, loading, isSuperAdmin, isAdmin, signUp, signIn, signOut }}>
       {children}
     </AuthContext.Provider>
   );

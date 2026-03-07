@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, Menu, Moon, Sun, Plus, Shield, Mail } from 'lucide-react';
+import { Search, Menu, Moon, Sun, Plus, Shield, Mail, User, Bookmark } from 'lucide-react';
 import { useChatContext } from '@/context/ChatContext';
 import { useAuth } from '@/context/AuthContext';
 import ChatAvatar from './ChatAvatar';
@@ -9,6 +9,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import type { Tables } from '@/integrations/supabase/types';
 import NewChatDialog from './NewChatDialog';
 import AdminEmailApproval from './AdminEmailApproval';
+import EditProfileDialog from './EditProfileDialog';
 
 type ConversationMember = Tables<'conversation_members'>;
 type Profile = Tables<'profiles'>;
@@ -21,32 +22,33 @@ interface ConversationWithDetails {
   lastMessage?: any;
   unreadCount: number;
   pinned?: boolean | null;
+  created_by?: string | null;
 }
 
 const ChatSidebar: React.FC = () => {
   const {
     conversations, activeConversationId, setActiveConversation,
     searchQuery, setSearchQuery, darkMode, toggleDarkMode,
-    loadingConversations, profiles,
+    loadingConversations, profiles, ensureSavedMessages,
   } = useChatContext();
   const { user, signOut, isAdmin } = useAuth();
   const [showNewChat, setShowNewChat] = React.useState(false);
   const [showMenu, setShowMenu] = React.useState(false);
   const [showEmailApproval, setShowEmailApproval] = React.useState(false);
+  const [showEditProfile, setShowEditProfile] = React.useState(false);
 
   const getConversationName = (conv: ConversationWithDetails) => {
+    if (conv.name === 'Saved Messages') return '📌 Saved Messages';
     if (conv.name) return conv.name;
     if (conv.type === 'private' && user) {
       const other = conv.members.find(m => m.user_id !== user.id);
-      if (other) {
-        const p = profiles[other.user_id];
-        return p?.display_name || 'Unknown';
-      }
+      if (other) return profiles[other.user_id]?.display_name || 'Unknown';
     }
     return 'Chat';
   };
 
   const getOtherMemberOnline = (conv: ConversationWithDetails) => {
+    if (conv.name === 'Saved Messages') return undefined;
     if (conv.type !== 'private' || !user) return undefined;
     const other = conv.members.find(m => m.user_id !== user.id);
     if (other) return profiles[other.user_id]?.online ?? false;
@@ -57,18 +59,21 @@ const ChatSidebar: React.FC = () => {
     getConversationName(c).toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  // Sort: pinned first, then by updated_at
+  const sorted = [...filtered].sort((a, b) => {
+    if (a.pinned && !b.pinned) return -1;
+    if (!a.pinned && b.pinned) return 1;
+    return 0;
+  });
+
   return (
     <div className="flex flex-col h-full bg-tg-sidebar border-r border-border">
       {/* Header */}
       <div className="flex items-center gap-2 px-4 py-3 border-b border-border">
         <div className="relative">
-          <button
-            onClick={() => setShowMenu(p => !p)}
-            className="p-2 rounded-lg hover:bg-tg-hover transition-colors"
-          >
+          <button onClick={() => setShowMenu(p => !p)} className="p-2 rounded-lg hover:bg-tg-hover transition-colors">
             <Menu className="h-5 w-5 text-muted-foreground" />
           </button>
-          {/* Dropdown menu */}
           <AnimatePresence>
             {showMenu && (
               <motion.div
@@ -78,48 +83,41 @@ const ChatSidebar: React.FC = () => {
                 transition={{ duration: 0.12 }}
                 className="absolute top-full left-0 mt-1 w-56 bg-popover border border-border rounded-xl shadow-lg z-50 overflow-hidden"
               >
+                <button onClick={() => { setShowMenu(false); setShowEditProfile(true); }} className="flex items-center gap-3 w-full px-4 py-2.5 text-sm hover:bg-tg-hover transition-colors text-left">
+                  <User className="h-4 w-4 text-primary" />
+                  <span>Chỉnh sửa Profile</span>
+                </button>
+                <button onClick={async () => { setShowMenu(false); await ensureSavedMessages(); }} className="flex items-center gap-3 w-full px-4 py-2.5 text-sm hover:bg-tg-hover transition-colors text-left">
+                  <Bookmark className="h-4 w-4 text-primary" />
+                  <span>Saved Messages</span>
+                </button>
                 {isAdmin && (
                   <>
-                    <button
-                      onClick={() => { setShowMenu(false); setShowEmailApproval(true); }}
-                      className="flex items-center gap-3 w-full px-4 py-2.5 text-sm hover:bg-tg-hover transition-colors text-left"
-                    >
+                    <div className="border-t border-border" />
+                    <button onClick={() => { setShowMenu(false); setShowEmailApproval(true); }} className="flex items-center gap-3 w-full px-4 py-2.5 text-sm hover:bg-tg-hover transition-colors text-left">
                       <Mail className="h-4 w-4 text-primary" />
                       <span>Duyệt email đăng ký</span>
                     </button>
-                    <a
-                      href="/admin"
-                      onClick={() => setShowMenu(false)}
-                      className="flex items-center gap-3 w-full px-4 py-2.5 text-sm hover:bg-tg-hover transition-colors text-left"
-                    >
+                    <a href="/admin" onClick={() => setShowMenu(false)} className="flex items-center gap-3 w-full px-4 py-2.5 text-sm hover:bg-tg-hover transition-colors text-left">
                       <Shield className="h-4 w-4 text-primary" />
                       <span>Admin Dashboard</span>
                     </a>
-                    <div className="border-t border-border" />
                   </>
                 )}
-                <button
-                  onClick={() => { toggleDarkMode(); setShowMenu(false); }}
-                  className="flex items-center gap-3 w-full px-4 py-2.5 text-sm hover:bg-tg-hover transition-colors text-left"
-                >
+                <div className="border-t border-border" />
+                <button onClick={() => { toggleDarkMode(); setShowMenu(false); }} className="flex items-center gap-3 w-full px-4 py-2.5 text-sm hover:bg-tg-hover transition-colors text-left">
                   {darkMode ? <Sun className="h-4 w-4 text-muted-foreground" /> : <Moon className="h-4 w-4 text-muted-foreground" />}
                   <span>{darkMode ? 'Chế độ sáng' : 'Chế độ tối'}</span>
                 </button>
               </motion.div>
             )}
           </AnimatePresence>
-          {/* Overlay to close menu */}
           {showMenu && <div className="fixed inset-0 z-40" onClick={() => setShowMenu(false)} />}
         </div>
         <div className="flex-1 relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <input
-            type="text"
-            placeholder="Tìm kiếm..."
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-            className="w-full bg-secondary rounded-xl pl-9 pr-4 py-2 text-sm outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-primary/30 transition-all"
-          />
+          <input type="text" placeholder="Tìm kiếm..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+            className="w-full bg-secondary rounded-xl pl-9 pr-4 py-2 text-sm outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-primary/30 transition-all" />
         </div>
         <button onClick={toggleDarkMode} className="p-2 rounded-lg hover:bg-tg-hover transition-colors">
           {darkMode ? <Sun className="h-5 w-5 text-muted-foreground" /> : <Moon className="h-5 w-5 text-muted-foreground" />}
@@ -128,12 +126,8 @@ const ChatSidebar: React.FC = () => {
 
       {/* New Chat Button */}
       <div className="px-4 py-2">
-        <button
-          onClick={() => setShowNewChat(true)}
-          className="w-full flex items-center gap-2 px-3 py-2 rounded-xl bg-primary/10 text-primary text-sm font-medium hover:bg-primary/20 transition-colors"
-        >
-          <Plus className="h-4 w-4" />
-          Cuộc trò chuyện mới
+        <button onClick={() => setShowNewChat(true)} className="w-full flex items-center gap-2 px-3 py-2 rounded-xl bg-primary/10 text-primary text-sm font-medium hover:bg-primary/20 transition-colors">
+          <Plus className="h-4 w-4" /> Cuộc trò chuyện mới
         </button>
       </div>
 
@@ -143,13 +137,13 @@ const ChatSidebar: React.FC = () => {
           <div className="flex items-center justify-center py-8">
             <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full" />
           </div>
-        ) : filtered.length === 0 ? (
+        ) : sorted.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground text-sm">
             {searchQuery ? 'Không tìm thấy' : 'Chưa có cuộc trò chuyện'}
           </div>
         ) : (
           <AnimatePresence>
-            {filtered.map(c => (
+            {sorted.map(c => (
               <motion.div
                 key={c.id}
                 layout
@@ -162,15 +156,11 @@ const ChatSidebar: React.FC = () => {
                   c.id === activeConversationId ? 'bg-primary/10' : 'hover:bg-tg-hover'
                 )}
               >
-                <ChatAvatar
-                  name={getConversationName(c)}
-                  online={getOtherMemberOnline(c)}
-                  size="md"
-                />
+                <ChatAvatar name={c.name === 'Saved Messages' ? 'Saved' : getConversationName(c).replace('📌 ', '').replace('👥 ', '').replace('📢 ', '')} online={getOtherMemberOnline(c)} size="md" />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between">
                     <span className="font-medium text-sm truncate">
-                      {c.type === 'group' ? '👥 ' : c.type === 'channel' ? '📢 ' : ''}
+                      {c.type === 'group' && c.name !== 'Saved Messages' ? '👥 ' : c.type === 'channel' ? '📢 ' : ''}
                       {getConversationName(c)}
                     </span>
                     {c.lastMessage && (
@@ -194,20 +184,19 @@ const ChatSidebar: React.FC = () => {
         )}
       </div>
 
-      {/* Footer - user info */}
+      {/* Footer */}
       <div className="border-t border-border px-4 py-3 flex items-center gap-3">
         <ChatAvatar name={profiles[user?.id || '']?.display_name || 'User'} online={true} size="sm" />
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium truncate">{profiles[user?.id || '']?.display_name || 'User'}</p>
           <p className="text-xs text-muted-foreground truncate">@{profiles[user?.id || '']?.username}</p>
         </div>
-        <button onClick={signOut} className="text-xs text-muted-foreground hover:text-destructive transition-colors">
-          Đăng xuất
-        </button>
+        <button onClick={signOut} className="text-xs text-muted-foreground hover:text-destructive transition-colors">Đăng xuất</button>
       </div>
 
       {showNewChat && <NewChatDialog onClose={() => setShowNewChat(false)} />}
       {showEmailApproval && <AdminEmailApproval onClose={() => setShowEmailApproval(false)} />}
+      {showEditProfile && <EditProfileDialog onClose={() => setShowEditProfile(false)} />}
     </div>
   );
 };
