@@ -36,6 +36,8 @@ interface ChatContextType {
   createGroup: (name: string, memberIds: string[]) => Promise<string | null>;
   allProfiles: Profile[];
   deleteConversation: (convId: string) => Promise<void>;
+  leaveGroup: (convId: string) => Promise<void>;
+  ensureSavedMessages: () => Promise<void>;
 }
 
 const ChatContext = createContext<ChatContextType | null>(null);
@@ -63,7 +65,6 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     document.documentElement.classList.toggle('dark', darkMode);
   }, [darkMode]);
 
-  // Fetch all profiles
   useEffect(() => {
     if (!user) return;
     const fetchProfiles = async () => {
@@ -78,141 +79,72 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     fetchProfiles();
   }, [user]);
 
-  // Fetch conversations
   const fetchConversations = useCallback(async () => {
     if (!user) return;
     setLoadingConversations(true);
-    
-    const { data: memberships } = await supabase
-      .from('conversation_members')
-      .select('conversation_id')
-      .eq('user_id', user.id);
-
+    const { data: memberships } = await supabase.from('conversation_members').select('conversation_id').eq('user_id', user.id);
     if (!memberships || memberships.length === 0) {
       setConversations([]);
       setLoadingConversations(false);
       return;
     }
-
     const convIds = memberships.map(m => m.conversation_id);
-
-    const { data: convs } = await supabase
-      .from('conversations')
-      .select('*')
-      .in('id', convIds)
-      .order('updated_at', { ascending: false });
-
-    if (!convs) {
-      setLoadingConversations(false);
-      return;
-    }
-
-    const { data: allMembers } = await supabase
-      .from('conversation_members')
-      .select('*')
-      .in('conversation_id', convIds);
+    const { data: convs } = await supabase.from('conversations').select('*').in('id', convIds).order('updated_at', { ascending: false });
+    if (!convs) { setLoadingConversations(false); return; }
+    const { data: allMembers } = await supabase.from('conversation_members').select('*').in('conversation_id', convIds);
 
     const conversationsWithDetails: ConversationWithDetails[] = await Promise.all(
       convs.map(async (conv) => {
-        const members = (allMembers || []).filter(m => m.conversation_id === conv.id)
-          .map(m => ({ ...m, profile: profiles[m.user_id] }));
-
-        const { data: lastMsgData } = await supabase
-          .from('messages')
-          .select('*')
-          .eq('conversation_id', conv.id)
-          .order('created_at', { ascending: false })
-          .limit(1);
-
-        const lastMessage = lastMsgData?.[0]
-          ? { ...lastMsgData[0], sender: profiles[lastMsgData[0].sender_id] }
-          : undefined;
-
-        return {
-          ...conv,
-          members,
-          lastMessage,
-          unreadCount: 0,
-        };
+        const members = (allMembers || []).filter(m => m.conversation_id === conv.id).map(m => ({ ...m, profile: profiles[m.user_id] }));
+        const { data: lastMsgData } = await supabase.from('messages').select('*').eq('conversation_id', conv.id).order('created_at', { ascending: false }).limit(1);
+        const lastMessage = lastMsgData?.[0] ? { ...lastMsgData[0], sender: profiles[lastMsgData[0].sender_id] } : undefined;
+        return { ...conv, members, lastMessage, unreadCount: 0 };
       })
     );
-
     setConversations(conversationsWithDetails);
     setLoadingConversations(false);
   }, [user, profiles]);
 
-  useEffect(() => {
-    fetchConversations();
-  }, [fetchConversations]);
+  useEffect(() => { fetchConversations(); }, [fetchConversations]);
 
-  // Fetch messages for active conversation
   useEffect(() => {
-    if (!activeConversationId || !user) {
-      setMessages([]);
-      return;
-    }
-
+    if (!activeConversationId || !user) { setMessages([]); return; }
     const fetchMessages = async () => {
       setLoadingMessages(true);
-      const { data } = await supabase
-        .from('messages')
-        .select('*')
-        .eq('conversation_id', activeConversationId)
-        .order('created_at', { ascending: true })
-        .limit(100);
+      const { data } = await supabase.from('messages').select('*').eq('conversation_id', activeConversationId).order('created_at', { ascending: true }).limit(100);
       setMessages(data || []);
       setLoadingMessages(false);
     };
-
     fetchMessages();
   }, [activeConversationId, user]);
 
-  // Realtime messages subscription
   useEffect(() => {
     if (!activeConversationId) return;
-
-    const channel = supabase
-      .channel(`messages:${activeConversationId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'messages',
-          filter: `conversation_id=eq.${activeConversationId}`,
-        },
+    const channel = supabase.channel(`messages:${activeConversationId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'messages', filter: `conversation_id=eq.${activeConversationId}` },
         (payload: RealtimePostgresChangesPayload<Message>) => {
           if (payload.eventType === 'INSERT') {
             setMessages(prev => [...prev, payload.new as Message]);
           } else if (payload.eventType === 'UPDATE') {
             const updated = payload.new as Message;
             setMessages(prev => prev.map(m => m.id === updated.id ? updated : m));
+          } else if (payload.eventType === 'DELETE') {
+            const old = payload.old as any;
+            if (old?.id) setMessages(prev => prev.filter(m => m.id !== old.id));
           }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+        }).subscribe();
+    return () => { supabase.removeChannel(channel); };
   }, [activeConversationId]);
 
-  // Realtime profiles subscription (online status)
   useEffect(() => {
-    const channel = supabase
-      .channel('profiles-changes')
-      .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'profiles' },
+    const channel = supabase.channel('profiles-changes')
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles' },
         (payload: RealtimePostgresChangesPayload<Profile>) => {
           if (payload.eventType === 'UPDATE') {
             const updated = payload.new as Profile;
             setProfiles(prev => ({ ...prev, [updated.id]: updated }));
           }
-        }
-      )
-      .subscribe();
-
+        }).subscribe();
     return () => { supabase.removeChannel(channel); };
   }, []);
 
@@ -230,85 +162,82 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const deleteConversation = useCallback(async (convId: string) => {
     if (!user) return;
     try {
-      // Delete all messages first
       await supabase.from('messages').delete().eq('conversation_id', convId);
-      // Delete all members
       await supabase.from('conversation_members').delete().eq('conversation_id', convId);
-      // Delete conversation
       const { error } = await supabase.from('conversations').delete().eq('id', convId);
       if (error) throw error;
-      
       setConversations(prev => prev.filter(c => c.id !== convId));
-      if (activeConversationId === convId) {
-        setActiveConversationId(null);
-      }
+      if (activeConversationId === convId) setActiveConversationId(null);
       toast.success('Đã xoá cuộc trò chuyện');
     } catch (err: any) {
       toast.error('Lỗi xoá: ' + (err.message || 'Unknown'));
     }
   }, [user, activeConversationId]);
 
+  const leaveGroup = useCallback(async (convId: string) => {
+    if (!user) return;
+    try {
+      const { error } = await supabase.from('conversation_members').delete().eq('conversation_id', convId).eq('user_id', user.id);
+      if (error) throw error;
+      setConversations(prev => prev.filter(c => c.id !== convId));
+      if (activeConversationId === convId) setActiveConversationId(null);
+      toast.success('Đã rời nhóm');
+    } catch (err: any) {
+      toast.error('Lỗi: ' + (err.message || 'Unknown'));
+    }
+  }, [user, activeConversationId]);
+
+  const ensureSavedMessages = useCallback(async () => {
+    if (!user) return;
+    // Check if Saved Messages exists
+    const existing = conversations.find(c => c.name === 'Saved Messages' && c.created_by === user.id);
+    if (existing) {
+      setActiveConversationId(existing.id);
+      return;
+    }
+    // Create it
+    const { data: conv, error } = await supabase.from('conversations').insert({
+      type: 'private' as const,
+      name: 'Saved Messages',
+      created_by: user.id,
+      pinned: true,
+    }).select().single();
+    if (error || !conv) { toast.error('Lỗi tạo Saved Messages'); return; }
+    await supabase.from('conversation_members').insert({ conversation_id: conv.id, user_id: user.id, role: 'owner' as const });
+    await fetchConversations();
+    setActiveConversationId(conv.id);
+  }, [user, conversations, fetchConversations]);
+
   const createPrivateChat = useCallback(async (userId: string): Promise<string | null> => {
     if (!user) return null;
-
-    const { data: existingMembers } = await supabase
-      .from('conversation_members')
-      .select('conversation_id')
-      .eq('user_id', user.id);
-
+    const { data: existingMembers } = await supabase.from('conversation_members').select('conversation_id').eq('user_id', user.id);
     if (existingMembers) {
       for (const m of existingMembers) {
-        const { data: otherMember } = await supabase
-          .from('conversation_members')
-          .select('conversation_id')
-          .eq('conversation_id', m.conversation_id)
-          .eq('user_id', userId);
-        
+        const { data: otherMember } = await supabase.from('conversation_members').select('conversation_id').eq('conversation_id', m.conversation_id).eq('user_id', userId);
         if (otherMember && otherMember.length > 0) {
-          const { data: conv } = await supabase
-            .from('conversations')
-            .select('type')
-            .eq('id', m.conversation_id)
-            .eq('type', 'private')
-            .single();
+          const { data: conv } = await supabase.from('conversations').select('type').eq('id', m.conversation_id).eq('type', 'private').single();
           if (conv) return m.conversation_id;
         }
       }
     }
-
-    const { data: conv, error } = await supabase
-      .from('conversations')
-      .insert({ type: 'private', created_by: user.id })
-      .select()
-      .single();
-
+    const { data: conv, error } = await supabase.from('conversations').insert({ type: 'private', created_by: user.id }).select().single();
     if (error || !conv) return null;
-
     await supabase.from('conversation_members').insert([
       { conversation_id: conv.id, user_id: user.id, role: 'member' as const },
       { conversation_id: conv.id, user_id: userId, role: 'member' as const },
     ]);
-
     await fetchConversations();
     return conv.id;
   }, [user, fetchConversations]);
 
   const createGroup = useCallback(async (name: string, memberIds: string[]): Promise<string | null> => {
     if (!user) return null;
-
-    const { data: conv, error } = await supabase
-      .from('conversations')
-      .insert({ type: 'group', name, created_by: user.id })
-      .select()
-      .single();
-
+    const { data: conv, error } = await supabase.from('conversations').insert({ type: 'group', name, created_by: user.id }).select().single();
     if (error || !conv) return null;
-
     const members = [
       { conversation_id: conv.id, user_id: user.id, role: 'owner' as const },
       ...memberIds.map(id => ({ conversation_id: conv.id, user_id: id, role: 'member' as const })),
     ];
-
     await supabase.from('conversation_members').insert(members);
     await fetchConversations();
     return conv.id;
@@ -325,7 +254,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       showInfoPanel, toggleInfoPanel, darkMode, toggleDarkMode,
       activeConversation, loadingConversations, loadingMessages,
       profiles, createPrivateChat, createGroup, allProfiles,
-      deleteConversation,
+      deleteConversation, leaveGroup, ensureSavedMessages,
     }}>
       {children}
     </ChatContext.Provider>
