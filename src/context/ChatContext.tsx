@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 import type { Tables } from '@/integrations/supabase/types';
@@ -38,6 +38,8 @@ interface ChatContextType {
   deleteConversation: (convId: string) => Promise<void>;
   leaveGroup: (convId: string) => Promise<void>;
   ensureSavedMessages: () => Promise<void>;
+  isMobileShowingChat: boolean;
+  setMobileShowingChat: (v: boolean) => void;
 }
 
 const ChatContext = createContext<ChatContextType | null>(null);
@@ -60,11 +62,17 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [profiles, setProfiles] = useState<Record<string, Profile>>({});
   const [allProfiles, setAllProfiles] = useState<Profile[]>([]);
+  const [isMobileShowingChat, setMobileShowingChat] = useState(false);
+  const profilesRef = useRef<Record<string, Profile>>({});
+  const initialLoadDone = useRef(false);
+
+  useEffect(() => { profilesRef.current = profiles; }, [profiles]);
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', darkMode);
   }, [darkMode]);
 
+  // Fetch profiles once
   useEffect(() => {
     if (!user) return;
     const fetchProfiles = async () => {
@@ -79,34 +87,59 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     fetchProfiles();
   }, [user]);
 
-  const fetchConversations = useCallback(async () => {
+  const fetchConversations = useCallback(async (showLoading = false) => {
     if (!user) return;
-    setLoadingConversations(true);
+    if (showLoading) setLoadingConversations(true);
+
     const { data: memberships } = await supabase.from('conversation_members').select('conversation_id').eq('user_id', user.id);
     if (!memberships || memberships.length === 0) {
       setConversations([]);
       setLoadingConversations(false);
+      initialLoadDone.current = true;
       return;
     }
     const convIds = memberships.map(m => m.conversation_id);
     const { data: convs } = await supabase.from('conversations').select('*').in('id', convIds).order('updated_at', { ascending: false });
-    if (!convs) { setLoadingConversations(false); return; }
+    if (!convs) { setLoadingConversations(false); initialLoadDone.current = true; return; }
     const { data: allMembers } = await supabase.from('conversation_members').select('*').in('conversation_id', convIds);
 
+    const currentProfiles = profilesRef.current;
     const conversationsWithDetails: ConversationWithDetails[] = await Promise.all(
       convs.map(async (conv) => {
-        const members = (allMembers || []).filter(m => m.conversation_id === conv.id).map(m => ({ ...m, profile: profiles[m.user_id] }));
+        const members = (allMembers || []).filter(m => m.conversation_id === conv.id).map(m => ({ ...m, profile: currentProfiles[m.user_id] }));
         const { data: lastMsgData } = await supabase.from('messages').select('*').eq('conversation_id', conv.id).order('created_at', { ascending: false }).limit(1);
-        const lastMessage = lastMsgData?.[0] ? { ...lastMsgData[0], sender: profiles[lastMsgData[0].sender_id] } : undefined;
+        const lastMessage = lastMsgData?.[0] ? { ...lastMsgData[0], sender: currentProfiles[lastMsgData[0].sender_id] } : undefined;
         return { ...conv, members, lastMessage, unreadCount: 0 };
       })
     );
     setConversations(conversationsWithDetails);
     setLoadingConversations(false);
-  }, [user, profiles]);
+    initialLoadDone.current = true;
+  }, [user]);
 
-  useEffect(() => { fetchConversations(); }, [fetchConversations]);
+  // Initial load
+  useEffect(() => {
+    if (!user) return;
+    // Wait a tick for profiles to load
+    const timer = setTimeout(() => fetchConversations(true), 300);
+    return () => clearTimeout(timer);
+  }, [user, fetchConversations]);
 
+  // Listen for conversation changes (new conversations, updates)
+  useEffect(() => {
+    if (!user) return;
+    const channel = supabase.channel('conversations-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'conversations' }, () => {
+        fetchConversations(false);
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'conversation_members' }, () => {
+        fetchConversations(false);
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [user, fetchConversations]);
+
+  // Fetch messages for active conversation
   useEffect(() => {
     if (!activeConversationId || !user) { setMessages([]); return; }
     const fetchMessages = async () => {
@@ -118,6 +151,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     fetchMessages();
   }, [activeConversationId, user]);
 
+  // Realtime messages
   useEffect(() => {
     if (!activeConversationId) return;
     const channel = supabase.channel(`messages:${activeConversationId}`)
@@ -136,7 +170,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => { supabase.removeChannel(channel); };
   }, [activeConversationId]);
 
-  // Realtime profile updates (online/offline status)
+  // Realtime profile updates
   useEffect(() => {
     const channel = supabase.channel('profiles-changes')
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles' },
@@ -150,7 +184,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => { supabase.removeChannel(channel); };
   }, []);
 
-  // Polling fallback for online status (every 15s)
+  // Profile polling fallback (every 30s instead of 15s to reduce load)
   useEffect(() => {
     if (!user) return;
     const pollProfiles = async () => {
@@ -162,7 +196,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setAllProfiles(data);
       }
     };
-    const interval = setInterval(pollProfiles, 15000);
+    const interval = setInterval(pollProfiles, 30000);
     return () => clearInterval(interval);
   }, [user]);
 
@@ -185,7 +219,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const { error } = await supabase.from('conversations').delete().eq('id', convId);
       if (error) throw error;
       setConversations(prev => prev.filter(c => c.id !== convId));
-      if (activeConversationId === convId) setActiveConversationId(null);
+      if (activeConversationId === convId) { setActiveConversationId(null); setMobileShowingChat(false); }
       toast.success('Đã xoá cuộc trò chuyện');
     } catch (err: any) {
       toast.error('Lỗi xoá: ' + (err.message || 'Unknown'));
@@ -198,7 +232,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const { error } = await supabase.from('conversation_members').delete().eq('conversation_id', convId).eq('user_id', user.id);
       if (error) throw error;
       setConversations(prev => prev.filter(c => c.id !== convId));
-      if (activeConversationId === convId) setActiveConversationId(null);
+      if (activeConversationId === convId) { setActiveConversationId(null); setMobileShowingChat(false); }
       toast.success('Đã rời nhóm');
     } catch (err: any) {
       toast.error('Lỗi: ' + (err.message || 'Unknown'));
@@ -207,13 +241,12 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const ensureSavedMessages = useCallback(async () => {
     if (!user) return;
-    // Check if Saved Messages exists
     const existing = conversations.find(c => c.name === 'Saved Messages' && c.created_by === user.id);
     if (existing) {
       setActiveConversationId(existing.id);
+      setMobileShowingChat(true);
       return;
     }
-    // Create it
     const { data: conv, error } = await supabase.from('conversations').insert({
       type: 'private' as const,
       name: 'Saved Messages',
@@ -222,29 +255,47 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }).select().single();
     if (error || !conv) { toast.error('Lỗi tạo Saved Messages'); return; }
     await supabase.from('conversation_members').insert({ conversation_id: conv.id, user_id: user.id, role: 'owner' as const });
-    await fetchConversations();
+    await fetchConversations(false);
     setActiveConversationId(conv.id);
+    setMobileShowingChat(true);
   }, [user, conversations, fetchConversations]);
 
   const createPrivateChat = useCallback(async (userId: string): Promise<string | null> => {
     if (!user) return null;
-    const { data: existingMembers } = await supabase.from('conversation_members').select('conversation_id').eq('user_id', user.id);
-    if (existingMembers) {
-      for (const m of existingMembers) {
-        const { data: otherMember } = await supabase.from('conversation_members').select('conversation_id').eq('conversation_id', m.conversation_id).eq('user_id', userId);
-        if (otherMember && otherMember.length > 0) {
-          const { data: conv } = await supabase.from('conversations').select('type').eq('id', m.conversation_id).eq('type', 'private').single();
-          if (conv) return m.conversation_id;
+    try {
+      // Check existing private chat
+      const { data: existingMembers } = await supabase.from('conversation_members').select('conversation_id').eq('user_id', user.id);
+      if (existingMembers) {
+        for (const m of existingMembers) {
+          const { data: otherMember } = await supabase.from('conversation_members').select('conversation_id').eq('conversation_id', m.conversation_id).eq('user_id', userId);
+          if (otherMember && otherMember.length > 0) {
+            const { data: conv } = await supabase.from('conversations').select('type').eq('id', m.conversation_id).eq('type', 'private').single();
+            if (conv) {
+              setMobileShowingChat(true);
+              return m.conversation_id;
+            }
+          }
         }
       }
+      const { data: conv, error } = await supabase.from('conversations').insert({ type: 'private', created_by: user.id }).select().single();
+      if (error || !conv) { console.error('Create private chat error:', error); return null; }
+      
+      // Insert self first
+      const { error: selfErr } = await supabase.from('conversation_members').insert({ conversation_id: conv.id, user_id: user.id, role: 'member' as const });
+      if (selfErr) { console.error('Add self error:', selfErr); return null; }
+      
+      // Then other user
+      const { error: otherErr } = await supabase.from('conversation_members').insert({ conversation_id: conv.id, user_id: userId, role: 'member' as const });
+      if (otherErr) { console.error('Add other user error:', otherErr); }
+      
+      await fetchConversations(false);
+      setMobileShowingChat(true);
+      return conv.id;
+    } catch (err: any) {
+      console.error('Create private chat error:', err);
+      toast.error('Lỗi tạo cuộc trò chuyện');
+      return null;
     }
-    const { data: conv, error } = await supabase.from('conversations').insert({ type: 'private', created_by: user.id }).select().single();
-    if (error || !conv) return null;
-    // Insert self first, then other user
-    await supabase.from('conversation_members').insert({ conversation_id: conv.id, user_id: user.id, role: 'member' as const });
-    await supabase.from('conversation_members').insert({ conversation_id: conv.id, user_id: userId, role: 'member' as const });
-    await fetchConversations();
-    return conv.id;
   }, [user, fetchConversations]);
 
   const createGroup = useCallback(async (name: string, memberIds: string[]): Promise<string | null> => {
@@ -253,18 +304,18 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const { data: conv, error } = await supabase.from('conversations').insert({ type: 'group', name, created_by: user.id }).select().single();
       if (error || !conv) { console.error('Create group conv error:', error); toast.error('Lỗi tạo nhóm'); return null; }
       
-      // Insert owner FIRST (RLS requires owner to exist before adding other members)
+      // Insert owner FIRST
       const { error: ownerErr } = await supabase.from('conversation_members').insert({ conversation_id: conv.id, user_id: user.id, role: 'owner' as const });
       if (ownerErr) { console.error('Add owner error:', ownerErr); toast.error('Lỗi thêm chủ nhóm'); return null; }
       
-      // Then insert other members
-      if (memberIds.length > 0) {
-        const otherMembers = memberIds.map(id => ({ conversation_id: conv.id, user_id: id, role: 'member' as const }));
-        const { error: membersErr } = await supabase.from('conversation_members').insert(otherMembers);
-        if (membersErr) { console.error('Add members error:', membersErr); toast.error('Lỗi thêm thành viên, nhưng nhóm đã được tạo'); }
+      // Then insert other members one by one to avoid batch RLS issues
+      for (const memberId of memberIds) {
+        const { error: memberErr } = await supabase.from('conversation_members').insert({ conversation_id: conv.id, user_id: memberId, role: 'member' as const });
+        if (memberErr) { console.error(`Add member ${memberId} error:`, memberErr); }
       }
       
-      await fetchConversations();
+      await fetchConversations(false);
+      setMobileShowingChat(true);
       return conv.id;
     } catch (err: any) {
       console.error('Create group error:', err);
@@ -273,18 +324,24 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [user, fetchConversations]);
 
+  const setActiveConversation = useCallback((id: string | null) => {
+    setActiveConversationId(id);
+    if (id) setMobileShowingChat(true);
+  }, []);
+
   const toggleInfoPanel = useCallback(() => setShowInfoPanel(p => !p), []);
   const toggleDarkMode = useCallback(() => setDarkMode(p => !p), []);
   const activeConversation = conversations.find(c => c.id === activeConversationId) || null;
 
   return (
     <ChatContext.Provider value={{
-      conversations, activeConversationId, setActiveConversation: setActiveConversationId,
+      conversations, activeConversationId, setActiveConversation,
       messages, sendMessage, searchQuery, setSearchQuery,
       showInfoPanel, toggleInfoPanel, darkMode, toggleDarkMode,
       activeConversation, loadingConversations, loadingMessages,
       profiles, createPrivateChat, createGroup, allProfiles,
       deleteConversation, leaveGroup, ensureSavedMessages,
+      isMobileShowingChat, setMobileShowingChat,
     }}>
       {children}
     </ChatContext.Provider>

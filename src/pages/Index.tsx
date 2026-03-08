@@ -2,17 +2,31 @@ import React from 'react';
 import ChatSidebar from '@/components/chat/ChatSidebar';
 import MessageArea from '@/components/chat/MessageArea';
 import InfoPanel from '@/components/chat/InfoPanel';
-import { ChatProvider } from '@/context/ChatContext';
+import { ChatProvider, useChatContext } from '@/context/ChatContext';
 import { useAuth } from '@/context/AuthContext';
 import { Navigate } from 'react-router-dom';
+import { cn } from '@/lib/utils';
 
 const ChatLayout: React.FC = () => {
+  const { isMobileShowingChat } = useChatContext();
+
   return (
-    <div className="flex h-screen w-full overflow-hidden">
-      <div className="w-80 flex-shrink-0 h-full">
+    <div className="flex h-[100dvh] w-full overflow-hidden">
+      {/* Sidebar: always visible on md+, toggle on mobile */}
+      <div className={cn(
+        'h-full flex-shrink-0 border-r border-border',
+        'w-full md:w-80',
+        isMobileShowingChat ? 'hidden md:block' : 'block'
+      )}>
         <ChatSidebar />
       </div>
-      <MessageArea />
+      {/* Chat area: always visible on md+, toggle on mobile */}
+      <div className={cn(
+        'flex-1 h-full min-w-0',
+        isMobileShowingChat ? 'block' : 'hidden md:block'
+      )}>
+        <MessageArea />
+      </div>
       <InfoPanel />
     </div>
   );
