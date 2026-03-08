@@ -7,7 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
 const AuthPage: React.FC = () => {
-  const { signIn, signUp } = useAuth();
+  const { user, loading, signIn, signUp } = useAuth();
   const navigate = useNavigate();
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
