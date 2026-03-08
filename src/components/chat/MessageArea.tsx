@@ -508,15 +508,29 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
                                             {btn.text}
                                           </a>
                                         ) : (
-                                          <button key={bi} onClick={() => {
-                                            // Send callback_data as a message
+                                          <button key={bi} onClick={async () => {
                                             if (btn.callback_data) {
-                                              supabase.from('messages').insert({
+                                              await supabase.from('messages').insert({
                                                 conversation_id: activeConversation!.id,
                                                 sender_id: user!.id,
                                                 content: btn.callback_data,
                                                 message_type: 'text',
                                               });
+                                              await supabase.from('conversations').update({ updated_at: new Date().toISOString() }).eq('id', activeConversation!.id);
+                                              // If BotFather conversation, process the callback
+                                              if (isBotFatherConversation(activeConversation!.id)) {
+                                                try {
+                                                  await supabase.functions.invoke('botfather', {
+                                                    body: {
+                                                      action: 'process-message',
+                                                      message: btn.callback_data,
+                                                      conversation_id: activeConversation!.id,
+                                                    },
+                                                  });
+                                                } catch (err) {
+                                                  console.error('BotFather callback error:', err);
+                                                }
+                                              }
                                             }
                                           }} className="flex-1 text-center px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-xs font-medium hover:bg-primary/20 transition-colors">
                                             {btn.text}
