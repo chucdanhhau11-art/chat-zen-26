@@ -7,6 +7,7 @@ interface ChatAvatarProps {
   avatar?: string;
   online?: boolean;
   size?: 'sm' | 'md' | 'lg';
+  isBot?: boolean;
 }
 
 const sizeClasses = {
@@ -32,7 +33,7 @@ const getColorFromName = (name: string) => {
   return bgColors[Math.abs(hash) % bgColors.length];
 };
 
-const ChatAvatar: React.FC<ChatAvatarProps> = ({ name, avatar, online, size = 'md' }) => {
+const ChatAvatar: React.FC<ChatAvatarProps> = ({ name, avatar, online, size = 'md', isBot }) => {
   return (
     <div className="relative flex-shrink-0">
       {avatar ? (
@@ -46,7 +47,15 @@ const ChatAvatar: React.FC<ChatAvatarProps> = ({ name, avatar, online, size = 'm
           {getInitials(name)}
         </div>
       )}
-      {online !== undefined && (
+      {isBot && (
+        <span className={cn(
+          'absolute -bottom-0.5 -right-0.5 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-[7px] font-bold',
+          size === 'sm' ? 'h-3.5 w-3.5' : size === 'md' ? 'h-4 w-4' : 'h-5 w-5'
+        )}>
+          B
+        </span>
+      )}
+      {!isBot && online !== undefined && (
         <span className={cn(
           'absolute bottom-0 right-0 rounded-full border-card',
           dotSizes[size],
