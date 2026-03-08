@@ -121,8 +121,8 @@ const InfoPanel: React.FC = () => {
   );
 };
 
-const InfoButton: React.FC<{ icon: React.ElementType; label: string; detail: string }> = ({ icon: Icon, label, detail }) => (
-  <button className="flex items-center gap-3 w-full px-4 py-2.5 rounded-lg hover:bg-tg-hover transition-colors text-sm">
+const InfoButton: React.FC<{ icon: React.ElementType; label: string; detail: string; onClick?: () => void }> = ({ icon: Icon, label, detail, onClick }) => (
+  <button onClick={onClick} className="flex items-center gap-3 w-full px-4 py-2.5 rounded-lg hover:bg-tg-hover transition-colors text-sm">
     <Icon className="h-4 w-4 text-muted-foreground" />
     <span className="flex-1 text-left">{label}</span>
     <span className="text-muted-foreground text-xs">{detail}</span>
