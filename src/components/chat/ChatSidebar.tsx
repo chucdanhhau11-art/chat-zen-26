@@ -46,8 +46,8 @@ const ChatSidebar: React.FC = () => {
   const prevUnreadRef = useRef<Record<string, number>>({});
   const prevPendingCountRef = useRef(0);
 
-  // Friend request notifications
-  const { pendingRequests, friends, friendships } = useChatContext();
+  // Destructured above already
+  
 
   useEffect(() => {
     if (pendingRequests.length > prevPendingCountRef.current) {
