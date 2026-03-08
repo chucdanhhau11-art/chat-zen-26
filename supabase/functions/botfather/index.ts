@@ -417,7 +417,7 @@ serve(async (req) => {
                   const { data: b } = await supabase.from("bots").select("status").eq("id", botId).single();
                   const ns = b?.status === 'active' ? 'disabled' : 'active';
                   await supabase.from("bots").update({ status: ns }).eq("id", botId).eq("owner_id", caller.id);
-                  responseText = ns === 'active' ? "🟢 Bot has been enabled." : "🔴 Bot has been disabled.";
+                  responseText = ns === 'active' ? "🟢 Bot đã được bật." : "🔴 Bot đã bị tắt.";
                   break;
                 }
                 case "delete":
