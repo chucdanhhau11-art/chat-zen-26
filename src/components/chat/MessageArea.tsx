@@ -444,7 +444,13 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
                     onContextMenu={(e) => handleMessageContextMenu(e, msg)}
                   >
                     {!isOwn && activeConversation.type !== 'private' && showAvatar && (
-                      <p className="text-xs font-medium text-primary mb-0.5 cursor-pointer" onClick={() => setViewProfileId(msg.sender_id)}>{sender?.display_name}</p>
+                      <p className="text-xs font-medium text-primary mb-0.5 cursor-pointer" onClick={() => setViewProfileId(msg.sender_id)}>
+                        {sender?.display_name}
+                        {sender?.is_bot && <span className="ml-1 text-[9px] px-1 py-0.5 rounded bg-primary/10 text-primary font-bold uppercase">BOT</span>}
+                      </p>
+                    )}
+                    {!isOwn && activeConversation.type === 'private' && sender?.is_bot && (
+                      <p className="text-[9px] font-bold text-primary/60 mb-0.5 uppercase tracking-wider">BOT</p>
                     )}
                     {/* Reply preview */}
                     {repliedMsg && (
