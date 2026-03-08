@@ -717,7 +717,7 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
                       </div>
                     )}
                     {msg.message_type === 'text' ? (
-                      <p className="whitespace-pre-wrap break-words">{renderContent(msg.content)}</p>
+                      <p className="whitespace-pre-wrap break-words">{renderContent(msg.content, msgSearchQuery)}</p>
                     ) : msg.message_type === 'bot_message' ? (
                       <div>
                         <p className="whitespace-pre-wrap break-words">{renderContent(msg.content)}</p>
