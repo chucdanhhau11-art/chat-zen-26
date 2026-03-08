@@ -300,8 +300,11 @@ const MessageArea: React.FC = () => {
   return (
     <div className="flex-1 flex flex-col bg-tg-chat h-full">
       {/* Header */}
-      <div className="flex items-center gap-3 px-4 py-3 border-b border-border bg-tg-sidebar">
-        <div className="cursor-pointer" onClick={handleAvatarClick}>
+      <div className="flex items-center gap-2 px-3 py-3 border-b border-border bg-tg-sidebar">
+        <button onClick={() => setMobileShowingChat(false)} className="p-2 rounded-lg hover:bg-tg-hover transition-colors md:hidden flex-shrink-0">
+          <ArrowLeft className="h-5 w-5 text-muted-foreground" />
+        </button>
+        <div className="cursor-pointer flex-shrink-0" onClick={handleAvatarClick}>
           <ChatAvatar name={getConvName()} online={getOtherOnline()} size="sm" />
         </div>
         <div className="flex-1 min-w-0 cursor-pointer" onClick={toggleInfoPanel}>
