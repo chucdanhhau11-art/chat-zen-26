@@ -103,14 +103,6 @@ const NewChatDialog: React.FC<NewChatDialogProps> = ({ onClose }) => {
           >
             <Users className="h-3.5 w-3.5" /> Tạo nhóm / Group
           </button>
-          <button
-            onClick={() => setTab('search')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-              tab === 'search' ? 'bg-primary text-primary-foreground' : 'hover:bg-tg-hover text-muted-foreground'
-            }`}
-          >
-            <Search className="h-3.5 w-3.5" /> Tìm kiếm / Search
-          </button>
         </div>
 
         {/* Pending friend requests */}
