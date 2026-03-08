@@ -45,7 +45,7 @@ const TransferOwnerDialog: React.FC<TransferOwnerDialogProps> = ({ open, onClose
             >
               <ChatAvatar
                 name={m.profile?.display_name || 'User'}
-                avatarUrl={m.profile?.avatar_url || undefined}
+                avatar={m.profile?.avatar_url || undefined}
                 size="sm"
               />
               <span className="font-medium">{m.profile?.display_name || 'User'}</span>
