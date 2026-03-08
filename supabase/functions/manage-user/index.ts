@@ -42,10 +42,31 @@ serve(async (req) => {
       });
     }
 
-    const { action, userId } = await req.json();
+    const body = await req.json();
+    const { action } = body;
+
+    // List pending (unconfirmed) users
+    if (action === "list-pending") {
+      const { data: { users }, error } = await supabase.auth.admin.listUsers({ perPage: 1000 });
+      if (error) throw error;
+      
+      const pending = users
+        .filter(u => !u.email_confirmed_at && !u.banned_at)
+        .map(u => ({
+          id: u.id,
+          email: u.email,
+          created_at: u.created_at,
+          username: u.user_metadata?.username || u.email?.split('@')[0],
+          display_name: u.user_metadata?.display_name || u.email?.split('@')[0],
+        }));
+      
+      return new Response(JSON.stringify({ users: pending }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     if (action === "approve") {
-      // Confirm user's email using admin API
+      const { userId } = body;
       const { error } = await supabase.auth.admin.updateUserById(userId, {
         email_confirm: true,
       });
@@ -55,16 +76,51 @@ serve(async (req) => {
       });
     }
 
+    if (action === "reject") {
+      const { userId } = body;
+      // Delete the user entirely so they disappear from the queue
+      const { error } = await supabase.auth.admin.deleteUser(userId);
+      if (error) throw error;
+      // Also clean up profile and roles
+      await supabase.from("profiles").delete().eq("id", userId);
+      await supabase.from("user_roles").delete().eq("user_id", userId);
+      return new Response(JSON.stringify({ success: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     if (action === "ban") {
-      // Ban user
+      const { userId } = body;
       const { error } = await supabase.auth.admin.updateUserById(userId, {
-        ban_duration: "876600h", // ~100 years
+        ban_duration: "876600h",
       });
       if (error) throw error;
-      
-      // Also delete their profile
       await supabase.from("profiles").delete().eq("id", userId);
-      
+      return new Response(JSON.stringify({ success: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (action === "create") {
+      const { email, password, username, displayName, role } = body;
+      const { data: newUser, error } = await supabase.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true,
+        user_metadata: { username, display_name: displayName },
+      });
+      if (error) throw error;
+      if (role === "admin" && newUser.user) {
+        await supabase.from("user_roles").upsert({ user_id: newUser.user.id, role: "admin" }, { onConflict: "user_id" });
+      }
+      return new Response(JSON.stringify({ success: true, userId: newUser.user?.id }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (action === "set-role") {
+      const { userId, role } = body;
+      await supabase.from("user_roles").upsert({ user_id: userId, role }, { onConflict: "user_id" });
       return new Response(JSON.stringify({ success: true }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });

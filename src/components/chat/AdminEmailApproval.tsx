@@ -4,66 +4,66 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import ChatAvatar from './ChatAvatar';
 import { motion } from 'framer-motion';
-import type { Tables } from '@/integrations/supabase/types';
-
-type Profile = Tables<'profiles'>;
 
 interface PendingUser {
-  profile: Profile;
+  id: string;
   email: string;
-  confirmed: boolean;
+  username: string;
+  display_name: string;
+  created_at: string;
 }
 
 const AdminEmailApproval: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const [users, setUsers] = useState<PendingUser[]>([]);
   const [loading, setLoading] = useState(true);
+  const [processing, setProcessing] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchUsers();
+    fetchPendingUsers();
   }, []);
 
-  const fetchUsers = async () => {
+  const fetchPendingUsers = async () => {
     setLoading(true);
-    // Get all profiles
-    const { data: profilesData } = await supabase.from('profiles').select('*').order('created_at', { ascending: false });
-    
-    if (profilesData) {
-      // We show all users - admin can see their status
-      const userList: PendingUser[] = profilesData.map(p => ({
-        profile: p,
-        email: `${p.username}@...`, // We don't have direct access to email from profiles
-        confirmed: true, // Will be updated by edge function
-      }));
-      setUsers(userList);
+    try {
+      const { data, error } = await supabase.functions.invoke('manage-user', {
+        body: { action: 'list-pending' },
+      });
+      if (error) throw error;
+      setUsers(data?.users || []);
+    } catch (err: any) {
+      toast.error('Lỗi tải danh sách: ' + (err.message || 'Unknown'));
     }
     setLoading(false);
   };
 
   const handleApprove = async (userId: string) => {
+    setProcessing(userId);
     try {
-      // Call edge function to confirm user email
-      const { data, error } = await supabase.functions.invoke('manage-user', {
+      const { error } = await supabase.functions.invoke('manage-user', {
         body: { action: 'approve', userId },
       });
       if (error) throw error;
       toast.success('Đã duyệt tài khoản');
-      setUsers(prev => prev.map(u => u.profile.id === userId ? { ...u, confirmed: true } : u));
+      setUsers(prev => prev.filter(u => u.id !== userId));
     } catch (err: any) {
       toast.error('Lỗi: ' + (err.message || 'Unknown'));
     }
+    setProcessing(null);
   };
 
   const handleReject = async (userId: string) => {
+    setProcessing(userId);
     try {
-      const { data, error } = await supabase.functions.invoke('manage-user', {
-        body: { action: 'ban', userId },
+      const { error } = await supabase.functions.invoke('manage-user', {
+        body: { action: 'reject', userId },
       });
       if (error) throw error;
-      toast.success('Đã từ chối tài khoản');
-      setUsers(prev => prev.filter(u => u.profile.id !== userId));
+      toast.success('Đã từ chối và xoá tài khoản');
+      setUsers(prev => prev.filter(u => u.id !== userId));
     } catch (err: any) {
       toast.error('Lỗi: ' + (err.message || 'Unknown'));
     }
+    setProcessing(null);
   };
 
   return (
@@ -76,7 +76,7 @@ const AdminEmailApproval: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         <div className="flex items-center justify-between px-5 py-4 border-b border-border">
           <div className="flex items-center gap-2">
             <Mail className="h-5 w-5 text-primary" />
-            <h3 className="font-display font-semibold">Duyệt tài khoản</h3>
+            <h3 className="font-display font-semibold">Duyệt tài khoản đăng ký</h3>
           </div>
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-tg-hover transition-colors">
             <X className="h-4 w-4 text-muted-foreground" />
@@ -89,31 +89,35 @@ const AdminEmailApproval: React.FC<{ onClose: () => void }> = ({ onClose }) => {
               <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full" />
             </div>
           ) : users.length === 0 ? (
-            <p className="text-center text-muted-foreground text-sm py-8">Không có tài khoản nào</p>
+            <div className="flex flex-col items-center py-8 text-muted-foreground">
+              <CheckCircle className="h-8 w-8 mb-2 opacity-30" />
+              <p className="text-sm">Không có tài khoản nào chờ duyệt</p>
+            </div>
           ) : (
             <div className="space-y-2">
               {users.map(u => (
-                <div key={u.profile.id} className="flex items-center gap-3 p-3 rounded-xl bg-secondary/50 hover:bg-secondary transition-colors">
-                  <ChatAvatar name={u.profile.display_name} online={u.profile.online ?? false} size="sm" />
+                <div key={u.id} className={`flex items-center gap-3 p-3 rounded-xl bg-secondary/50 hover:bg-secondary transition-colors ${processing === u.id ? 'opacity-50 pointer-events-none' : ''}`}>
+                  <ChatAvatar name={u.display_name} online={false} size="sm" />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{u.profile.display_name}</p>
-                    <p className="text-xs text-muted-foreground">@{u.profile.username}</p>
+                    <p className="text-sm font-medium truncate">{u.display_name}</p>
+                    <p className="text-xs text-muted-foreground">@{u.username}</p>
+                    <p className="text-[10px] text-primary/70">{u.email}</p>
                     <p className="text-[10px] text-muted-foreground">
-                      {new Date(u.profile.created_at).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                      {new Date(u.created_at).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                     </p>
                   </div>
                   <div className="flex items-center gap-1">
                     <button
-                      onClick={() => handleApprove(u.profile.id)}
+                      onClick={() => handleApprove(u.id)}
                       className="p-2 rounded-lg hover:bg-tg-hover transition-colors text-tg-online"
                       title="Duyệt"
                     >
                       <CheckCircle className="h-5 w-5" />
                     </button>
                     <button
-                      onClick={() => handleReject(u.profile.id)}
+                      onClick={() => handleReject(u.id)}
                       className="p-2 rounded-lg hover:bg-tg-hover transition-colors text-destructive"
-                      title="Từ chối"
+                      title="Từ chối & Xoá"
                     >
                       <XCircle className="h-5 w-5" />
                     </button>

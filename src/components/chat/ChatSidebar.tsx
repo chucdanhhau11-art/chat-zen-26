@@ -1,5 +1,5 @@
-import React from 'react';
-import { Search, Menu, Moon, Sun, Plus, Shield, Mail, User, Bookmark } from 'lucide-react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
+import { Search, Menu, Moon, Sun, Plus, Shield, Mail, User, Bookmark, Bell } from 'lucide-react';
 import { useChatContext } from '@/context/ChatContext';
 import { useAuth } from '@/context/AuthContext';
 import ChatAvatar from './ChatAvatar';
@@ -10,6 +10,7 @@ import type { Tables } from '@/integrations/supabase/types';
 import NewChatDialog from './NewChatDialog';
 import AdminEmailApproval from './AdminEmailApproval';
 import EditProfileDialog from './EditProfileDialog';
+import NotificationPanel, { type NotificationItem } from './NotificationPanel';
 
 type ConversationMember = Tables<'conversation_members'>;
 type Profile = Tables<'profiles'>;
@@ -36,6 +37,57 @@ const ChatSidebar: React.FC = () => {
   const [showMenu, setShowMenu] = React.useState(false);
   const [showEmailApproval, setShowEmailApproval] = React.useState(false);
   const [showEditProfile, setShowEditProfile] = React.useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const notifIdCounter = useRef(0);
+
+  // Listen for unread count changes to generate notifications
+  const prevUnreadRef = useRef<Record<string, number>>({});
+  
+  useEffect(() => {
+    // When conversations update with new unread, create notification entries
+    conversations.forEach(c => {
+      if (c.unreadCount > (prevUnreadRef.current[c.id] || 0) && c.lastMessage && c.lastMessage.sender_id !== user?.id) {
+        const convName = c.name === 'Saved Messages' ? '📌 Saved Messages' : c.name || (c.type === 'private' ? (() => {
+          const other = c.members.find(m => m.user_id !== user?.id);
+          return other ? (profiles[other.user_id]?.display_name || 'Unknown') : 'Chat';
+        })() : c.name || 'Chat');
+        
+        const senderName = profiles[c.lastMessage.sender_id]?.display_name || 'Unknown';
+        
+        notifIdCounter.current++;
+        const newNotif: NotificationItem = {
+          id: `notif-${notifIdCounter.current}-${Date.now()}`,
+          conversationId: c.id,
+          conversationName: convName,
+          senderName,
+          content: c.lastMessage.content || '📎 File',
+          timestamp: c.lastMessage.created_at,
+          read: false,
+        };
+        setNotifications(prev => [newNotif, ...prev].slice(0, 50));
+      }
+    });
+    const map: Record<string, number> = {};
+    conversations.forEach(c => { map[c.id] = c.unreadCount; });
+    prevUnreadRef.current = map;
+  }, [conversations, user, profiles]);
+
+  const totalUnreadNotifs = notifications.filter(n => !n.read).length;
+
+  const handleClickNotification = useCallback((notif: NotificationItem) => {
+    setNotifications(prev => prev.map(n => n.id === notif.id ? { ...n, read: true } : n));
+    setActiveConversation(notif.conversationId);
+    setShowNotifications(false);
+  }, [setActiveConversation]);
+
+  const handleMarkAllRead = useCallback(() => {
+    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+  }, []);
+
+  const handleClearNotifications = useCallback(() => {
+    setNotifications([]);
+  }, []);
 
   const getConversationName = (conv: ConversationWithDetails) => {
     if (conv.name === 'Saved Messages') return '📌 Saved Messages';
@@ -119,6 +171,16 @@ const ChatSidebar: React.FC = () => {
           <input type="text" placeholder="Tìm kiếm..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
             className="w-full bg-secondary rounded-xl pl-9 pr-4 py-2 text-sm outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-primary/30 transition-all" />
         </div>
+        <div className="relative">
+          <button onClick={() => setShowNotifications(true)} className="p-2 rounded-lg hover:bg-tg-hover transition-colors relative">
+            <Bell className="h-5 w-5 text-muted-foreground" />
+            {totalUnreadNotifs > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 bg-tg-unread text-primary-foreground text-[9px] font-bold rounded-full min-w-[16px] h-4 flex items-center justify-center px-1">
+                {totalUnreadNotifs}
+              </span>
+            )}
+          </button>
+        </div>
         <button onClick={toggleDarkMode} className="p-2 rounded-lg hover:bg-tg-hover transition-colors">
           {darkMode ? <Sun className="h-5 w-5 text-muted-foreground" /> : <Moon className="h-5 w-5 text-muted-foreground" />}
         </button>
@@ -197,6 +259,17 @@ const ChatSidebar: React.FC = () => {
       {showNewChat && <NewChatDialog onClose={() => setShowNewChat(false)} />}
       {showEmailApproval && <AdminEmailApproval onClose={() => setShowEmailApproval(false)} />}
       {showEditProfile && <EditProfileDialog onClose={() => setShowEditProfile(false)} />}
+      <AnimatePresence>
+        {showNotifications && (
+          <NotificationPanel
+            notifications={notifications}
+            onClose={() => setShowNotifications(false)}
+            onClear={handleClearNotifications}
+            onClickNotification={handleClickNotification}
+            onMarkAllRead={handleMarkAllRead}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 };
