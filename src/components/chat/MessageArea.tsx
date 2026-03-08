@@ -669,8 +669,7 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
     setContextMenu({ msg, x: Math.max(8, x), y: Math.max(8, y) });
   };
 
-  // Filter visible messages (not deleted_for me, not recalled, not from blocked users in groups)
-  const { isBlocked: isBlockedFn, isBlockedBy: isBlockedByFn } = useChatContext();
+  // Filter visible messages (not deleted_for me, not recalled, not from blocked users)
   const visibleMessages = messages.filter(m => {
     if (m.deleted && m.sender_id !== user?.id) return true;
     if (m.deleted_for && user && (m.deleted_for as string[]).includes(user.id)) return false;
