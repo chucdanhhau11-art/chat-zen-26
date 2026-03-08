@@ -4,12 +4,14 @@ import { useChatContext } from '@/context/ChatContext';
 import { useAuth } from '@/context/AuthContext';
 import ChatAvatar from './ChatAvatar';
 import ProfileViewDialog from './ProfileViewDialog';
+import MediaGalleryDialog from './MediaGalleryDialog';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const InfoPanel: React.FC = () => {
   const { activeConversation, showInfoPanel, toggleInfoPanel, profiles, deleteConversation, leaveGroup, messages } = useChatContext();
   const { user } = useAuth();
   const [viewProfileId, setViewProfileId] = useState<string | null>(null);
+  const [galleryTab, setGalleryTab] = useState<'media' | 'files' | null>(null);
 
   if (!activeConversation) return null;
 
