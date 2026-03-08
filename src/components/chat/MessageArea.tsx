@@ -103,9 +103,36 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
   const [headerMenu, setHeaderMenu] = useState(false);
   const [viewProfileId, setViewProfileId] = useState<string | null>(null);
   const [showMediaGallery, setShowMediaGallery] = useState(false);
+  const [showCommandSuggestions, setShowCommandSuggestions] = useState(false);
+  const [botCommands, setBotCommands] = useState<{ command: string; description: string }[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const prevMessagesLenRef = useRef(0);
+
+  // Fetch bot commands for the active conversation
+  useEffect(() => {
+    if (!activeConversation) { setBotCommands([]); return; }
+    const fetchBotCommands = async () => {
+      // Find bot members in this conversation
+      const botMembers = activeConversation.members.filter(m => profiles[m.user_id]?.is_bot);
+      if (botMembers.length === 0) { setBotCommands([]); return; }
+      // Get bot ids from profile ids
+      const { data: bots } = await supabase.from('bots').select('id, profile_id').in('profile_id', botMembers.map(m => m.user_id));
+      if (!bots || bots.length === 0) { setBotCommands([]); return; }
+      const { data: cmds } = await supabase.from('bot_commands').select('command, description').in('bot_id', bots.map(b => b.id));
+      setBotCommands((cmds || []).map(c => ({ command: c.command, description: c.description || '' })));
+    };
+    fetchBotCommands();
+  }, [activeConversation, profiles]);
+
+  // Show command suggestions when typing "/"
+  useEffect(() => {
+    if (input.startsWith('/') && botCommands.length > 0) {
+      setShowCommandSuggestions(true);
+    } else {
+      setShowCommandSuggestions(false);
+    }
+  }, [input, botCommands]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
