@@ -325,6 +325,70 @@ const ChatSidebar: React.FC = () => {
             ))}
           </AnimatePresence>
         )}
+
+        {/* User search results */}
+        {searchQuery.trim().length >= 2 && searchedUsers.length > 0 && (
+          <>
+            <div className="px-4 pt-2 pb-1">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                Người dùng / Users
+              </p>
+            </div>
+            {searchedUsers.map(p => {
+              const status = getFriendStatus(p.id);
+              return (
+                <div
+                  key={p.id}
+                  className="flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-tg-hover"
+                >
+                  <ChatAvatar name={p.display_name} online={p.online ?? false} size="md" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{p.display_name}</p>
+                    <p className="text-xs text-muted-foreground">@{p.username}</p>
+                  </div>
+                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                    {status === 'none' && (
+                      <button
+                        onClick={() => sendFriendRequest(p.id)}
+                        className="flex items-center gap-1 px-2 py-1 rounded-lg bg-primary text-primary-foreground text-[11px] font-medium hover:bg-primary/90 transition-colors"
+                      >
+                        <UserPlus className="h-3 w-3" /> Kết bạn
+                      </button>
+                    )}
+                    {status === 'sent' && (
+                      <span className="flex items-center gap-1 px-2 py-1 rounded-lg bg-muted text-muted-foreground text-[11px]">
+                        <Clock className="h-3 w-3" /> Đã gửi
+                      </span>
+                    )}
+                    {status === 'received' && (
+                      <button
+                        onClick={() => {
+                          const fs = getFriendshipWith(p.id);
+                          if (fs) acceptFriendRequest(fs.id);
+                        }}
+                        className="flex items-center gap-1 px-2 py-1 rounded-lg bg-primary text-primary-foreground text-[11px] font-medium hover:bg-primary/90 transition-colors"
+                      >
+                        <Check className="h-3 w-3" /> Chấp nhận
+                      </button>
+                    )}
+                    {status === 'friend' && (
+                      <span className="flex items-center gap-1 px-2 py-1 rounded-lg bg-primary/10 text-primary text-[11px]">
+                        <Check className="h-3 w-3" /> Bạn bè
+                      </span>
+                    )}
+                    <button
+                      onClick={() => handleUserChat(p.id)}
+                      className="p-1.5 rounded-lg hover:bg-tg-hover transition-colors"
+                      title="Nhắn tin / Message"
+                    >
+                      <MessageCircle className="h-3.5 w-3.5 text-muted-foreground" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </>
+        )}
       </div>
 
       {/* Footer */}
