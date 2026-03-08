@@ -186,7 +186,7 @@ interface MessageAreaProps {
 }
 
 const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
-  const { activeConversation, messages, sendMessage, toggleInfoPanel, profiles, loadingMessages, deleteConversation, leaveGroup, setMobileShowingChat, isBotFatherConversation, activeConversationId } = useChatContext();
+  const { activeConversation, messages, sendMessage, toggleInfoPanel, profiles, loadingMessages, deleteConversation, leaveGroup, setMobileShowingChat, isBotFatherConversation, activeConversationId, isBlocked: isBlockedFn, isBlockedBy: isBlockedByFn } = useChatContext();
   const { user } = useAuth();
   const [input, setInput] = useState('');
   const [uploading, setUploading] = useState(false);
