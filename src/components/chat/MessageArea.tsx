@@ -590,6 +590,53 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
         </div>
       </div>
 
+      {/* Search bar */}
+      <AnimatePresence>
+        {showSearch && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden border-b border-border bg-tg-sidebar"
+          >
+            <div className="flex items-center gap-2 px-3 py-2">
+              <Search className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+              <input
+                ref={searchInputRef}
+                value={msgSearchQuery}
+                onChange={e => setMsgSearchQuery(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && searchMatchIds.length > 0) {
+                    setSearchActiveIdx(prev => (prev - 1 + searchMatchIds.length) % searchMatchIds.length);
+                  } else if (e.key === 'Escape') {
+                    toggleSearch();
+                  }
+                }}
+                placeholder="Tìm tin nhắn..."
+                className="flex-1 bg-transparent text-sm outline-none text-foreground placeholder:text-muted-foreground"
+              />
+              {searchMatchIds.length > 0 && (
+                <span className="text-xs text-muted-foreground whitespace-nowrap">
+                  {searchActiveIdx + 1}/{searchMatchIds.length}
+                </span>
+              )}
+              {msgSearchQuery && searchMatchIds.length === 0 && (
+                <span className="text-xs text-muted-foreground">Không tìm thấy</span>
+              )}
+              <button onClick={() => setSearchActiveIdx(prev => (prev - 1 + searchMatchIds.length) % searchMatchIds.length)} disabled={searchMatchIds.length === 0} className="p-1 rounded hover:bg-tg-hover disabled:opacity-30">
+                <ChevronUp className="h-4 w-4 text-muted-foreground" />
+              </button>
+              <button onClick={() => setSearchActiveIdx(prev => (prev + 1) % searchMatchIds.length)} disabled={searchMatchIds.length === 0} className="p-1 rounded hover:bg-tg-hover disabled:opacity-30">
+                <ChevronDown className="h-4 w-4 text-muted-foreground" />
+              </button>
+              <button onClick={toggleSearch} className="p-1 rounded hover:bg-tg-hover">
+                <X className="h-4 w-4 text-muted-foreground" />
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Messages */}
       <div ref={messagesContainerRef} onScroll={handleMessagesScroll} className="relative flex-1 overflow-y-auto scrollbar-thin px-4 py-4 space-y-1">
         {loadingMessages ? (
