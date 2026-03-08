@@ -53,7 +53,7 @@ const AuthPage: React.FC = () => {
         toast.success('Đăng ký thành công! Tài khoản của bạn đang chờ Admin duyệt. Vui lòng đợi thông báo kích hoạt.');
       }
     }
-    setLoading(false);
+    setSubmitting(false);
   };
 
   return (
