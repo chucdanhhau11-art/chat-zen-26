@@ -62,12 +62,15 @@ const ChatSidebar: React.FC = () => {
         notifIdCounter.current++;
         const newNotif: NotificationItem = {
           id: `notif-fr-${notifIdCounter.current}-${Date.now()}`,
-          conversationId: '', // no conversation
+          conversationId: '',
           conversationName: '👥 Lời mời kết bạn / Friend Request',
           senderName,
           content: `${senderName} đã gửi lời mời kết bạn / sent you a friend request`,
           timestamp: req.created_at,
           read: false,
+          type: 'friend_request',
+          friendRequestId: req.id,
+          requesterId: req.requester_id,
         };
         setNotifications(prev => [newNotif, ...prev].slice(0, 50));
         try {
