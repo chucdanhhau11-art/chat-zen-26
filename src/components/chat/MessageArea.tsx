@@ -839,6 +839,14 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
 
       {viewProfileId && <ProfileViewDialog userId={viewProfileId} onClose={() => setViewProfileId(null)} />}
       {showMediaGallery && <MediaGalleryDialog onClose={() => setShowMediaGallery(false)} />}
+      {lightboxImage && (
+        <ImageLightbox
+          src={lightboxImage}
+          allImages={messages.filter(m => m.message_type === 'image' && m.file_url).map(m => ({ src: m.file_url!, alt: m.file_name || '' }))}
+          initialIndex={messages.filter(m => m.message_type === 'image' && m.file_url).findIndex(m => m.file_url === lightboxImage)}
+          onClose={() => setLightboxImage(null)}
+        />
+      )}
       {miniApp && (
         <MiniAppDialog
           url={miniApp.url}
