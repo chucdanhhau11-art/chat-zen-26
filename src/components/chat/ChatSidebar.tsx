@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { Search, Menu, Moon, Sun, Plus, Shield, Mail, User, Bookmark, Bell, Bot } from 'lucide-react';
+import { Search, Menu, Moon, Sun, Plus, Shield, Mail, User, Bookmark, Bell, Bot, UserPlus, Check, Clock, MessageCircle } from 'lucide-react';
 import { useChatContext } from '@/context/ChatContext';
 import { useAuth } from '@/context/AuthContext';
 import ChatAvatar from './ChatAvatar';
@@ -31,6 +31,7 @@ const ChatSidebar: React.FC = () => {
     conversations, activeConversationId, setActiveConversation,
     searchQuery, setSearchQuery, darkMode, toggleDarkMode,
     loadingConversations, profiles, ensureSavedMessages, openBotFatherChat,
+    allProfiles, createPrivateChat, friends, getFriendshipWith, sendFriendRequest, pendingRequests, acceptFriendRequest,
   } = useChatContext();
   const { user, signOut, isAdmin } = useAuth();
   const [showNewChat, setShowNewChat] = React.useState(false);
@@ -45,8 +46,8 @@ const ChatSidebar: React.FC = () => {
   const prevUnreadRef = useRef<Record<string, number>>({});
   const prevPendingCountRef = useRef(0);
 
-  // Friend request notifications
-  const { pendingRequests, friends, friendships } = useChatContext();
+  // Destructured above already
+  
 
   useEffect(() => {
     if (pendingRequests.length > prevPendingCountRef.current) {
@@ -148,11 +149,32 @@ const ChatSidebar: React.FC = () => {
     return undefined;
   };
 
+  // User search results (only when searching)
+  const searchedUsers = searchQuery.trim().length >= 2
+    ? allProfiles.filter(p =>
+        p.id !== user?.id && !p.is_bot &&
+        (p.display_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+         p.username.toLowerCase().includes(searchQuery.toLowerCase()))
+      )
+    : [];
+
+  const getFriendStatus = (userId: string) => {
+    const fs = getFriendshipWith(userId);
+    if (!fs) return 'none';
+    if (fs.status === 'accepted') return 'friend';
+    if (fs.status === 'pending' && fs.requester_id === user?.id) return 'sent';
+    if (fs.status === 'pending' && fs.addressee_id === user?.id) return 'received';
+    return 'none';
+  };
+
+  const handleUserChat = async (userId: string) => {
+    const convId = await createPrivateChat(userId);
+    if (convId) setActiveConversation(convId);
+  };
+
   const filtered = conversations.filter(c => {
     if (!getConversationName(c).toLowerCase().includes(searchQuery.toLowerCase())) return false;
-    // Hide private chats with no messages (except Saved Messages) so the other user only sees it after a message is sent
     if (c.type === 'private' && c.name !== 'Saved Messages' && !c.lastMessage) {
-      // Only show to the creator
       if (c.created_by !== user?.id) return false;
     }
     return true;
@@ -302,6 +324,70 @@ const ChatSidebar: React.FC = () => {
               </motion.div>
             ))}
           </AnimatePresence>
+        )}
+
+        {/* User search results */}
+        {searchQuery.trim().length >= 2 && searchedUsers.length > 0 && (
+          <>
+            <div className="px-4 pt-2 pb-1">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                Người dùng / Users
+              </p>
+            </div>
+            {searchedUsers.map(p => {
+              const status = getFriendStatus(p.id);
+              return (
+                <div
+                  key={p.id}
+                  className="flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-tg-hover"
+                >
+                  <ChatAvatar name={p.display_name} online={p.online ?? false} size="md" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{p.display_name}</p>
+                    <p className="text-xs text-muted-foreground">@{p.username}</p>
+                  </div>
+                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                    {status === 'none' && (
+                      <button
+                        onClick={() => sendFriendRequest(p.id)}
+                        className="flex items-center gap-1 px-2 py-1 rounded-lg bg-primary text-primary-foreground text-[11px] font-medium hover:bg-primary/90 transition-colors"
+                      >
+                        <UserPlus className="h-3 w-3" /> Kết bạn
+                      </button>
+                    )}
+                    {status === 'sent' && (
+                      <span className="flex items-center gap-1 px-2 py-1 rounded-lg bg-muted text-muted-foreground text-[11px]">
+                        <Clock className="h-3 w-3" /> Đã gửi
+                      </span>
+                    )}
+                    {status === 'received' && (
+                      <button
+                        onClick={() => {
+                          const fs = getFriendshipWith(p.id);
+                          if (fs) acceptFriendRequest(fs.id);
+                        }}
+                        className="flex items-center gap-1 px-2 py-1 rounded-lg bg-primary text-primary-foreground text-[11px] font-medium hover:bg-primary/90 transition-colors"
+                      >
+                        <Check className="h-3 w-3" /> Chấp nhận
+                      </button>
+                    )}
+                    {status === 'friend' && (
+                      <span className="flex items-center gap-1 px-2 py-1 rounded-lg bg-primary/10 text-primary text-[11px]">
+                        <Check className="h-3 w-3" /> Bạn bè
+                      </span>
+                    )}
+                    <button
+                      onClick={() => handleUserChat(p.id)}
+                      className="p-1.5 rounded-lg hover:bg-tg-hover transition-colors"
+                      title="Nhắn tin / Message"
+                    >
+                      <MessageCircle className="h-3.5 w-3.5 text-muted-foreground" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </>
         )}
       </div>
 

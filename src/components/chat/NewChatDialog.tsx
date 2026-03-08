@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Users, MessageCircle, Search, UserPlus, Check, Clock } from 'lucide-react';
+import { X, Users, MessageCircle, UserPlus, Check, Clock } from 'lucide-react';
 import { useChatContext } from '@/context/ChatContext';
 import { useAuth } from '@/context/AuthContext';
 import ChatAvatar from './ChatAvatar';
@@ -13,7 +13,7 @@ interface NewChatDialogProps {
 const NewChatDialog: React.FC<NewChatDialogProps> = ({ onClose }) => {
   const { allProfiles, createPrivateChat, createGroup, setActiveConversation, friends, getFriendshipWith, sendFriendRequest, pendingRequests, acceptFriendRequest, declineFriendRequest } = useChatContext();
   const { user } = useAuth();
-  const [tab, setTab] = useState<'private' | 'group' | 'search'>('private');
+  const [tab, setTab] = useState<'private' | 'group'>('private');
   const [groupName, setGroupName] = useState('');
   const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
   const [search, setSearch] = useState('');
@@ -26,11 +26,6 @@ const NewChatDialog: React.FC<NewChatDialogProps> = ({ onClose }) => {
     p.username.toLowerCase().includes(search.toLowerCase())
   );
 
-  // All users filtered by search (for search tab)
-  const filteredAll = otherProfiles.filter(p =>
-    p.display_name.toLowerCase().includes(search.toLowerCase()) ||
-    p.username.toLowerCase().includes(search.toLowerCase())
-  );
 
   const handlePrivateChat = async (userId: string) => {
     const convId = await createPrivateChat(userId);
@@ -108,14 +103,6 @@ const NewChatDialog: React.FC<NewChatDialogProps> = ({ onClose }) => {
           >
             <Users className="h-3.5 w-3.5" /> Tạo nhóm / Group
           </button>
-          <button
-            onClick={() => setTab('search')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-              tab === 'search' ? 'bg-primary text-primary-foreground' : 'hover:bg-tg-hover text-muted-foreground'
-            }`}
-          >
-            <Search className="h-3.5 w-3.5" /> Tìm kiếm / Search
-          </button>
         </div>
 
         {/* Pending friend requests */}
@@ -169,13 +156,12 @@ const NewChatDialog: React.FC<NewChatDialogProps> = ({ onClose }) => {
           </div>
         )}
 
-        {/* Search */}
         <div className="px-4 pt-3">
           <input
             type="text"
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder={tab === 'search' ? "Tìm người dùng / Search users..." : "Tìm bạn bè / Search friends..."}
+            placeholder="Tìm bạn bè / Search friends..."
             className="w-full bg-secondary rounded-xl px-4 py-2 text-sm outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-primary/30"
           />
         </div>
@@ -234,72 +220,6 @@ const NewChatDialog: React.FC<NewChatDialogProps> = ({ onClose }) => {
             </>
           )}
 
-          {tab === 'search' && (
-            <>
-              {filteredAll.length === 0 ? (
-                <p className="text-center text-muted-foreground text-sm py-4">Không tìm thấy / Not found</p>
-              ) : (
-                filteredAll.map(p => {
-                  const status = getFriendStatus(p.id);
-                  return (
-                    <div
-                      key={p.id}
-                      className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl transition-colors hover:bg-tg-hover"
-                    >
-                      <ChatAvatar name={p.display_name} online={p.online ?? false} size="sm" />
-                      <div className="flex-1 text-left min-w-0">
-                        <p className="text-sm font-medium truncate">{p.display_name}</p>
-                        <p className="text-xs text-muted-foreground">@{p.username}</p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {status === 'none' && (
-                          <button
-                            onClick={() => sendFriendRequest(p.id)}
-                            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors"
-                            title="Kết bạn / Add friend"
-                          >
-                            <UserPlus className="h-3.5 w-3.5" />
-                            Kết bạn
-                          </button>
-                        )}
-                        {status === 'sent' && (
-                          <span className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-muted text-muted-foreground text-xs">
-                            <Clock className="h-3.5 w-3.5" />
-                            Đã gửi / Sent
-                          </span>
-                        )}
-                        {status === 'received' && (
-                          <button
-                            onClick={() => {
-                              const fs = getFriendshipWith(p.id);
-                              if (fs) acceptFriendRequest(fs.id);
-                            }}
-                            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors"
-                          >
-                            <Check className="h-3.5 w-3.5" />
-                            Chấp nhận / Accept
-                          </button>
-                        )}
-                        {status === 'friend' && (
-                          <span className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-primary/10 text-primary text-xs">
-                            <Check className="h-3.5 w-3.5" />
-                            Bạn bè / Friends
-                          </span>
-                        )}
-                        <button
-                          onClick={() => handlePrivateChat(p.id)}
-                          className="p-1.5 rounded-lg hover:bg-tg-hover transition-colors"
-                          title="Nhắn tin / Message"
-                        >
-                          <MessageCircle className="h-4 w-4 text-muted-foreground" />
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-            </>
-          )}
         </div>
 
         {/* Group create button */}
