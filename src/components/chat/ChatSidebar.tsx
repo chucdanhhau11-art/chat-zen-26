@@ -37,6 +37,57 @@ const ChatSidebar: React.FC = () => {
   const [showMenu, setShowMenu] = React.useState(false);
   const [showEmailApproval, setShowEmailApproval] = React.useState(false);
   const [showEditProfile, setShowEditProfile] = React.useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const notifIdCounter = useRef(0);
+
+  // Listen for unread count changes to generate notifications
+  const prevUnreadRef = useRef<Record<string, number>>({});
+  
+  useEffect(() => {
+    // When conversations update with new unread, create notification entries
+    conversations.forEach(c => {
+      if (c.unreadCount > (prevUnreadRef.current[c.id] || 0) && c.lastMessage && c.lastMessage.sender_id !== user?.id) {
+        const convName = c.name === 'Saved Messages' ? '📌 Saved Messages' : c.name || (c.type === 'private' ? (() => {
+          const other = c.members.find(m => m.user_id !== user?.id);
+          return other ? (profiles[other.user_id]?.display_name || 'Unknown') : 'Chat';
+        })() : c.name || 'Chat');
+        
+        const senderName = profiles[c.lastMessage.sender_id]?.display_name || 'Unknown';
+        
+        notifIdCounter.current++;
+        const newNotif: NotificationItem = {
+          id: `notif-${notifIdCounter.current}-${Date.now()}`,
+          conversationId: c.id,
+          conversationName: convName,
+          senderName,
+          content: c.lastMessage.content || '📎 File',
+          timestamp: c.lastMessage.created_at,
+          read: false,
+        };
+        setNotifications(prev => [newNotif, ...prev].slice(0, 50));
+      }
+    });
+    const map: Record<string, number> = {};
+    conversations.forEach(c => { map[c.id] = c.unreadCount; });
+    prevUnreadRef.current = map;
+  }, [conversations, user, profiles]);
+
+  const totalUnreadNotifs = notifications.filter(n => !n.read).length;
+
+  const handleClickNotification = useCallback((notif: NotificationItem) => {
+    setNotifications(prev => prev.map(n => n.id === notif.id ? { ...n, read: true } : n));
+    setActiveConversation(notif.conversationId);
+    setShowNotifications(false);
+  }, [setActiveConversation]);
+
+  const handleMarkAllRead = useCallback(() => {
+    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+  }, []);
+
+  const handleClearNotifications = useCallback(() => {
+    setNotifications([]);
+  }, []);
 
   const getConversationName = (conv: ConversationWithDetails) => {
     if (conv.name === 'Saved Messages') return '📌 Saved Messages';
