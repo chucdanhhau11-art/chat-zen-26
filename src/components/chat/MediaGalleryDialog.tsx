@@ -2,13 +2,16 @@ import React, { useState } from 'react';
 import { X, FileText } from 'lucide-react';
 import { useChatContext } from '@/context/ChatContext';
 import { motion } from 'framer-motion';
+import ImageLightbox from './ImageLightbox';
 
 const MediaGalleryDialog: React.FC<{ onClose: () => void; defaultTab?: 'media' | 'files' }> = ({ onClose, defaultTab = 'media' }) => {
   const { messages } = useChatContext();
   const [tab, setTab] = useState<'media' | 'files'>(defaultTab);
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
 
   const mediaMessages = messages.filter(m => m.message_type === 'image' || m.message_type === 'video');
   const fileMessages = messages.filter(m => m.message_type === 'file');
+  const allImages = mediaMessages.filter(m => m.message_type === 'image' && m.file_url).map(m => ({ src: m.file_url!, alt: m.file_name || '' }));
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/60 backdrop-blur-sm" onClick={onClose}>
@@ -39,11 +42,13 @@ const MediaGalleryDialog: React.FC<{ onClose: () => void; defaultTab?: 'media' |
             ) : (
               <div className="grid grid-cols-3 gap-2">
                 {mediaMessages.map(m => (
-                  <div key={m.id} className="aspect-square rounded-lg overflow-hidden cursor-pointer hover:opacity-80 transition-opacity" onClick={() => window.open(m.file_url || '', '_blank')}>
+                  <div key={m.id} className="aspect-square rounded-lg overflow-hidden cursor-pointer hover:opacity-80 transition-opacity" onClick={() => {
+                    if (m.message_type === 'image') setLightboxUrl(m.file_url || '');
+                  }}>
                     {m.message_type === 'image' ? (
                       <img src={m.file_url || ''} alt="" className="w-full h-full object-cover" />
                     ) : (
-                      <video src={m.file_url || ''} className="w-full h-full object-cover" />
+                      <video src={m.file_url || ''} className="w-full h-full object-cover" controls />
                     )}
                   </div>
                 ))}
@@ -68,6 +73,14 @@ const MediaGalleryDialog: React.FC<{ onClose: () => void; defaultTab?: 'media' |
           )}
         </div>
       </motion.div>
+      {lightboxUrl && (
+        <ImageLightbox
+          src={lightboxUrl}
+          allImages={allImages}
+          initialIndex={allImages.findIndex(img => img.src === lightboxUrl)}
+          onClose={() => setLightboxUrl(null)}
+        />
+      )}
     </div>
   );
 };

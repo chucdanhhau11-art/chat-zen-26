@@ -13,6 +13,7 @@ import ProfileViewDialog from './ProfileViewDialog';
 import MediaGalleryDialog from './MediaGalleryDialog';
 import InlineResultsDropdown from './InlineResultsDropdown';
 import MiniAppDialog from './MiniAppDialog';
+import ImageLightbox from './ImageLightbox';
 import logoImg from '@/assets/logo.png';
 
 const isImageType = (type: string) => type.startsWith('image/');
@@ -38,7 +39,7 @@ const playNotificationSound = () => {
   } catch (e) {}
 };
 
-const MessageBubbleFile: React.FC<{ msg: any; isOwn: boolean }> = ({ msg, isOwn }) => {
+const MessageBubbleFile: React.FC<{ msg: any; isOwn: boolean; onImageClick?: (url: string) => void }> = ({ msg, isOwn, onImageClick }) => {
   const fileUrl = msg.file_url;
   const fileName = msg.file_name || 'file';
   const fileSize = msg.file_size;
@@ -47,7 +48,7 @@ const MessageBubbleFile: React.FC<{ msg: any; isOwn: boolean }> = ({ msg, isOwn 
   if (msgType === 'image' && fileUrl) {
     return (
       <div className="max-w-xs">
-        <img src={fileUrl} alt={fileName} className="rounded-lg max-w-full max-h-64 object-cover cursor-pointer" onClick={() => window.open(fileUrl, '_blank')} />
+        <img src={fileUrl} alt={fileName} className="rounded-lg max-w-full max-h-64 object-cover cursor-pointer" onClick={() => onImageClick?.(fileUrl)} />
         {msg.content && <p className="mt-1 whitespace-pre-wrap break-words text-sm">{msg.content}</p>}
       </div>
     );
@@ -111,6 +112,7 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
   const [inlineBotUsername, setInlineBotUsername] = useState('');
   const [showInlineResults, setShowInlineResults] = useState(false);
   const [miniApp, setMiniApp] = useState<{ url: string; botName: string; botId?: string } | null>(null);
+  const [lightboxImage, setLightboxImage] = useState<string | null>(null);
   const inlineDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -671,7 +673,7 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
                         })()}
                       </div>
                     ) : (
-                      <MessageBubbleFile msg={msg} isOwn={isOwn} />
+                      <MessageBubbleFile msg={msg} isOwn={isOwn} onImageClick={(url) => setLightboxImage(url)} />
                     )}
                     <div className={cn('flex items-center gap-1 mt-1', isOwn ? 'justify-end' : 'justify-start')}>
                       <span className="text-[10px] text-muted-foreground">{formatTime(new Date(msg.created_at))}</span>
@@ -837,6 +839,14 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
 
       {viewProfileId && <ProfileViewDialog userId={viewProfileId} onClose={() => setViewProfileId(null)} />}
       {showMediaGallery && <MediaGalleryDialog onClose={() => setShowMediaGallery(false)} />}
+      {lightboxImage && (
+        <ImageLightbox
+          src={lightboxImage}
+          allImages={messages.filter(m => m.message_type === 'image' && m.file_url).map(m => ({ src: m.file_url!, alt: m.file_name || '' }))}
+          initialIndex={messages.filter(m => m.message_type === 'image' && m.file_url).findIndex(m => m.file_url === lightboxImage)}
+          onClose={() => setLightboxImage(null)}
+        />
+      )}
       {miniApp && (
         <MiniAppDialog
           url={miniApp.url}
