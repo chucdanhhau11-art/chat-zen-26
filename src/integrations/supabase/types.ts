@@ -44,6 +44,13 @@ export type Database = {
             referencedRelation: "bots"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "bot_commands_bot_id_fkey"
+            columns: ["bot_id"]
+            isOneToOne: false
+            referencedRelation: "bots_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       bot_events: {
@@ -77,6 +84,13 @@ export type Database = {
             columns: ["bot_id"]
             isOneToOne: false
             referencedRelation: "bots"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bot_events_bot_id_fkey"
+            columns: ["bot_id"]
+            isOneToOne: false
+            referencedRelation: "bots_public"
             referencedColumns: ["id"]
           },
         ]
@@ -232,6 +246,13 @@ export type Database = {
             referencedRelation: "bots"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "inline_queries_bot_id_fkey"
+            columns: ["bot_id"]
+            isOneToOne: false
+            referencedRelation: "bots_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       inline_results: {
@@ -280,6 +301,13 @@ export type Database = {
             columns: ["bot_id"]
             isOneToOne: false
             referencedRelation: "bots"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inline_results_bot_id_fkey"
+            columns: ["bot_id"]
+            isOneToOne: false
+            referencedRelation: "bots_public"
             referencedColumns: ["id"]
           },
         ]
@@ -450,7 +478,50 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      bots_public: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string | null
+          owner_id: string | null
+          permissions: Json | null
+          profile_id: string | null
+          status: Database["public"]["Enums"]["bot_status"] | null
+          updated_at: string | null
+          webhook_url: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string | null
+          owner_id?: string | null
+          permissions?: Json | null
+          profile_id?: string | null
+          status?: Database["public"]["Enums"]["bot_status"] | null
+          updated_at?: string | null
+          webhook_url?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string | null
+          owner_id?: string | null
+          permissions?: Json | null
+          profile_id?: string | null
+          status?: Database["public"]["Enums"]["bot_status"] | null
+          updated_at?: string | null
+          webhook_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bots_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       has_role: {
