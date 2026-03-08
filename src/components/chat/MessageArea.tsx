@@ -13,6 +13,7 @@ import ProfileViewDialog from './ProfileViewDialog';
 import MediaGalleryDialog from './MediaGalleryDialog';
 import InlineResultsDropdown from './InlineResultsDropdown';
 import MiniAppDialog from './MiniAppDialog';
+import ImageLightbox from './ImageLightbox';
 import logoImg from '@/assets/logo.png';
 
 const isImageType = (type: string) => type.startsWith('image/');
