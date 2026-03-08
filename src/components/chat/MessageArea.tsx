@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Send, Smile, Paperclip, Mic, MoreVertical, Phone, Video, Search, Info, X, FileText, Film, Image as ImageIcon, Reply, Trash2, RotateCcw, Eye, ImageIcon as GalleryIcon, ArrowLeft } from 'lucide-react';
+import { Send, Smile, Paperclip, Mic, MoreVertical, Phone, Video, Search, Info, X, FileText, Film, Image as ImageIcon, Reply, Trash2, RotateCcw, Eye, ImageIcon as GalleryIcon, ArrowLeft, ChevronDown } from 'lucide-react';
 import type { CallType } from '@/hooks/useWebRTC';
 import { useChatContext } from '@/context/ChatContext';
 import { useAuth } from '@/context/AuthContext';
@@ -113,8 +113,10 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
   const [showInlineResults, setShowInlineResults] = useState(false);
   const [miniApp, setMiniApp] = useState<{ url: string; botName: string; botId?: string } | null>(null);
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
+  const [showScrollBtn, setShowScrollBtn] = useState(false);
   const inlineDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const prevMessagesLenRef = useRef(0);
 
@@ -245,14 +247,22 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
     setInlineResults([]);
   }, [activeConversation, user]);
 
+  const scrollToBottom = useCallback((behavior: ScrollBehavior = 'smooth') => {
+    requestAnimationFrame(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior });
+    });
+  }, []);
+
+  const handleMessagesScroll = useCallback(() => {
+    const el = messagesContainerRef.current;
+    if (!el) return;
+    const distFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    setShowScrollBtn(distFromBottom > 200);
+  }, []);
+
   useEffect(() => {
-    // Only scroll to bottom when messages are loaded (not on reset to empty)
-    if (messages.length > 0) {
-      requestAnimationFrame(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-      });
-    }
-  }, [messages.length]);
+    if (messages.length > 0) scrollToBottom('smooth');
+  }, [messages.length, scrollToBottom]);
 
   useEffect(() => {
     if (messages.length > prevMessagesLenRef.current && prevMessagesLenRef.current > 0) {
@@ -553,7 +563,7 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto scrollbar-thin px-4 py-4 space-y-1">
+      <div ref={messagesContainerRef} onScroll={handleMessagesScroll} className="relative flex-1 overflow-y-auto scrollbar-thin px-4 py-4 space-y-1">
         {loadingMessages ? (
           <div className="flex items-center justify-center py-8">
             <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full" />
@@ -714,6 +724,22 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
           </AnimatePresence>
         )}
         <div ref={messagesEndRef} />
+
+        {/* Scroll to bottom button */}
+        <AnimatePresence>
+          {showScrollBtn && (
+            <motion.button
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.8 }}
+              onClick={() => scrollToBottom('smooth')}
+              className="sticky bottom-4 left-1/2 -translate-x-1/2 ml-auto mr-auto w-10 h-10 flex items-center justify-center bg-primary text-primary-foreground rounded-full shadow-lg hover:bg-primary/90 transition-colors z-10"
+              title="Về tin nhắn mới nhất"
+            >
+              <ChevronDown className="h-5 w-5" />
+            </motion.button>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Context menu for messages */}
