@@ -125,8 +125,15 @@ interface ChatContextType {
   acceptFriendRequest: (friendshipId: string) => Promise<void>;
   declineFriendRequest: (friendshipId: string) => Promise<void>;
   removeFriend: (friendshipId: string) => Promise<void>;
+  cancelFriendRequest: (friendshipId: string) => Promise<void>;
   getFriendshipWith: (userId: string) => Friendship | null;
   addMemberToGroup: (convId: string, userId: string) => Promise<void>;
+  // Block
+  blockUser: (userId: string) => Promise<void>;
+  unblockUser: (userId: string) => Promise<void>;
+  isBlocked: (userId: string) => boolean;
+  isBlockedBy: (userId: string) => boolean;
+  blockedUsers: string[];
 }
 
 const ChatContext = createContext<ChatContextType | null>(null);
