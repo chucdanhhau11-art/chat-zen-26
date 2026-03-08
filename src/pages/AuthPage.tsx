@@ -3,11 +3,11 @@ import { useAuth } from '@/context/AuthContext';
 import { motion } from 'framer-motion';
 import { Eye, EyeOff } from 'lucide-react';
 import logoImg from '@/assets/logo.png';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Navigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
 const AuthPage: React.FC = () => {
-  const { signIn, signUp } = useAuth();
+  const { user, loading: authLoading, signIn, signUp } = useAuth();
   const navigate = useNavigate();
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
@@ -15,11 +15,23 @@ const AuthPage: React.FC = () => {
   const [username, setUsername] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  if (authLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full" />
+      </div>
+    );
+  }
+
+  if (user) {
+    return <Navigate to="/" replace />;
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    setSubmitting(true);
     if (isLogin) {
       const { error } = await signIn(email, password);
       if (error) {
@@ -33,7 +45,7 @@ const AuthPage: React.FC = () => {
         navigate('/');
       }
     } else {
-      if (!username.trim() || !displayName.trim()) { toast.error('Vui lòng điền đầy đủ thông tin'); setLoading(false); return; }
+      if (!username.trim() || !displayName.trim()) { toast.error('Vui lòng điền đầy đủ thông tin'); setSubmitting(false); return; }
       const { error } = await signUp(email, password, username, displayName);
       if (error) {
         toast.error(error.message);
@@ -41,7 +53,7 @@ const AuthPage: React.FC = () => {
         toast.success('Đăng ký thành công! Tài khoản của bạn đang chờ Admin duyệt. Vui lòng đợi thông báo kích hoạt.');
       }
     }
-    setLoading(false);
+    setSubmitting(false);
   };
 
   return (
@@ -79,8 +91,8 @@ const AuthPage: React.FC = () => {
                 </button>
               </div>
             </div>
-            <button type="submit" disabled={loading} className="w-full bg-primary text-primary-foreground rounded-xl py-2.5 text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50">
-              {loading ? 'Đang xử lý...' : isLogin ? 'Đăng nhập' : 'Đăng ký'}
+            <button type="submit" disabled={submitting} className="w-full bg-primary text-primary-foreground rounded-xl py-2.5 text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50">
+              {submitting ? 'Đang xử lý...' : isLogin ? 'Đăng nhập' : 'Đăng ký'}
             </button>
           </form>
           <div className="mt-4 text-center">
