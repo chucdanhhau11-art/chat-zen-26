@@ -7,9 +7,11 @@ import ImageLightbox from './ImageLightbox';
 const MediaGalleryDialog: React.FC<{ onClose: () => void; defaultTab?: 'media' | 'files' }> = ({ onClose, defaultTab = 'media' }) => {
   const { messages } = useChatContext();
   const [tab, setTab] = useState<'media' | 'files'>(defaultTab);
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
 
   const mediaMessages = messages.filter(m => m.message_type === 'image' || m.message_type === 'video');
   const fileMessages = messages.filter(m => m.message_type === 'file');
+  const allImages = mediaMessages.filter(m => m.message_type === 'image' && m.file_url).map(m => ({ src: m.file_url!, alt: m.file_name || '' }));
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/60 backdrop-blur-sm" onClick={onClose}>
