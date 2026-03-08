@@ -458,6 +458,7 @@ const ChatSidebar: React.FC = () => {
       {showNewChat && <NewChatDialog onClose={() => setShowNewChat(false)} />}
       {showEmailApproval && <AdminEmailApproval onClose={() => setShowEmailApproval(false)} />}
       {showEditProfile && <EditProfileDialog onClose={() => setShowEditProfile(false)} />}
+      {viewProfileUserId && <ProfileViewDialog userId={viewProfileUserId} onClose={() => setViewProfileUserId(null)} />}
       <AnimatePresence>
         {showNotifications && (
           <NotificationPanel
@@ -469,6 +470,56 @@ const ChatSidebar: React.FC = () => {
             onAcceptFriend={handleAcceptFriend}
             onRejectFriend={handleRejectFriend}
           />
+        )}
+      </AnimatePresence>
+
+      {/* Blocked users dialog */}
+      <AnimatePresence>
+        {showBlockedList && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/60 backdrop-blur-sm" onClick={() => setShowBlockedList(false)}>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              onClick={e => e.stopPropagation()}
+              className="bg-card rounded-2xl border border-border shadow-xl w-full max-w-sm p-5"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-display font-semibold text-sm flex items-center gap-2">
+                  <Ban className="h-4 w-4 text-destructive" />
+                  Người dùng đã chặn / Blocked Users
+                </h3>
+                <button onClick={() => setShowBlockedList(false)} className="p-1.5 rounded-lg hover:bg-tg-hover transition-colors">
+                  <X className="h-4 w-4 text-muted-foreground" />
+                </button>
+              </div>
+              {blockedUsers.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-6">Chưa chặn ai / No blocked users</p>
+              ) : (
+                <div className="space-y-2 max-h-[50vh] overflow-y-auto">
+                  {blockedUsers.map(uid => {
+                    const p = profiles[uid];
+                    if (!p) return null;
+                    return (
+                      <div key={uid} className="flex items-center gap-3 px-3 py-2 rounded-xl bg-secondary/50">
+                        <ChatAvatar name={p.display_name} size="sm" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{p.display_name}</p>
+                          <p className="text-xs text-muted-foreground">@{p.username}</p>
+                        </div>
+                        <button
+                          onClick={() => unblockUser(uid)}
+                          className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-primary text-primary-foreground text-[11px] font-medium hover:bg-primary/90 transition-colors"
+                        >
+                          Bỏ chặn
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
     </div>
