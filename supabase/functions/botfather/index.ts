@@ -410,7 +410,7 @@ serve(async (req) => {
                 case "revoke": {
                   const newToken = generateToken();
                   await supabase.from("bots").update({ bot_token: newToken }).eq("id", botId).eq("owner_id", caller.id);
-                  responseText = `🔑 Token revoked! Your new token:\n\n\`${newToken}\`\n\nThe old token is no longer valid.`;
+                  responseText = `🔑 Token đã được đặt lại! Token mới:\n\n\`${newToken}\`\n\nToken cũ không còn hiệu lực.`;
                   break;
                 }
                 case "toggle": {
