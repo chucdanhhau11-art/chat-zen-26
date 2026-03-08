@@ -25,29 +25,50 @@ const playNotificationSound = () => {
   } catch (e) {}
 };
 
-// Request browser notification permission on load
-const requestNotificationPermission = () => {
-  if ('Notification' in window && Notification.permission === 'default') {
-    Notification.requestPermission();
+// Register service worker and request notification permission
+let swRegistration: ServiceWorkerRegistration | null = null;
+
+const registerServiceWorker = async () => {
+  if ('serviceWorker' in navigator) {
+    try {
+      swRegistration = await navigator.serviceWorker.register('/sw.js');
+      console.log('Service Worker registered');
+    } catch (e) {
+      console.warn('SW registration failed:', e);
+    }
   }
 };
 
-const showBrowserNotification = (title: string, body: string, onClick?: () => void) => {
-  if ('Notification' in window && Notification.permission === 'granted') {
-    const notif = new Notification(title, {
-      body,
-      icon: '/favicon.ico',
-      tag: 'chat-message',
-    });
-    if (onClick) {
-      notif.onclick = () => {
-        window.focus();
-        onClick();
-      };
-    }
-    // Auto close after 5s
-    setTimeout(() => notif.close(), 5000);
+const requestNotificationPermission = async () => {
+  if ('Notification' in window && Notification.permission === 'default') {
+    await Notification.requestPermission();
   }
+  await registerServiceWorker();
+};
+
+const showBrowserNotification = async (title: string, body: string) => {
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  
+  try {
+    // Use SW notification for mobile compatibility (works in background)
+    const reg = swRegistration || (await navigator.serviceWorker?.getRegistration());
+    if (reg) {
+      await reg.showNotification(title, {
+        body,
+        icon: '/favicon.ico',
+        tag: 'chat-message-' + Date.now(),
+        renotify: true,
+        vibrate: [200, 100, 200],
+      });
+      return;
+    }
+  } catch (e) {}
+  
+  // Fallback for desktop
+  try {
+    const notif = new Notification(title, { body, icon: '/favicon.ico', tag: 'chat-message' });
+    setTimeout(() => notif.close(), 5000);
+  } catch (e) {}
 };
 
 type Profile = Tables<'profiles'>;
