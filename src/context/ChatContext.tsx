@@ -25,6 +25,31 @@ const playNotificationSound = () => {
   } catch (e) {}
 };
 
+// Request browser notification permission on load
+const requestNotificationPermission = () => {
+  if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission();
+  }
+};
+
+const showBrowserNotification = (title: string, body: string, onClick?: () => void) => {
+  if ('Notification' in window && Notification.permission === 'granted') {
+    const notif = new Notification(title, {
+      body,
+      icon: '/favicon.ico',
+      tag: 'chat-message',
+    });
+    if (onClick) {
+      notif.onclick = () => {
+        window.focus();
+        onClick();
+      };
+    }
+    // Auto close after 5s
+    setTimeout(() => notif.close(), 5000);
+  }
+};
+
 type Profile = Tables<'profiles'>;
 type Conversation = Tables<'conversations'>;
 type ConversationMember = Tables<'conversation_members'>;
@@ -95,6 +120,11 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     document.documentElement.classList.toggle('dark', darkMode);
   }, [darkMode]);
+
+  // Request browser notification permission
+  useEffect(() => {
+    if (user) requestNotificationPermission();
+  }, [user]);
 
   // Fetch profiles once
   useEffect(() => {
@@ -178,6 +208,10 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
               [newMsg.conversation_id]: (prev[newMsg.conversation_id] || 0) + 1,
             }));
             playNotificationSound();
+            // Show browser notification
+            const senderProfile = profilesRef.current[newMsg.sender_id];
+            const senderName = senderProfile?.display_name || 'Tin nhắn mới';
+            showBrowserNotification(senderName, newMsg.content || '📎 File');
             // Update conversations to reflect new unread
             setConversations(prev => prev.map(c =>
               c.id === newMsg.conversation_id

@@ -21,11 +21,24 @@ const AuthPage: React.FC = () => {
     setLoading(true);
     if (isLogin) {
       const { error } = await signIn(email, password);
-      if (error) { toast.error(error.message); } else { toast.success('Đăng nhập thành công!'); navigate('/'); }
+      if (error) {
+        if (error.message?.toLowerCase().includes('email not confirmed')) {
+          toast.error('Tài khoản chưa được kích hoạt. Vui lòng chờ Admin duyệt tài khoản của bạn.');
+        } else {
+          toast.error(error.message);
+        }
+      } else {
+        toast.success('Đăng nhập thành công!');
+        navigate('/');
+      }
     } else {
       if (!username.trim() || !displayName.trim()) { toast.error('Vui lòng điền đầy đủ thông tin'); setLoading(false); return; }
       const { error } = await signUp(email, password, username, displayName);
-      if (error) { toast.error(error.message); } else { toast.success('Đăng ký thành công! Vui lòng kiểm tra email để xác nhận.'); }
+      if (error) {
+        toast.error(error.message);
+      } else {
+        toast.success('Đăng ký thành công! Tài khoản của bạn đang chờ Admin duyệt. Vui lòng đợi thông báo kích hoạt.');
+      }
     }
     setLoading(false);
   };
