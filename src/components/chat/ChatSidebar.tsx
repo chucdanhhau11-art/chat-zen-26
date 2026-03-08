@@ -79,6 +79,9 @@ const ChatSidebar: React.FC = () => {
           requesterId: req.requester_id,
         };
         setNotifications(prev => [newNotif, ...prev].slice(0, 50));
+        // Toast popup
+        toast(`👥 ${senderName}`, { description: 'đã gửi lời mời kết bạn', duration: 4000 });
+        // Sound
         try {
           const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
           const osc = audioCtx.createOscillator();
@@ -89,8 +92,9 @@ const ChatSidebar: React.FC = () => {
           gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15);
           osc.start(); osc.stop(audioCtx.currentTime + 0.15);
         } catch (e) {}
+        // Browser notification
         if ('Notification' in window && Notification.permission === 'granted') {
-          try { new Notification('Lời mời kết bạn / Friend Request', { body: `${senderName} đã gửi lời mời kết bạn`, icon: '/favicon.ico' }); } catch (e) {}
+          try { new Notification('Lời mời kết bạn', { body: `${senderName} đã gửi lời mời kết bạn`, icon: '/favicon.ico' }); } catch (e) {}
         }
       }
     }
