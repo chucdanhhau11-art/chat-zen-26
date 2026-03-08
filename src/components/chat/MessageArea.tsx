@@ -761,9 +761,19 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
 
       <input ref={fileInputRef} type="file" accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar" className="hidden" onChange={handleFileSelect} />
 
+      {/* Inline results dropdown */}
+      {showInlineResults && (
+        <InlineResultsDropdown
+          results={inlineResults}
+          botUsername={inlineBotUsername}
+          onSelectResult={handleSelectInlineResult}
+          onClose={() => { setShowInlineResults(false); setInlineResults([]); }}
+        />
+      )}
+
       {/* Command suggestions */}
       <AnimatePresence>
-        {showCommandSuggestions && (
+        {showCommandSuggestions && !showInlineResults && (
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -799,7 +809,7 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder={previewFile ? "Thêm chú thích..." : "Nhập tin nhắn..."}
+              placeholder={previewFile ? "Thêm chú thích..." : "Nhập tin nhắn hoặc @botname query..."}
               rows={1}
               className="w-full bg-secondary rounded-xl px-4 py-2.5 text-sm outline-none placeholder:text-muted-foreground resize-none focus:ring-2 focus:ring-primary/30 transition-all max-h-32"
               style={{ minHeight: '40px' }}
@@ -826,6 +836,15 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
 
       {viewProfileId && <ProfileViewDialog userId={viewProfileId} onClose={() => setViewProfileId(null)} />}
       {showMediaGallery && <MediaGalleryDialog onClose={() => setShowMediaGallery(false)} />}
+      {miniApp && (
+        <MiniAppDialog
+          url={miniApp.url}
+          botName={miniApp.botName}
+          chatId={activeConversation?.id}
+          botId={miniApp.botId}
+          onClose={() => setMiniApp(null)}
+        />
+      )}
     </div>
   );
 };
