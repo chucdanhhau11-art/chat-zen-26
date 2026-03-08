@@ -10,6 +10,7 @@ import type { Tables } from '@/integrations/supabase/types';
 import NewChatDialog from './NewChatDialog';
 import AdminEmailApproval from './AdminEmailApproval';
 import EditProfileDialog from './EditProfileDialog';
+import ProfileViewDialog from './ProfileViewDialog';
 import NotificationPanel, { type NotificationItem } from './NotificationPanel';
 
 type ConversationMember = Tables<'conversation_members'>;
