@@ -14,6 +14,7 @@ import MediaGalleryDialog from './MediaGalleryDialog';
 import InlineResultsDropdown from './InlineResultsDropdown';
 import MiniAppDialog from './MiniAppDialog';
 import ImageLightbox from './ImageLightbox';
+import TransferOwnerDialog from './TransferOwnerDialog';
 import logoImg from '@/assets/logo.png';
 
 const isImageType = (type: string) => type.startsWith('image/');
@@ -124,6 +125,7 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
   const [showInlineResults, setShowInlineResults] = useState(false);
   const [miniApp, setMiniApp] = useState<{ url: string; botName: string; botId?: string } | null>(null);
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
+  const [showTransferDialog, setShowTransferDialog] = useState(false);
   const [showScrollBtn, setShowScrollBtn] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [msgSearchQuery, setMsgSearchQuery] = useState('');
@@ -427,12 +429,33 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
     setHeaderMenu(false);
   };
 
+  // Determine ownership status for leave handling
+  const isOwner = user && activeConversation?.members.find(m => m.user_id === user.id)?.role === 'owner';
+  const otherMembers = (activeConversation?.members || []).filter(m => m.user_id !== user?.id).map(m => ({
+    ...m,
+    profile: profiles[m.user_id] || null,
+  }));
+
   const handleLeaveGroup = async () => {
     if (!activeConversation) return;
+    
+    // If owner and there are other members, show transfer dialog
+    if (isOwner && otherMembers.length > 0) {
+      setShowTransferDialog(true);
+      setHeaderMenu(false);
+      return;
+    }
+    
+    // If owner but no other members, or if not owner, just leave
     if (window.confirm('Rời khỏi nhóm này?')) {
       await leaveGroup(activeConversation.id);
     }
     setHeaderMenu(false);
+  };
+
+  const handleTransferAndLeave = async (newOwnerId: string) => {
+    if (!activeConversation) return;
+    await leaveGroup(activeConversation.id, newOwnerId);
   };
 
   const handleMessageContextMenu = (e: React.MouseEvent, msg: any) => {
@@ -1005,6 +1028,14 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
           chatId={activeConversation?.id}
           botId={miniApp.botId}
           onClose={() => setMiniApp(null)}
+        />
+      )}
+      {showTransferDialog && (
+        <TransferOwnerDialog
+          open={showTransferDialog}
+          onClose={() => setShowTransferDialog(false)}
+          members={otherMembers}
+          onTransferAndLeave={handleTransferAndLeave}
         />
       )}
     </div>

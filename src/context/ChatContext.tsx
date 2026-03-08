@@ -101,7 +101,7 @@ interface ChatContextType {
   createGroup: (name: string, memberIds: string[]) => Promise<string | null>;
   allProfiles: Profile[];
   deleteConversation: (convId: string) => Promise<void>;
-  leaveGroup: (convId: string) => Promise<void>;
+  leaveGroup: (convId: string, newOwnerId?: string) => Promise<void>;
   ensureSavedMessages: () => Promise<void>;
   isMobileShowingChat: boolean;
   setMobileShowingChat: (v: boolean) => void;
@@ -357,9 +357,19 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [user, activeConversationId]);
 
-  const leaveGroup = useCallback(async (convId: string) => {
+  const leaveGroup = useCallback(async (convId: string, newOwnerId?: string) => {
     if (!user) return;
     try {
+      // If transferring ownership, update the new owner's role first
+      if (newOwnerId) {
+        const { error: transferErr } = await supabase.from('conversation_members')
+          .update({ role: 'owner' as const })
+          .eq('conversation_id', convId)
+          .eq('user_id', newOwnerId);
+        if (transferErr) throw transferErr;
+        // Also update conversations.created_by so the new owner has delete rights
+        await supabase.from('conversations').update({ created_by: newOwnerId }).eq('id', convId);
+      }
       const { error } = await supabase.from('conversation_members').delete().eq('conversation_id', convId).eq('user_id', user.id);
       if (error) throw error;
       setConversations(prev => prev.filter(c => c.id !== convId));
