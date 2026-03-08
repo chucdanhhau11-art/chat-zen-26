@@ -97,6 +97,12 @@
   body {
     @apply bg-background text-foreground font-sans;
     font-family: 'Inter', system-ui, sans-serif;
+    overscroll-behavior: none;
+    -webkit-text-size-adjust: 100%;
+  }
+  html, body, #root {
+    height: 100%;
+    overflow: hidden;
   }
   h1, h2, h3, h4, h5, h6 {
     font-family: 'Space Grotesk', system-ui, sans-serif;

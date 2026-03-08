@@ -539,9 +539,11 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
           </div>
           <button className="p-2 rounded-lg hover:bg-tg-hover transition-colors flex-shrink-0"><Smile className="h-5 w-5 text-muted-foreground" /></button>
           {input.trim() || previewFile ? (
-            <motion.button
+           <motion.button
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
+              onMouseDown={(e) => e.preventDefault()}
+              onTouchStart={(e) => e.preventDefault()}
               onClick={handleSend}
               disabled={uploading}
               className="p-2.5 rounded-full bg-primary hover:bg-primary/90 transition-colors flex-shrink-0 disabled:opacity-50"
