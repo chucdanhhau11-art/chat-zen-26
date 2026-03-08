@@ -466,6 +466,7 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       recordingStreamRef.current = stream;
       audioChunksRef.current = [];
+      recordingCancelledRef.current = false;
       setRecordingCancelled(false);
 
       const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : 'audio/webm';
