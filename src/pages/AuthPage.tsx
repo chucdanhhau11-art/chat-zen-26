@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { motion } from 'framer-motion';
-import { Send, Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff } from 'lucide-react';
+import logoImg from '@/assets/logo.png';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
@@ -47,9 +48,7 @@ const AuthPage: React.FC = () => {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
-            <Send className="h-8 w-8 text-foreground" />
-          </div>
+          <img src={logoImg} alt="Chim Cu Gáy" className="w-20 h-20 mx-auto mb-4 drop-shadow-lg" />
           <h1 className="text-2xl font-display font-bold">Chim Cu Gáy</h1>
           <p className="text-muted-foreground text-sm mt-1">{isLogin ? 'Đăng nhập để tiếp tục' : 'Tạo tài khoản mới'}</p>
         </div>
