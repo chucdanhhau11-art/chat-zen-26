@@ -524,6 +524,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       profiles, createPrivateChat, createGroup, allProfiles,
       deleteConversation, leaveGroup, ensureSavedMessages,
       isMobileShowingChat, setMobileShowingChat, clearUnread,
+      openBotFatherChat, isBotFatherConversation,
     }}>
       {children}
     </ChatContext.Provider>
