@@ -421,12 +421,12 @@ serve(async (req) => {
                   break;
                 }
                 case "delete":
-                  responseText = "⚠️ Are you sure you want to delete this bot? This action cannot be undone.\n\nSend 'yes' to confirm or /cancel to abort.";
+                  responseText = "⚠️ Bạn có chắc muốn xoá bot này? Hành động này không thể hoàn tác.\n\nGửi 'yes' để xác nhận hoặc /cancel để huỷ.";
                   newState = "deletebot_confirm";
                   newStateData = { bot_id: botId };
                   break;
                 default:
-                  responseText = "Unknown action. Use /help for available commands.";
+                  responseText = "Hành động không xác định. Dùng /help để xem các lệnh có sẵn.";
               }
             } else {
               responseText = "Please select an action from the buttons above, or use /cancel.";
