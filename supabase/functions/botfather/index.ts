@@ -18,35 +18,35 @@ function generateToken(): string {
   }).join(":");
 }
 
-const HELP_TEXT = `🤖 **BotFather** - Bot Management System
+const HELP_TEXT = `🤖 **BotFather** - Hệ thống quản lý Bot
 
-I can help you create and manage bots. Here are the available commands:
+Tôi có thể giúp bạn tạo và quản lý bot. Dưới đây là các lệnh có sẵn:
 
-**Bot Creation & Management**
-/newbot - Create a new bot
-/mybots - List your bots
-/deletebot - Delete a bot
+**Tạo & Quản lý Bot**
+/newbot - Tạo bot mới
+/mybots - Danh sách bot của bạn
+/deletebot - Xoá bot
 
-**Bot Settings**
-/setname - Change bot display name
-/setdescription - Change bot description
-/setabouttext - Set bot about text
-/setcommands - Set bot commands
-/setwebhook - Configure webhook URL
-/setprivacy - Set privacy mode
+**Cài đặt Bot**
+/setname - Đổi tên hiển thị bot
+/setdescription - Đổi mô tả bot
+/setabouttext - Đặt giới thiệu bot
+/setcommands - Đặt danh sách lệnh bot
+/setwebhook - Cấu hình webhook URL
+/setprivacy - Cài đặt chế độ riêng tư
 
-**Token Management**
-/revoke - Reset bot API token
+**Quản lý Token**
+/revoke - Đặt lại token API của bot
 
-/help - Show this help message
-/start - Start interacting with BotFather`;
+/help - Hiện trợ giúp này
+/start - Bắt đầu tương tác với BotFather`;
 
-const WELCOME_TEXT = `🤖 Welcome to **BotFather**!
+const WELCOME_TEXT = `🤖 Chào mừng bạn đến với **BotFather**!
 
-I can help you create and manage bots for this platform.
+Tôi có thể giúp bạn tạo và quản lý bot trên nền tảng này.
 
-Use /newbot to create a new bot.
-Use /help to see all available commands.`;
+Dùng /newbot để tạo bot mới.
+Dùng /help để xem tất cả lệnh có sẵn.`;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -100,7 +100,7 @@ serve(async (req) => {
       await supabase.from("profiles").update({
         is_bot: true,
         online: true,
-        bio: "I am BotFather. I can help you create and manage bots.",
+        bio: "Tôi là BotFather. Tôi có thể giúp bạn tạo và quản lý bot.",
         display_name: "BotFather",
       }).eq("id", authData.user.id);
 
@@ -156,7 +156,7 @@ serve(async (req) => {
             break;
 
           case "/newbot":
-            responseText = "Alright, a new bot. How are we going to call it? Please choose a name for your bot.";
+            responseText = "Được rồi, tạo bot mới. Bạn muốn đặt tên gì cho bot? Hãy gửi tên cho bot của bạn.";
             newState = "creating_bot_name";
             break;
 
@@ -167,12 +167,12 @@ serve(async (req) => {
               .order("created_at", { ascending: false });
 
             if (!bots || bots.length === 0) {
-              responseText = "You don't have any bots yet. Use /newbot to create one.";
+              responseText = "Bạn chưa có bot nào. Dùng /newbot để tạo bot mới.";
             } else {
               const botList = bots.map((b: any, i: number) =>
-                `${i + 1}. **${b.profiles?.display_name}** (@${b.profiles?.username}) - ${b.status === 'active' ? '🟢 Active' : '🔴 Disabled'}`
+                `${i + 1}. **${b.profiles?.display_name}** (@${b.profiles?.username}) - ${b.status === 'active' ? '🟢 Hoạt động' : '🔴 Đã tắt'}`
               ).join("\n");
-              responseText = `📋 **Your Bots:**\n\n${botList}\n\nSelect a bot by sending its number, or use other commands.`;
+              responseText = `📋 **Bot của bạn:**\n\n${botList}\n\nChọn bot bằng cách gửi số thứ tự, hoặc dùng lệnh khác.`;
               newState = "selecting_bot";
               newStateData = { bots: bots.map((b: any) => ({ id: b.id, name: b.profiles?.display_name, username: b.profiles?.username })) };
               
@@ -188,52 +188,52 @@ serve(async (req) => {
           }
 
           case "/setname":
-            responseText = "Choose a bot to change its name. Send the bot username (e.g. @mybot)";
+            responseText = "Chọn bot để đổi tên. Gửi username của bot (ví dụ: @mybot)";
             newState = "setname_choose_bot";
             break;
 
           case "/setdescription":
-            responseText = "Choose a bot to change its description. Send the bot username (e.g. @mybot)";
+            responseText = "Chọn bot để đổi mô tả. Gửi username của bot (ví dụ: @mybot)";
             newState = "setdescription_choose_bot";
             break;
 
           case "/setabouttext":
-            responseText = "Choose a bot to set its about text. Send the bot username (e.g. @mybot)";
+            responseText = "Chọn bot để đặt giới thiệu. Gửi username của bot (ví dụ: @mybot)";
             newState = "setabouttext_choose_bot";
             break;
 
           case "/setcommands":
-            responseText = "Choose a bot to set its commands. Send the bot username (e.g. @mybot)";
+            responseText = "Chọn bot để đặt lệnh. Gửi username của bot (ví dụ: @mybot)";
             newState = "setcommands_choose_bot";
             break;
 
           case "/setwebhook":
-            responseText = "Choose a bot to configure its webhook. Send the bot username (e.g. @mybot)";
+            responseText = "Chọn bot để cấu hình webhook. Gửi username của bot (ví dụ: @mybot)";
             newState = "setwebhook_choose_bot";
             break;
 
           case "/setprivacy":
-            responseText = "Choose a bot to set privacy mode. Send the bot username (e.g. @mybot)";
+            responseText = "Chọn bot để cài đặt chế độ riêng tư. Gửi username của bot (ví dụ: @mybot)";
             newState = "setprivacy_choose_bot";
             break;
 
           case "/revoke":
-            responseText = "Choose a bot to revoke its token. Send the bot username (e.g. @mybot)";
+            responseText = "Chọn bot để đặt lại token. Gửi username của bot (ví dụ: @mybot)";
             newState = "revoke_choose_bot";
             break;
 
           case "/deletebot":
-            responseText = "Choose a bot to delete. Send the bot username (e.g. @mybot)\n\n⚠️ This action cannot be undone!";
+            responseText = "Chọn bot để xoá. Gửi username của bot (ví dụ: @mybot)\n\n⚠️ Hành động này không thể hoàn tác!";
             newState = "deletebot_choose_bot";
             break;
 
           case "/cancel":
-            responseText = "Command cancelled. Use /help to see available commands.";
+            responseText = "Đã huỷ lệnh. Dùng /help để xem các lệnh có sẵn.";
             newState = "idle";
             break;
 
           default:
-            responseText = `Unknown command: ${cmd}\n\nUse /help to see available commands.`;
+            responseText = `Lệnh không xác định: ${cmd}\n\nDùng /help để xem các lệnh có sẵn.`;
         }
       } else {
         // Process based on current state
@@ -241,13 +241,13 @@ serve(async (req) => {
           case "creating_bot_name":
             newState = "creating_bot_username";
             newStateData = { bot_name: text };
-            responseText = `Good. Now let's choose a username for your bot. It must end with "bot" (e.g. weatherbot, shop_bot).\n\nBot name: **${text}**`;
+            responseText = `Tốt lắm. Bây giờ hãy chọn username cho bot. Username phải kết thúc bằng "bot" (ví dụ: weatherbot, shop_bot).\n\nTên bot: **${text}**`;
             break;
 
           case "creating_bot_username": {
             const username = text.replace("@", "").toLowerCase().replace(/[^a-z0-9_]/g, "");
             if (!username.endsWith("bot")) {
-              responseText = "Sorry, the username must end with \"bot\". Please try again.";
+              responseText = "Username phải kết thúc bằng \"bot\". Vui lòng thử lại.";
               newState = "creating_bot_username";
               newStateData = stateData;
               break;
@@ -256,7 +256,7 @@ serve(async (req) => {
             // Check username uniqueness
             const { data: existingUser } = await supabase.from("profiles").select("id").eq("username", username).maybeSingle();
             if (existingUser) {
-              responseText = `Sorry, the username @${username} is already taken. Please try another one.`;
+              responseText = `Username @${username} đã được sử dụng. Vui lòng thử username khác.`;
               newState = "creating_bot_username";
               newStateData = stateData;
               break;
@@ -283,7 +283,7 @@ serve(async (req) => {
               });
 
               if (authErr) {
-                responseText = `Error creating bot: ${authErr.message}. Please try again.`;
+                responseText = `Lỗi tạo bot: ${authErr.message}. Vui lòng thử lại.`;
                 newState = "idle";
                 break;
               }
@@ -304,12 +304,12 @@ serve(async (req) => {
               }).select().single();
 
               if (botErr) {
-                responseText = `Error creating bot record: ${botErr.message}. Please try again.`;
+                responseText = `Lỗi tạo bản ghi bot: ${botErr.message}. Vui lòng thử lại.`;
                 newState = "idle";
                 break;
               }
 
-              responseText = `✅ Done! Congratulations on your new bot.\n\n🤖 **Name:** ${botName}\n👤 **Username:** @${username}\n\n🔑 **Your API Token:**\n\`${botToken}\`\n\nUse this token to access the Bot API.\nKeep your token secure and don't share it!\n\nFor a description of the Bot API, see /help.`;
+              responseText = `✅ Xong! Chúc mừng bạn đã tạo bot mới.\n\n🤖 **Tên:** ${botName}\n👤 **Username:** @${username}\n\n🔑 **Token API của bạn:**\n\`${botToken}\`\n\nDùng token này để truy cập Bot API.\nHãy giữ bí mật token và không chia sẻ!\n\nĐể xem hướng dẫn Bot API, dùng /help.`;
               newState = "idle";
               break;
             }
@@ -324,12 +324,12 @@ serve(async (req) => {
             });
 
             if (botErr) {
-              responseText = `Error: ${botErr.message}`;
+              responseText = `Lỗi: ${botErr.message}`;
               newState = "idle";
               break;
             }
 
-            responseText = `✅ Done! Congratulations on your new bot.\n\n🤖 **Name:** ${botName}\n👤 **Username:** @${username}\n\n🔑 **Your API Token:**\n\`${botToken}\`\n\nKeep your token secure!`;
+            responseText = `✅ Xong! Chúc mừng bạn đã tạo bot mới.\n\n🤖 **Tên:** ${botName}\n👤 **Username:** @${username}\n\n🔑 **Token API của bạn:**\n\`${botToken}\`\n\nHãy giữ bí mật token!`;
             newState = "idle";
             break;
           }
@@ -348,7 +348,7 @@ serve(async (req) => {
             }
 
             if (!selectedBotId) {
-              responseText = "Please send a valid bot number from the list, or use /cancel.";
+              responseText = "Vui lòng gửi số thứ tự hợp lệ từ danh sách, hoặc dùng /cancel.";
               newState = "selecting_bot";
               newStateData = stateData;
               break;
@@ -359,19 +359,19 @@ serve(async (req) => {
               .eq("id", selectedBotId).eq("owner_id", caller.id).single();
 
             if (!botDetail) {
-              responseText = "Bot not found or you don't own it.";
+              responseText = "Không tìm thấy bot hoặc bạn không sở hữu bot này.";
               break;
             }
 
             const statusEmoji = botDetail.status === 'active' ? '🟢' : '🔴';
-            responseText = `🤖 **${botDetail.profiles?.display_name}** (@${botDetail.profiles?.username})\n\n${statusEmoji} Status: ${botDetail.status}\n📝 Description: ${botDetail.description || 'Not set'}\n🌐 Webhook: ${botDetail.webhook_url || 'Not set'}\n\nWhat would you like to do?`;
+            responseText = `🤖 **${botDetail.profiles?.display_name}** (@${botDetail.profiles?.username})\n\n${statusEmoji} Trạng thái: ${botDetail.status === 'active' ? 'Hoạt động' : 'Đã tắt'}\n📝 Mô tả: ${botDetail.description || 'Chưa đặt'}\n🌐 Webhook: ${botDetail.webhook_url || 'Chưa đặt'}\n\nBạn muốn làm gì?`;
             
             replyMarkup = {
               inline_keyboard: [
-                [{ text: "✏️ Edit Name", callback_data: `action:setname:${selectedBotId}` }, { text: "📝 Edit Description", callback_data: `action:setdesc:${selectedBotId}` }],
-                [{ text: "🌐 Set Webhook", callback_data: `action:setwebhook:${selectedBotId}` }, { text: "⌨️ Set Commands", callback_data: `action:setcmds:${selectedBotId}` }],
-                [{ text: "🔑 Revoke Token", callback_data: `action:revoke:${selectedBotId}` }, { text: botDetail.status === 'active' ? "🔴 Disable" : "🟢 Enable", callback_data: `action:toggle:${selectedBotId}` }],
-                [{ text: "🗑️ Delete Bot", callback_data: `action:delete:${selectedBotId}` }],
+                [{ text: "✏️ Đổi tên", callback_data: `action:setname:${selectedBotId}` }, { text: "📝 Đổi mô tả", callback_data: `action:setdesc:${selectedBotId}` }],
+                [{ text: "🌐 Đặt Webhook", callback_data: `action:setwebhook:${selectedBotId}` }, { text: "⌨️ Đặt lệnh", callback_data: `action:setcmds:${selectedBotId}` }],
+                [{ text: "🔑 Đặt lại Token", callback_data: `action:revoke:${selectedBotId}` }, { text: botDetail.status === 'active' ? "🔴 Tắt bot" : "🟢 Bật bot", callback_data: `action:toggle:${selectedBotId}` }],
+                [{ text: "🗑️ Xoá Bot", callback_data: `action:delete:${selectedBotId}` }],
               ]
             };
             newState = "bot_actions";
@@ -388,48 +388,48 @@ serve(async (req) => {
 
               switch (actionType) {
                 case "setname":
-                  responseText = "Send me the new name for your bot.";
+                  responseText = "Gửi cho tôi tên mới cho bot của bạn.";
                   newState = "setname_input";
                   newStateData = { bot_id: botId };
                   break;
                 case "setdesc":
-                  responseText = "Send me the new description for your bot (or 'none' to remove).";
+                  responseText = "Gửi cho tôi mô tả mới cho bot (hoặc 'none' để xoá).";
                   newState = "setdescription_input";
                   newStateData = { bot_id: botId };
                   break;
                 case "setwebhook":
-                  responseText = "Send me the webhook URL (or 'none' to remove).";
+                  responseText = "Gửi cho tôi webhook URL (hoặc 'none' để xoá).";
                   newState = "setwebhook_input";
                   newStateData = { bot_id: botId };
                   break;
                 case "setcmds":
-                  responseText = "Send me the commands list. Each line should have:\ncommand - description\n\nExample:\nstart - Start the bot\nhelp - Show help\nnews - Get latest news\n\nSend 'none' to clear all commands.";
+                  responseText = "Gửi cho tôi danh sách lệnh. Mỗi dòng có dạng:\nlệnh - mô tả\n\nVí dụ:\nstart - Khởi động bot\nhelp - Hiện trợ giúp\nnews - Lấy tin mới nhất\n\nGửi 'none' để xoá tất cả lệnh.";
                   newState = "setcommands_input";
                   newStateData = { bot_id: botId };
                   break;
                 case "revoke": {
                   const newToken = generateToken();
                   await supabase.from("bots").update({ bot_token: newToken }).eq("id", botId).eq("owner_id", caller.id);
-                  responseText = `🔑 Token revoked! Your new token:\n\n\`${newToken}\`\n\nThe old token is no longer valid.`;
+                  responseText = `🔑 Token đã được đặt lại! Token mới:\n\n\`${newToken}\`\n\nToken cũ không còn hiệu lực.`;
                   break;
                 }
                 case "toggle": {
                   const { data: b } = await supabase.from("bots").select("status").eq("id", botId).single();
                   const ns = b?.status === 'active' ? 'disabled' : 'active';
                   await supabase.from("bots").update({ status: ns }).eq("id", botId).eq("owner_id", caller.id);
-                  responseText = ns === 'active' ? "🟢 Bot has been enabled." : "🔴 Bot has been disabled.";
+                  responseText = ns === 'active' ? "🟢 Bot đã được bật." : "🔴 Bot đã bị tắt.";
                   break;
                 }
                 case "delete":
-                  responseText = "⚠️ Are you sure you want to delete this bot? This action cannot be undone.\n\nSend 'yes' to confirm or /cancel to abort.";
+                  responseText = "⚠️ Bạn có chắc muốn xoá bot này? Hành động này không thể hoàn tác.\n\nGửi 'yes' để xác nhận hoặc /cancel để huỷ.";
                   newState = "deletebot_confirm";
                   newStateData = { bot_id: botId };
                   break;
                 default:
-                  responseText = "Unknown action. Use /help for available commands.";
+                  responseText = "Hành động không xác định. Dùng /help để xem các lệnh có sẵn.";
               }
             } else {
-              responseText = "Please select an action from the buttons above, or use /cancel.";
+              responseText = "Vui lòng chọn hành động từ các nút bên trên, hoặc dùng /cancel.";
               newState = "bot_actions";
               newStateData = stateData;
             }
@@ -448,13 +448,13 @@ serve(async (req) => {
             const uname = text.replace("@", "").toLowerCase();
             const { data: bp } = await supabase.from("profiles").select("id").eq("username", uname).maybeSingle();
             if (!bp) {
-              responseText = `Bot @${uname} not found. Please check the username and try again, or use /cancel.`;
+              responseText = `Không tìm thấy bot @${uname}. Vui lòng kiểm tra username và thử lại, hoặc dùng /cancel.`;
               newState = state;
               break;
             }
             const { data: foundBot } = await supabase.from("bots").select("id").eq("profile_id", bp.id).eq("owner_id", caller.id).maybeSingle();
             if (!foundBot) {
-              responseText = `You don't own a bot with username @${uname}. Use /mybots to see your bots.`;
+              responseText = `Bạn không sở hữu bot có username @${uname}. Dùng /mybots để xem danh sách bot.`;
               newState = state;
               break;
             }
@@ -462,39 +462,39 @@ serve(async (req) => {
             const baseState = state.replace("_choose_bot", "");
             switch (baseState) {
               case "setname":
-                responseText = `Bot @${uname} selected. Send me the new name.`;
+                responseText = `Đã chọn bot @${uname}. Gửi cho tôi tên mới.`;
                 newState = "setname_input";
                 newStateData = { bot_id: foundBot.id };
                 break;
               case "setdescription":
               case "setabouttext":
-                responseText = `Bot @${uname} selected. Send me the new description (or 'none' to remove).`;
+                responseText = `Đã chọn bot @${uname}. Gửi cho tôi mô tả mới (hoặc 'none' để xoá).`;
                 newState = "setdescription_input";
                 newStateData = { bot_id: foundBot.id };
                 break;
               case "setcommands":
-                responseText = `Bot @${uname} selected. Send me the commands list:\ncommand - description\n\nExample:\nstart - Start the bot\nhelp - Show help\n\nSend 'none' to clear all commands.`;
+                responseText = `Đã chọn bot @${uname}. Gửi danh sách lệnh:\nlệnh - mô tả\n\nVí dụ:\nstart - Khởi động bot\nhelp - Hiện trợ giúp\n\nGửi 'none' để xoá tất cả lệnh.`;
                 newState = "setcommands_input";
                 newStateData = { bot_id: foundBot.id };
                 break;
               case "setwebhook":
-                responseText = `Bot @${uname} selected. Send me the webhook URL (or 'none' to remove).`;
+                responseText = `Đã chọn bot @${uname}. Gửi cho tôi webhook URL (hoặc 'none' để xoá).`;
                 newState = "setwebhook_input";
                 newStateData = { bot_id: foundBot.id };
                 break;
               case "setprivacy":
-                responseText = `Bot @${uname} selected. Privacy mode:\n- **enabled**: bot only receives commands\n- **disabled**: bot receives all messages\n\nSend 'enabled' or 'disabled'.`;
+                responseText = `Đã chọn bot @${uname}. Chế độ riêng tư:\n- **enabled**: bot chỉ nhận lệnh\n- **disabled**: bot nhận tất cả tin nhắn\n\nGửi 'enabled' hoặc 'disabled'.`;
                 newState = "setprivacy_input";
                 newStateData = { bot_id: foundBot.id };
                 break;
               case "revoke": {
                 const newToken = generateToken();
                 await supabase.from("bots").update({ bot_token: newToken }).eq("id", foundBot.id);
-                responseText = `🔑 Token for @${uname} has been revoked.\n\nNew token:\n\`${newToken}\``;
+                responseText = `🔑 Token của @${uname} đã được đặt lại.\n\nToken mới:\n\`${newToken}\``;
                 break;
               }
               case "deletebot":
-                responseText = `⚠️ Are you sure you want to delete @${uname}? This cannot be undone.\n\nSend 'yes' to confirm or /cancel to abort.`;
+                responseText = `⚠️ Bạn có chắc muốn xoá @${uname}? Hành động này không thể hoàn tác.\n\nGửi 'yes' để xác nhận hoặc /cancel để huỷ.`;
                 newState = "deletebot_confirm";
                 newStateData = { bot_id: foundBot.id, username: uname };
                 break;
@@ -507,9 +507,9 @@ serve(async (req) => {
             const { data: bot } = await supabase.from("bots").select("profile_id").eq("id", stateData.bot_id).eq("owner_id", caller.id).single();
             if (bot) {
               await supabase.from("profiles").update({ display_name: text }).eq("id", bot.profile_id);
-              responseText = `✅ Bot name updated to: **${text}**`;
+              responseText = `✅ Đã cập nhật tên bot: **${text}**`;
             } else {
-              responseText = "Bot not found.";
+              responseText = "Không tìm thấy bot.";
             }
             break;
           }
@@ -520,9 +520,9 @@ serve(async (req) => {
             if (bot) {
               await supabase.from("profiles").update({ bio: desc }).eq("id", bot.profile_id);
               await supabase.from("bots").update({ description: desc }).eq("id", stateData.bot_id);
-              responseText = desc ? `✅ Description updated: ${desc}` : "✅ Description removed.";
+              responseText = desc ? `✅ Đã cập nhật mô tả: ${desc}` : "✅ Đã xoá mô tả.";
             } else {
-              responseText = "Bot not found.";
+              responseText = "Không tìm thấy bot.";
             }
             break;
           }
@@ -530,20 +530,20 @@ serve(async (req) => {
           case "setwebhook_input": {
             const url = text.toLowerCase() === 'none' ? null : text;
             if (url && !url.startsWith('http')) {
-              responseText = "Please send a valid URL starting with http:// or https://, or 'none' to remove.";
+              responseText = "Vui lòng gửi URL hợp lệ bắt đầu bằng http:// hoặc https://, hoặc 'none' để xoá.";
               newState = "setwebhook_input";
               newStateData = stateData;
               break;
             }
             await supabase.from("bots").update({ webhook_url: url }).eq("id", stateData.bot_id).eq("owner_id", caller.id);
-            responseText = url ? `✅ Webhook set to: ${url}` : "✅ Webhook removed.";
+            responseText = url ? `✅ Đã đặt webhook: ${url}` : "✅ Đã xoá webhook.";
             break;
           }
 
           case "setcommands_input": {
             if (text.toLowerCase() === 'none') {
               await supabase.from("bot_commands").delete().eq("bot_id", stateData.bot_id);
-              responseText = "✅ All commands have been cleared.";
+              responseText = "✅ Đã xoá tất cả lệnh.";
               break;
             }
             const lines = text.split("\n").filter(l => l.trim());
@@ -557,14 +557,14 @@ serve(async (req) => {
             if (cmds.length > 0) {
               await supabase.from("bot_commands").insert(cmds);
             }
-            responseText = `✅ Commands updated:\n\n${cmds.map(c => `${c.command} - ${c.description}`).join("\n")}`;
+            responseText = `✅ Đã cập nhật lệnh:\n\n${cmds.map(c => `${c.command} - ${c.description}`).join("\n")}`;
             break;
           }
 
           case "setprivacy_input": {
             const mode = text.toLowerCase();
             if (mode !== 'enabled' && mode !== 'disabled') {
-              responseText = "Please send 'enabled' or 'disabled'.";
+              responseText = "Vui lòng gửi 'enabled' hoặc 'disabled'.";
               newState = "setprivacy_input";
               newStateData = stateData;
               break;
@@ -573,7 +573,7 @@ serve(async (req) => {
               ? { read_messages: true, send_messages: true, delete_messages: false, manage_users: false }
               : { read_messages: false, send_messages: true, delete_messages: false, manage_users: false };
             await supabase.from("bots").update({ permissions: perms }).eq("id", stateData.bot_id).eq("owner_id", caller.id);
-            responseText = `✅ Privacy mode ${mode}. ${mode === 'enabled' ? 'Bot will only receive commands.' : 'Bot will receive all messages.'}`;
+            responseText = `✅ Chế độ riêng tư: ${mode}. ${mode === 'enabled' ? 'Bot chỉ nhận lệnh.' : 'Bot nhận tất cả tin nhắn.'}`;
             break;
           }
 
@@ -596,7 +596,7 @@ serve(async (req) => {
           }
 
           default:
-            responseText = "I don't understand. Use /help to see available commands.";
+            responseText = "Tôi không hiểu. Dùng /help để xem các lệnh có sẵn.";
         }
       }
 

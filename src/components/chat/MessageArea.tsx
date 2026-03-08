@@ -239,19 +239,19 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
     // BotFather has its own hardcoded commands
     if (isBotFather) {
       setBotCommands([
-        { command: '/start', description: 'Start interacting with BotFather' },
-        { command: '/help', description: 'Show all commands' },
-        { command: '/newbot', description: 'Create a new bot' },
-        { command: '/mybots', description: 'List your bots' },
-        { command: '/setname', description: 'Change bot name' },
-        { command: '/setdescription', description: 'Change bot description' },
-        { command: '/setabouttext', description: 'Set bot about text' },
-        { command: '/setcommands', description: 'Set bot commands' },
-        { command: '/setwebhook', description: 'Configure webhook URL' },
-        { command: '/setprivacy', description: 'Set privacy mode' },
-        { command: '/revoke', description: 'Reset bot token' },
-        { command: '/deletebot', description: 'Delete a bot' },
-        { command: '/cancel', description: 'Cancel current operation' },
+        { command: '/start', description: 'Bắt đầu tương tác với BotFather' },
+        { command: '/help', description: 'Hiện tất cả lệnh' },
+        { command: '/newbot', description: 'Tạo bot mới' },
+        { command: '/mybots', description: 'Danh sách bot của bạn' },
+        { command: '/setname', description: 'Đổi tên bot' },
+        { command: '/setdescription', description: 'Đổi mô tả bot' },
+        { command: '/setabouttext', description: 'Đặt giới thiệu bot' },
+        { command: '/setcommands', description: 'Đặt danh sách lệnh bot' },
+        { command: '/setwebhook', description: 'Cấu hình webhook URL' },
+        { command: '/setprivacy', description: 'Cài đặt chế độ riêng tư' },
+        { command: '/revoke', description: 'Đặt lại token bot' },
+        { command: '/deletebot', description: 'Xoá bot' },
+        { command: '/cancel', description: 'Huỷ thao tác hiện tại' },
       ]);
       return;
     }
