@@ -489,6 +489,28 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
     return true;
   });
 
+  // Message search logic
+  useEffect(() => {
+    if (!msgSearchQuery.trim()) { setSearchMatchIds([]); setSearchActiveIdx(0); return; }
+    const q = msgSearchQuery.toLowerCase();
+    const ids = visibleMessages.filter(m => m.content?.toLowerCase().includes(q)).map(m => m.id);
+    setSearchMatchIds(ids);
+    setSearchActiveIdx(ids.length > 0 ? ids.length - 1 : 0);
+  }, [msgSearchQuery, visibleMessages.length]);
+
+  useEffect(() => {
+    if (searchMatchIds.length > 0 && searchMatchIds[searchActiveIdx]) {
+      document.getElementById(`msg-${searchMatchIds[searchActiveIdx]}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [searchActiveIdx, searchMatchIds]);
+
+  const toggleSearch = useCallback(() => {
+    setShowSearch(prev => {
+      if (!prev) setTimeout(() => searchInputRef.current?.focus(), 100);
+      else { setMsgSearchQuery(''); setSearchMatchIds([]); }
+      return !prev;
+    });
+  }, []);
   return (
     <div className="flex-1 flex flex-col bg-tg-chat h-full">
       {/* Header */}
