@@ -201,6 +201,7 @@ serve(async (req) => {
 
     // ==================== processInlineQuery ====================
     // Called by the client when user types @botname query
+    // Can be called with bot_token OR bot_profile_id (for client-side calls)
     if (action === "processInlineQuery") {
       const { query, user_id, chat_id } = body;
 
