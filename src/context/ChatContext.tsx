@@ -101,7 +101,7 @@ interface ChatContextType {
   createGroup: (name: string, memberIds: string[]) => Promise<string | null>;
   allProfiles: Profile[];
   deleteConversation: (convId: string) => Promise<void>;
-  leaveGroup: (convId: string) => Promise<void>;
+  leaveGroup: (convId: string, newOwnerId?: string) => Promise<void>;
   ensureSavedMessages: () => Promise<void>;
   isMobileShowingChat: boolean;
   setMobileShowingChat: (v: boolean) => void;
