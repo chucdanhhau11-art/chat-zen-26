@@ -67,8 +67,19 @@ const ChatSidebar: React.FC = () => {
           read: false,
         };
         setNotifications(prev => [newNotif, ...prev].slice(0, 50));
-        playNotificationSound();
-        showBrowserNotification('Lời mời kết bạn / Friend Request', `${senderName} đã gửi lời mời kết bạn`);
+        try {
+          const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.connect(gain); gain.connect(audioCtx.destination);
+          osc.type = 'sine'; osc.frequency.setValueAtTime(1000, audioCtx.currentTime);
+          gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15);
+          osc.start(); osc.stop(audioCtx.currentTime + 0.15);
+        } catch (e) {}
+        if ('Notification' in window && Notification.permission === 'granted') {
+          try { new Notification('Lời mời kết bạn / Friend Request', { body: `${senderName} đã gửi lời mời kết bạn`, icon: '/favicon.ico' }); } catch (e) {}
+        }
       }
     }
     prevPendingCountRef.current = pendingRequests.length;
