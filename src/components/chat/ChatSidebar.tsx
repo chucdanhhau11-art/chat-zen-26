@@ -171,6 +171,16 @@ const ChatSidebar: React.FC = () => {
           <input type="text" placeholder="Tìm kiếm..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
             className="w-full bg-secondary rounded-xl pl-9 pr-4 py-2 text-sm outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-primary/30 transition-all" />
         </div>
+        <div className="relative">
+          <button onClick={() => setShowNotifications(true)} className="p-2 rounded-lg hover:bg-tg-hover transition-colors relative">
+            <Bell className="h-5 w-5 text-muted-foreground" />
+            {totalUnreadNotifs > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 bg-tg-unread text-primary-foreground text-[9px] font-bold rounded-full min-w-[16px] h-4 flex items-center justify-center px-1">
+                {totalUnreadNotifs}
+              </span>
+            )}
+          </button>
+        </div>
         <button onClick={toggleDarkMode} className="p-2 rounded-lg hover:bg-tg-hover transition-colors">
           {darkMode ? <Sun className="h-5 w-5 text-muted-foreground" /> : <Moon className="h-5 w-5 text-muted-foreground" />}
         </button>
