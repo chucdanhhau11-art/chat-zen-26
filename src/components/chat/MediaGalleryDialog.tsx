@@ -42,11 +42,13 @@ const MediaGalleryDialog: React.FC<{ onClose: () => void; defaultTab?: 'media' |
             ) : (
               <div className="grid grid-cols-3 gap-2">
                 {mediaMessages.map(m => (
-                  <div key={m.id} className="aspect-square rounded-lg overflow-hidden cursor-pointer hover:opacity-80 transition-opacity" onClick={() => window.open(m.file_url || '', '_blank')}>
+                  <div key={m.id} className="aspect-square rounded-lg overflow-hidden cursor-pointer hover:opacity-80 transition-opacity" onClick={() => {
+                    if (m.message_type === 'image') setLightboxUrl(m.file_url || '');
+                  }}>
                     {m.message_type === 'image' ? (
                       <img src={m.file_url || ''} alt="" className="w-full h-full object-cover" />
                     ) : (
-                      <video src={m.file_url || ''} className="w-full h-full object-cover" />
+                      <video src={m.file_url || ''} className="w-full h-full object-cover" controls />
                     )}
                   </div>
                 ))}
