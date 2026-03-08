@@ -462,39 +462,39 @@ serve(async (req) => {
             const baseState = state.replace("_choose_bot", "");
             switch (baseState) {
               case "setname":
-                responseText = `Bot @${uname} selected. Send me the new name.`;
+                responseText = `Đã chọn bot @${uname}. Gửi cho tôi tên mới.`;
                 newState = "setname_input";
                 newStateData = { bot_id: foundBot.id };
                 break;
               case "setdescription":
               case "setabouttext":
-                responseText = `Bot @${uname} selected. Send me the new description (or 'none' to remove).`;
+                responseText = `Đã chọn bot @${uname}. Gửi cho tôi mô tả mới (hoặc 'none' để xoá).`;
                 newState = "setdescription_input";
                 newStateData = { bot_id: foundBot.id };
                 break;
               case "setcommands":
-                responseText = `Bot @${uname} selected. Send me the commands list:\ncommand - description\n\nExample:\nstart - Start the bot\nhelp - Show help\n\nSend 'none' to clear all commands.`;
+                responseText = `Đã chọn bot @${uname}. Gửi danh sách lệnh:\nlệnh - mô tả\n\nVí dụ:\nstart - Khởi động bot\nhelp - Hiện trợ giúp\n\nGửi 'none' để xoá tất cả lệnh.`;
                 newState = "setcommands_input";
                 newStateData = { bot_id: foundBot.id };
                 break;
               case "setwebhook":
-                responseText = `Bot @${uname} selected. Send me the webhook URL (or 'none' to remove).`;
+                responseText = `Đã chọn bot @${uname}. Gửi cho tôi webhook URL (hoặc 'none' để xoá).`;
                 newState = "setwebhook_input";
                 newStateData = { bot_id: foundBot.id };
                 break;
               case "setprivacy":
-                responseText = `Bot @${uname} selected. Privacy mode:\n- **enabled**: bot only receives commands\n- **disabled**: bot receives all messages\n\nSend 'enabled' or 'disabled'.`;
+                responseText = `Đã chọn bot @${uname}. Chế độ riêng tư:\n- **enabled**: bot chỉ nhận lệnh\n- **disabled**: bot nhận tất cả tin nhắn\n\nGửi 'enabled' hoặc 'disabled'.`;
                 newState = "setprivacy_input";
                 newStateData = { bot_id: foundBot.id };
                 break;
               case "revoke": {
                 const newToken = generateToken();
                 await supabase.from("bots").update({ bot_token: newToken }).eq("id", foundBot.id);
-                responseText = `🔑 Token for @${uname} has been revoked.\n\nNew token:\n\`${newToken}\``;
+                responseText = `🔑 Token của @${uname} đã được đặt lại.\n\nToken mới:\n\`${newToken}\``;
                 break;
               }
               case "deletebot":
-                responseText = `⚠️ Are you sure you want to delete @${uname}? This cannot be undone.\n\nSend 'yes' to confirm or /cancel to abort.`;
+                responseText = `⚠️ Bạn có chắc muốn xoá @${uname}? Hành động này không thể hoàn tác.\n\nGửi 'yes' để xác nhận hoặc /cancel để huỷ.`;
                 newState = "deletebot_confirm";
                 newStateData = { bot_id: foundBot.id, username: uname };
                 break;
