@@ -563,7 +563,7 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto scrollbar-thin px-4 py-4 space-y-1">
+      <div ref={messagesContainerRef} onScroll={handleMessagesScroll} className="relative flex-1 overflow-y-auto scrollbar-thin px-4 py-4 space-y-1">
         {loadingMessages ? (
           <div className="flex items-center justify-center py-8">
             <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full" />
