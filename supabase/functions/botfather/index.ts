@@ -156,7 +156,7 @@ serve(async (req) => {
             break;
 
           case "/newbot":
-            responseText = "Alright, a new bot. How are we going to call it? Please choose a name for your bot.";
+            responseText = "Được rồi, tạo bot mới. Bạn muốn đặt tên gì cho bot? Hãy gửi tên cho bot của bạn.";
             newState = "creating_bot_name";
             break;
 
