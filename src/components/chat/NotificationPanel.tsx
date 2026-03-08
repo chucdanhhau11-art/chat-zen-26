@@ -1,9 +1,6 @@
 import React from 'react';
-import { X, Bell, MessageSquare } from 'lucide-react';
+import { X, Bell, MessageSquare, UserPlus, Check, XCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { useChatContext } from '@/context/ChatContext';
-import { useAuth } from '@/context/AuthContext';
-import ChatAvatar from './ChatAvatar';
 import { formatTime } from '@/lib/chatUtils';
 
 export interface NotificationItem {
@@ -14,6 +11,9 @@ export interface NotificationItem {
   content: string;
   timestamp: string;
   read: boolean;
+  type?: 'message' | 'friend_request';
+  friendRequestId?: string;
+  requesterId?: string;
 }
 
 interface NotificationPanelProps {
@@ -22,10 +22,13 @@ interface NotificationPanelProps {
   onClear: () => void;
   onClickNotification: (notif: NotificationItem) => void;
   onMarkAllRead: () => void;
+  onAcceptFriend?: (notif: NotificationItem) => void;
+  onRejectFriend?: (notif: NotificationItem) => void;
 }
 
 const NotificationPanel: React.FC<NotificationPanelProps> = ({
   notifications, onClose, onClear, onClickNotification, onMarkAllRead,
+  onAcceptFriend, onRejectFriend,
 }) => {
   const unreadCount = notifications.filter(n => !n.read).length;
 
@@ -75,15 +78,21 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({
           ) : (
             <div className="divide-y divide-border">
               {notifications.map(n => (
-                <button
+                <div
                   key={n.id}
-                  onClick={() => onClickNotification(n)}
                   className={`w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-tg-hover transition-colors ${!n.read ? 'bg-primary/5' : ''}`}
                 >
                   <div className="mt-0.5">
-                    <MessageSquare className={`h-4 w-4 ${!n.read ? 'text-primary' : 'text-muted-foreground'}`} />
+                    {n.type === 'friend_request' ? (
+                      <UserPlus className={`h-4 w-4 ${!n.read ? 'text-primary' : 'text-muted-foreground'}`} />
+                    ) : (
+                      <MessageSquare className={`h-4 w-4 ${!n.read ? 'text-primary' : 'text-muted-foreground'}`} />
+                    )}
                   </div>
-                  <div className="flex-1 min-w-0">
+                  <div
+                    className="flex-1 min-w-0 cursor-pointer"
+                    onClick={() => onClickNotification(n)}
+                  >
                     <div className="flex items-center gap-1.5">
                       <span className={`text-sm font-medium truncate ${!n.read ? 'text-foreground' : 'text-muted-foreground'}`}>
                         {n.senderName}
@@ -96,11 +105,27 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({
                     <p className={`text-xs mt-0.5 truncate ${!n.read ? 'text-foreground/80' : 'text-muted-foreground'}`}>
                       {n.content}
                     </p>
+                    {n.type === 'friend_request' && n.friendRequestId && (
+                      <div className="flex items-center gap-2 mt-2">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); onAcceptFriend?.(n); }}
+                          className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors"
+                        >
+                          <Check className="h-3 w-3" /> Chấp nhận
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); onRejectFriend?.(n); }}
+                          className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-destructive/10 text-destructive text-xs font-medium hover:bg-destructive/20 transition-colors"
+                        >
+                          <XCircle className="h-3 w-3" /> Từ chối
+                        </button>
+                      </div>
+                    )}
                   </div>
                   {!n.read && (
                     <div className="mt-2 w-2 h-2 rounded-full bg-primary flex-shrink-0" />
                   )}
-                </button>
+                </div>
               ))}
             </div>
           )}
