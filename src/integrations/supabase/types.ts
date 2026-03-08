@@ -14,6 +14,120 @@ export type Database = {
   }
   public: {
     Tables: {
+      bot_commands: {
+        Row: {
+          bot_id: string
+          command: string
+          created_at: string
+          description: string | null
+          id: string
+        }
+        Insert: {
+          bot_id: string
+          command: string
+          created_at?: string
+          description?: string | null
+          id?: string
+        }
+        Update: {
+          bot_id?: string
+          command?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bot_commands_bot_id_fkey"
+            columns: ["bot_id"]
+            isOneToOne: false
+            referencedRelation: "bots"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bot_events: {
+        Row: {
+          bot_id: string
+          created_at: string
+          event_type: string
+          id: string
+          payload: Json
+          processed: boolean
+        }
+        Insert: {
+          bot_id: string
+          created_at?: string
+          event_type: string
+          id?: string
+          payload?: Json
+          processed?: boolean
+        }
+        Update: {
+          bot_id?: string
+          created_at?: string
+          event_type?: string
+          id?: string
+          payload?: Json
+          processed?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bot_events_bot_id_fkey"
+            columns: ["bot_id"]
+            isOneToOne: false
+            referencedRelation: "bots"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bots: {
+        Row: {
+          bot_token: string
+          created_at: string
+          description: string | null
+          id: string
+          owner_id: string
+          permissions: Json
+          profile_id: string
+          status: Database["public"]["Enums"]["bot_status"]
+          updated_at: string
+          webhook_url: string | null
+        }
+        Insert: {
+          bot_token: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          owner_id: string
+          permissions?: Json
+          profile_id: string
+          status?: Database["public"]["Enums"]["bot_status"]
+          updated_at?: string
+          webhook_url?: string | null
+        }
+        Update: {
+          bot_token?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          owner_id?: string
+          permissions?: Json
+          profile_id?: string
+          status?: Database["public"]["Enums"]["bot_status"]
+          updated_at?: string
+          webhook_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bots_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       conversation_members: {
         Row: {
           conversation_id: string
@@ -165,6 +279,7 @@ export type Database = {
           created_at: string
           display_name: string
           id: string
+          is_bot: boolean
           last_seen: string | null
           online: boolean | null
           updated_at: string
@@ -177,6 +292,7 @@ export type Database = {
           created_at?: string
           display_name: string
           id: string
+          is_bot?: boolean
           last_seen?: string | null
           online?: boolean | null
           updated_at?: string
@@ -189,6 +305,7 @@ export type Database = {
           created_at?: string
           display_name?: string
           id?: string
+          is_bot?: boolean
           last_seen?: string | null
           online?: boolean | null
           updated_at?: string
@@ -265,6 +382,7 @@ export type Database = {
     }
     Enums: {
       app_role: "super_admin" | "admin" | "user"
+      bot_status: "active" | "disabled"
       conversation_type: "private" | "group" | "channel"
       member_role: "owner" | "admin" | "member"
       message_status: "sent" | "delivered" | "read"
@@ -396,6 +514,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["super_admin", "admin", "user"],
+      bot_status: ["active", "disabled"],
       conversation_type: ["private", "group", "channel"],
       member_role: ["owner", "admin", "member"],
       message_status: ["sent", "delivered", "read"],
