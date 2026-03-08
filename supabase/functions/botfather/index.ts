@@ -543,7 +543,7 @@ serve(async (req) => {
           case "setcommands_input": {
             if (text.toLowerCase() === 'none') {
               await supabase.from("bot_commands").delete().eq("bot_id", stateData.bot_id);
-              responseText = "✅ All commands have been cleared.";
+              responseText = "✅ Đã xoá tất cả lệnh.";
               break;
             }
             const lines = text.split("\n").filter(l => l.trim());
