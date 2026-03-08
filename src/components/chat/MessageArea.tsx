@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Send, Smile, Paperclip, Mic, MoreVertical, Phone, Search, Info, X, FileText, Film, Image as ImageIcon, Reply, Trash2, RotateCcw, Eye, ImageIcon as GalleryIcon } from 'lucide-react';
+import { Send, Smile, Paperclip, Mic, MoreVertical, Phone, Search, Info, X, FileText, Film, Image as ImageIcon, Reply, Trash2, RotateCcw, Eye, ImageIcon as GalleryIcon, ArrowLeft } from 'lucide-react';
 import { useChatContext } from '@/context/ChatContext';
 import { useAuth } from '@/context/AuthContext';
 import ChatAvatar from './ChatAvatar';
