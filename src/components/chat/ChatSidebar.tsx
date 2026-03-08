@@ -177,6 +177,7 @@ const ChatSidebar: React.FC = () => {
   const searchedUsers = userSearchQuery.trim().length >= 2
     ? allProfiles.filter(p =>
         p.id !== user?.id && !p.is_bot &&
+        !isBlocked(p.id) && !isBlockedBy(p.id) &&
         (p.display_name.toLowerCase().includes(userSearchQuery.toLowerCase()) ||
          p.username.toLowerCase().includes(userSearchQuery.toLowerCase()))
       )
