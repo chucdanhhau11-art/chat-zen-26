@@ -73,6 +73,14 @@ const MediaGalleryDialog: React.FC<{ onClose: () => void; defaultTab?: 'media' |
           )}
         </div>
       </motion.div>
+      {lightboxUrl && (
+        <ImageLightbox
+          src={lightboxUrl}
+          allImages={allImages}
+          initialIndex={allImages.findIndex(img => img.src === lightboxUrl)}
+          onClose={() => setLightboxUrl(null)}
+        />
+      )}
     </div>
   );
 };
