@@ -4,12 +4,14 @@ import { useChatContext } from '@/context/ChatContext';
 import { useAuth } from '@/context/AuthContext';
 import ChatAvatar from './ChatAvatar';
 import ProfileViewDialog from './ProfileViewDialog';
+import MediaGalleryDialog from './MediaGalleryDialog';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const InfoPanel: React.FC = () => {
   const { activeConversation, showInfoPanel, toggleInfoPanel, profiles, deleteConversation, leaveGroup, messages } = useChatContext();
   const { user } = useAuth();
   const [viewProfileId, setViewProfileId] = useState<string | null>(null);
+  const [galleryTab, setGalleryTab] = useState<'media' | 'files' | null>(null);
 
   if (!activeConversation) return null;
 
@@ -62,8 +64,8 @@ const InfoPanel: React.FC = () => {
               {activeConversation.type !== 'private' && (
                 <InfoButton icon={Users} label="Thành viên" detail={`${activeConversation.members.length}`} />
               )}
-              <InfoButton icon={Image} label="Ảnh & Video" detail={`${mediaCount}`} />
-              <InfoButton icon={FileText} label="Tệp" detail={`${fileCount}`} />
+              <InfoButton icon={Image} label="Ảnh & Video" detail={`${mediaCount}`} onClick={() => setGalleryTab('media')} />
+              <InfoButton icon={FileText} label="Tệp" detail={`${fileCount}`} onClick={() => setGalleryTab('files')} />
             </div>
 
             {activeConversation.type !== 'private' && (
@@ -112,14 +114,15 @@ const InfoPanel: React.FC = () => {
             </div>
           </div>
           {viewProfileId && <ProfileViewDialog userId={viewProfileId} onClose={() => setViewProfileId(null)} />}
+          {galleryTab && <MediaGalleryDialog defaultTab={galleryTab} onClose={() => setGalleryTab(null)} />}
         </motion.div>
       )}
     </AnimatePresence>
   );
 };
 
-const InfoButton: React.FC<{ icon: React.ElementType; label: string; detail: string }> = ({ icon: Icon, label, detail }) => (
-  <button className="flex items-center gap-3 w-full px-4 py-2.5 rounded-lg hover:bg-tg-hover transition-colors text-sm">
+const InfoButton: React.FC<{ icon: React.ElementType; label: string; detail: string; onClick?: () => void }> = ({ icon: Icon, label, detail, onClick }) => (
+  <button onClick={onClick} className="flex items-center gap-3 w-full px-4 py-2.5 rounded-lg hover:bg-tg-hover transition-colors text-sm">
     <Icon className="h-4 w-4 text-muted-foreground" />
     <span className="flex-1 text-left">{label}</span>
     <span className="text-muted-foreground text-xs">{detail}</span>
