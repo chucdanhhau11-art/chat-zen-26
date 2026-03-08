@@ -112,6 +112,7 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
   const [inlineBotUsername, setInlineBotUsername] = useState('');
   const [showInlineResults, setShowInlineResults] = useState(false);
   const [miniApp, setMiniApp] = useState<{ url: string; botName: string; botId?: string } | null>(null);
+  const [lightboxImage, setLightboxImage] = useState<string | null>(null);
   const inlineDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
