@@ -18,35 +18,35 @@ function generateToken(): string {
   }).join(":");
 }
 
-const HELP_TEXT = `🤖 **BotFather** - Bot Management System
+const HELP_TEXT = `🤖 **BotFather** - Hệ thống quản lý Bot
 
-I can help you create and manage bots. Here are the available commands:
+Tôi có thể giúp bạn tạo và quản lý bot. Dưới đây là các lệnh có sẵn:
 
-**Bot Creation & Management**
-/newbot - Create a new bot
-/mybots - List your bots
-/deletebot - Delete a bot
+**Tạo & Quản lý Bot**
+/newbot - Tạo bot mới
+/mybots - Danh sách bot của bạn
+/deletebot - Xoá bot
 
-**Bot Settings**
-/setname - Change bot display name
-/setdescription - Change bot description
-/setabouttext - Set bot about text
-/setcommands - Set bot commands
-/setwebhook - Configure webhook URL
-/setprivacy - Set privacy mode
+**Cài đặt Bot**
+/setname - Đổi tên hiển thị bot
+/setdescription - Đổi mô tả bot
+/setabouttext - Đặt giới thiệu bot
+/setcommands - Đặt danh sách lệnh bot
+/setwebhook - Cấu hình webhook URL
+/setprivacy - Cài đặt chế độ riêng tư
 
-**Token Management**
-/revoke - Reset bot API token
+**Quản lý Token**
+/revoke - Đặt lại token API của bot
 
-/help - Show this help message
-/start - Start interacting with BotFather`;
+/help - Hiện trợ giúp này
+/start - Bắt đầu tương tác với BotFather`;
 
-const WELCOME_TEXT = `🤖 Welcome to **BotFather**!
+const WELCOME_TEXT = `🤖 Chào mừng bạn đến với **BotFather**!
 
-I can help you create and manage bots for this platform.
+Tôi có thể giúp bạn tạo và quản lý bot trên nền tảng này.
 
-Use /newbot to create a new bot.
-Use /help to see all available commands.`;
+Dùng /newbot để tạo bot mới.
+Dùng /help để xem tất cả lệnh có sẵn.`;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
