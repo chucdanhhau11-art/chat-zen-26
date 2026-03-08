@@ -658,7 +658,7 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
               // Recalled message
               if (msg.deleted) {
                 return (
-                  <motion.div key={msg.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className={cn('flex gap-2', isOwn ? 'justify-end' : 'justify-start')}>
+                  <motion.div key={msg.id} id={`msg-${msg.id}`} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className={cn('flex gap-2', isOwn ? 'justify-end' : 'justify-start')}>
                     {!isOwn && <div className="w-8 flex-shrink-0" />}
                     <div className="max-w-[70%] px-3 py-2 rounded-2xl text-sm bg-muted/50 italic text-muted-foreground">
                       🚫 Tin nhắn đã được thu hồi
