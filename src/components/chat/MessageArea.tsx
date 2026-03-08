@@ -730,6 +730,28 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
             <button onClick={() => { setReplyTo(contextMenu.msg); setContextMenu(null); }} className="flex items-center gap-3 w-full px-4 py-2.5 text-sm hover:bg-tg-hover transition-colors text-left">
               <Reply className="h-4 w-4 text-muted-foreground" /> Trả lời
             </button>
+            {contextMenu.msg.message_type === 'image' && contextMenu.msg.file_url && (
+              <button onClick={async () => {
+                try {
+                  const res = await fetch(contextMenu.msg.file_url);
+                  const blob = await res.blob();
+                  await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })]);
+                  toast.success('Đã sao chép ảnh');
+                } catch { toast.error('Không thể sao chép ảnh'); }
+                setContextMenu(null);
+              }} className="flex items-center gap-3 w-full px-4 py-2.5 text-sm hover:bg-tg-hover transition-colors text-left">
+                <ImageIcon className="h-4 w-4 text-muted-foreground" /> Sao chép ảnh
+              </button>
+            )}
+            {contextMenu.msg.content && (
+              <button onClick={() => {
+                navigator.clipboard.writeText(contextMenu.msg.content || '');
+                toast.success('Đã sao chép');
+                setContextMenu(null);
+              }} className="flex items-center gap-3 w-full px-4 py-2.5 text-sm hover:bg-tg-hover transition-colors text-left">
+                <Eye className="h-4 w-4 text-muted-foreground" /> Sao chép text
+              </button>
+            )}
             <button onClick={() => handleDeleteForMe(contextMenu.msg.id)} className="flex items-center gap-3 w-full px-4 py-2.5 text-sm hover:bg-tg-hover transition-colors text-left">
               <Trash2 className="h-4 w-4 text-muted-foreground" /> Xoá ở phía bạn
             </button>
