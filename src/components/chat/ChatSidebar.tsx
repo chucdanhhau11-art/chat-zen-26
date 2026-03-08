@@ -31,6 +31,7 @@ const ChatSidebar: React.FC = () => {
     conversations, activeConversationId, setActiveConversation,
     searchQuery, setSearchQuery, darkMode, toggleDarkMode,
     loadingConversations, profiles, ensureSavedMessages, openBotFatherChat,
+    allProfiles, createPrivateChat, friends, getFriendshipWith, sendFriendRequest, pendingRequests, acceptFriendRequest,
   } = useChatContext();
   const { user, signOut, isAdmin } = useAuth();
   const [showNewChat, setShowNewChat] = React.useState(false);
