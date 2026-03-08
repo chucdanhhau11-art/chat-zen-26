@@ -157,6 +157,10 @@ const ChatSidebar: React.FC = () => {
                   <Bot className="h-4 w-4 text-primary" />
                   <span>Bot Management</span>
                 </a>
+                <button onClick={async () => { setShowMenu(false); await openBotFatherChat(); }} className="flex items-center gap-3 w-full px-4 py-2.5 text-sm hover:bg-tg-hover transition-colors text-left">
+                  <Bot className="h-4 w-4 text-primary" />
+                  <span>🤖 BotFather</span>
+                </button>
                 {isAdmin && (
                   <>
                     <div className="border-t border-border" />

@@ -225,6 +225,21 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
       reply_to: reply,
     });
     await supabase.from('conversations').update({ updated_at: new Date().toISOString() }).eq('id', activeConversation.id);
+
+    // If this is a BotFather conversation, process the message
+    if (isBotFatherConversation(activeConversation.id)) {
+      try {
+        await supabase.functions.invoke('botfather', {
+          body: {
+            action: 'process-message',
+            message: text.trim(),
+            conversation_id: activeConversation.id,
+          },
+        });
+      } catch (err) {
+        console.error('BotFather error:', err);
+      }
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
