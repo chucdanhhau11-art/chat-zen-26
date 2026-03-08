@@ -88,7 +88,7 @@ const CallScreen: React.FC<CallScreenProps> = ({
               animate={isCalling || isReceiving ? { scale: [1, 1.1, 1] } : {}}
               transition={{ repeat: Infinity, duration: 2 }}
             >
-              <ChatAvatar name={remoteName} avatarUrl={remoteAvatarUrl} size="lg" />
+              <ChatAvatar name={remoteName} avatar={remoteAvatarUrl || undefined} size="lg" />
             </motion.div>
             <h2 className="text-white text-2xl font-semibold">{remoteName}</h2>
             <p className="text-white/60 text-sm">
