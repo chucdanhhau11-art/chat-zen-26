@@ -568,6 +568,72 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const toggleDarkMode = useCallback(() => setDarkMode(p => !p), []);
   const activeConversation = conversations.find(c => c.id === activeConversationId) || null;
 
+  // Friendship functions
+  const friends = React.useMemo(() => {
+    if (!user) return [];
+    return friendships
+      .filter(f => f.status === 'accepted')
+      .map(f => {
+        const friendId = f.requester_id === user.id ? f.addressee_id : f.requester_id;
+        return profiles[friendId];
+      })
+      .filter(Boolean) as Profile[];
+  }, [friendships, user, profiles]);
+
+  const pendingRequests = React.useMemo(() => {
+    if (!user) return [];
+    return friendships.filter(f => f.status === 'pending' && f.addressee_id === user.id);
+  }, [friendships, user]);
+
+  const sendFriendRequest = useCallback(async (userId: string) => {
+    if (!user) return;
+    const { error } = await supabase.from('friendships').insert({ requester_id: user.id, addressee_id: userId });
+    if (error) {
+      if (error.code === '23505') toast.error('Đã gửi lời mời kết bạn rồi / Friend request already sent');
+      else toast.error('Lỗi / Error: ' + error.message);
+      return;
+    }
+    toast.success('Đã gửi lời mời kết bạn / Friend request sent!');
+    fetchFriendships();
+  }, [user, fetchFriendships]);
+
+  const acceptFriendRequest = useCallback(async (friendshipId: string) => {
+    await supabase.from('friendships').update({ status: 'accepted', updated_at: new Date().toISOString() }).eq('id', friendshipId);
+    toast.success('Đã chấp nhận kết bạn / Friend request accepted!');
+    fetchFriendships();
+  }, [fetchFriendships]);
+
+  const declineFriendRequest = useCallback(async (friendshipId: string) => {
+    await supabase.from('friendships').delete().eq('id', friendshipId);
+    toast.success('Đã từ chối / Declined');
+    fetchFriendships();
+  }, [fetchFriendships]);
+
+  const removeFriend = useCallback(async (friendshipId: string) => {
+    await supabase.from('friendships').delete().eq('id', friendshipId);
+    toast.success('Đã huỷ kết bạn / Unfriended');
+    fetchFriendships();
+  }, [fetchFriendships]);
+
+  const getFriendshipWith = useCallback((userId: string): Friendship | null => {
+    if (!user) return null;
+    return friendships.find(f =>
+      (f.requester_id === user.id && f.addressee_id === userId) ||
+      (f.addressee_id === user.id && f.requester_id === userId)
+    ) || null;
+  }, [friendships, user]);
+
+  const addMemberToGroup = useCallback(async (convId: string, userId: string) => {
+    if (!user) return;
+    const { error } = await supabase.from('conversation_members').insert({ conversation_id: convId, user_id: userId, role: 'member' as const });
+    if (error) {
+      toast.error('Lỗi thêm thành viên / Error adding member: ' + error.message);
+      return;
+    }
+    toast.success('Đã thêm thành viên / Member added!');
+    fetchConversations(false);
+  }, [user, fetchConversations]);
+
   return (
     <ChatContext.Provider value={{
       conversations, activeConversationId, setActiveConversation,
@@ -578,6 +644,9 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       deleteConversation, leaveGroup, ensureSavedMessages,
       isMobileShowingChat, setMobileShowingChat, clearUnread,
       openBotFatherChat, isBotFatherConversation,
+      friendships, friends, pendingRequests,
+      sendFriendRequest, acceptFriendRequest, declineFriendRequest,
+      removeFriend, getFriendshipWith, addMemberToGroup,
     }}>
       {children}
     </ChatContext.Provider>
