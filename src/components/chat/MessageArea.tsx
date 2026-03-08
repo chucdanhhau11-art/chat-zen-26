@@ -910,29 +910,55 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
                         grouped[r.emoji].push(r.user_id);
                       });
                       return (
-                        <div className="flex flex-wrap gap-1 mt-1">
-                          {Object.entries(grouped).map(([emoji, userIds]) => (
-                            <button
-                              key={emoji}
-                              onClick={() => toggleReaction(msg.id, emoji)}
-                              className={cn(
-                                'inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs transition-colors border',
-                                userIds.includes(user?.id || '') ? 'bg-primary/15 border-primary/30' : 'bg-secondary border-transparent hover:bg-muted'
-                              )}
-                            >
-                              <span>{emoji}</span>
-                              <span className="text-[10px] text-muted-foreground">{userIds.length}</span>
-                            </button>
-                          ))}
-                        </div>
+                        <motion.div layout className="flex flex-wrap gap-1 mt-1.5">
+                          {Object.entries(grouped).map(([emoji, userIds]) => {
+                            const isMine = userIds.includes(user?.id || '');
+                            return (
+                              <motion.button
+                                key={emoji}
+                                layout
+                                initial={{ scale: 0, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                exit={{ scale: 0, opacity: 0 }}
+                                whileTap={{ scale: 0.85 }}
+                                transition={{ type: 'spring', stiffness: 500, damping: 25 }}
+                                onClick={() => toggleReaction(msg.id, emoji)}
+                                className={cn(
+                                  'inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs border transition-colors duration-200',
+                                  isMine ? 'bg-primary/15 border-primary/40 shadow-sm' : 'bg-secondary/80 border-transparent hover:bg-muted'
+                                )}
+                                title={isMine ? 'Nhấn để thu hồi' : 'Nhấn để thả'}
+                              >
+                                <motion.span
+                                  key={`${emoji}-${userIds.length}`}
+                                  initial={{ scale: 1.4 }}
+                                  animate={{ scale: 1 }}
+                                  transition={{ type: 'spring', stiffness: 400, damping: 15 }}
+                                >
+                                  {emoji}
+                                </motion.span>
+                                <span className="text-[10px] text-muted-foreground font-medium">{userIds.length}</span>
+                              </motion.button>
+                            );
+                          })}
+                          <motion.button
+                            layout
+                            whileTap={{ scale: 0.85 }}
+                            onClick={(e) => { e.stopPropagation(); setEmojiPickerMsgId(prev => prev === msg.id ? null : msg.id); }}
+                            className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-secondary/60 hover:bg-muted border border-transparent transition-colors duration-200"
+                            title="Thêm cảm xúc"
+                          >
+                            <Plus className="h-3 w-3 text-muted-foreground" />
+                          </motion.button>
+                        </motion.div>
                       );
                     })()}
                     {/* Hover action buttons */}
-                    <div className={cn('absolute top-0 opacity-0 group-hover:opacity-100 transition-opacity flex gap-0.5', isOwn ? 'left-0 -translate-x-full pr-1' : 'right-0 translate-x-full pl-1')}>
-                      <button onClick={() => setReplyTo(msg)} className="p-1 rounded bg-secondary hover:bg-tg-hover" title="Trả lời">
+                    <div className={cn('absolute top-0 opacity-0 group-hover:opacity-100 transition-all duration-200 flex gap-0.5', isOwn ? 'left-0 -translate-x-full pr-1' : 'right-0 translate-x-full pl-1')}>
+                      <button onClick={() => setReplyTo(msg)} className="p-1 rounded-lg bg-secondary/90 hover:bg-tg-hover backdrop-blur-sm transition-colors duration-150" title="Trả lời">
                         <Reply className="h-3.5 w-3.5 text-muted-foreground" />
                       </button>
-                      <button onClick={(e) => { e.stopPropagation(); setEmojiPickerMsgId(prev => prev === msg.id ? null : msg.id); }} className="p-1 rounded bg-secondary hover:bg-tg-hover" title="Thả cảm xúc">
+                      <button onClick={(e) => { e.stopPropagation(); setEmojiPickerMsgId(prev => prev === msg.id ? null : msg.id); }} className="p-1 rounded-lg bg-secondary/90 hover:bg-tg-hover backdrop-blur-sm transition-colors duration-150" title="Thả cảm xúc">
                         <Smile className="h-3.5 w-3.5 text-muted-foreground" />
                       </button>
                     </div>
@@ -940,20 +966,26 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
                     <AnimatePresence>
                       {emojiPickerMsgId === msg.id && (
                         <motion.div
-                          initial={{ opacity: 0, scale: 0.9 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          exit={{ opacity: 0, scale: 0.9 }}
+                          initial={{ opacity: 0, scale: 0.8, y: 8 }}
+                          animate={{ opacity: 1, scale: 1, y: 0 }}
+                          exit={{ opacity: 0, scale: 0.8, y: 8 }}
+                          transition={{ type: 'spring', stiffness: 500, damping: 30 }}
                           onClick={e => e.stopPropagation()}
-                          className={cn('absolute z-50 bg-popover border border-border rounded-xl shadow-lg p-1.5 flex gap-1', isOwn ? 'right-0 bottom-full mb-1' : 'left-0 bottom-full mb-1')}
+                          className={cn('absolute z-50 bg-popover/95 backdrop-blur-md border border-border rounded-2xl shadow-xl p-2 flex gap-0.5', isOwn ? 'right-0 bottom-full mb-2' : 'left-0 bottom-full mb-2')}
                         >
-                          {QUICK_EMOJIS.map(emoji => (
-                            <button
+                          {QUICK_EMOJIS.map((emoji, idx) => (
+                            <motion.button
                               key={emoji}
+                              initial={{ scale: 0, opacity: 0 }}
+                              animate={{ scale: 1, opacity: 1 }}
+                              transition={{ delay: idx * 0.03, type: 'spring', stiffness: 500, damping: 20 }}
+                              whileHover={{ scale: 1.3 }}
+                              whileTap={{ scale: 0.85 }}
                               onClick={() => toggleReaction(msg.id, emoji)}
-                              className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-muted transition-colors text-lg"
+                              className="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-muted transition-colors duration-150 text-xl"
                             >
                               {emoji}
-                            </button>
+                            </motion.button>
                           ))}
                         </motion.div>
                       )}
