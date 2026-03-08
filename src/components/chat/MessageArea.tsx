@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Send, Smile, Paperclip, Mic, MoreVertical, Phone, Video, Search, Info, X, FileText, Film, Image as ImageIcon, Reply, Trash2, RotateCcw, Eye, ImageIcon as GalleryIcon, ArrowLeft, ChevronDown, ChevronUp } from 'lucide-react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { Send, Smile, Paperclip, Mic, MoreVertical, Phone, Video, Search, Info, X, FileText, Film, Image as ImageIcon, Reply, Trash2, RotateCcw, Eye, ImageIcon as GalleryIcon, ArrowLeft, ChevronDown, ChevronUp, Plus } from 'lucide-react';
 import type { CallType } from '@/hooks/useWebRTC';
 import { useChatContext } from '@/context/ChatContext';
 import { useAuth } from '@/context/AuthContext';
@@ -131,12 +131,16 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
   const [msgSearchQuery, setMsgSearchQuery] = useState('');
   const [searchMatchIds, setSearchMatchIds] = useState<string[]>([]);
   const [searchActiveIdx, setSearchActiveIdx] = useState(0);
+  const [reactions, setReactions] = useState<Record<string, { emoji: string; user_id: string; id: string }[]>>({});
+  const [emojiPickerMsgId, setEmojiPickerMsgId] = useState<string | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const inlineDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const prevMessagesLenRef = useRef(0);
+
+  const QUICK_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🔥', '👏', '🎉'];
 
   // Fetch bot commands for the active conversation
   const isBotFather = isBotFatherConversation(activeConversation?.id || null);
@@ -493,6 +497,66 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
     });
   }, []);
 
+  // Fetch reactions for current conversation messages
+  useEffect(() => {
+    if (!activeConversation || visibleMessages.length === 0) { setReactions({}); return; }
+    const msgIds = visibleMessages.map(m => m.id);
+    const fetchReactions = async () => {
+      const { data } = await supabase.from('reactions').select('*').in('message_id', msgIds);
+      if (data) {
+        const grouped: Record<string, { emoji: string; user_id: string; id: string }[]> = {};
+        data.forEach(r => {
+          if (!grouped[r.message_id]) grouped[r.message_id] = [];
+          grouped[r.message_id].push({ emoji: r.emoji, user_id: r.user_id, id: r.id });
+        });
+        setReactions(grouped);
+      }
+    };
+    fetchReactions();
+  }, [activeConversation?.id, messages.length]);
+
+  // Realtime reactions
+  useEffect(() => {
+    if (!activeConversation) return;
+    const channel = supabase.channel(`reactions-${activeConversation.id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'reactions' }, (payload: any) => {
+        if (payload.eventType === 'INSERT') {
+          const r = payload.new;
+          setReactions(prev => ({
+            ...prev,
+            [r.message_id]: [...(prev[r.message_id] || []), { emoji: r.emoji, user_id: r.user_id, id: r.id }],
+          }));
+        } else if (payload.eventType === 'DELETE') {
+          const r = payload.old;
+          setReactions(prev => ({
+            ...prev,
+            [r.message_id]: (prev[r.message_id] || []).filter(x => x.id !== r.id),
+          }));
+        }
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [activeConversation?.id]);
+
+  const toggleReaction = useCallback(async (messageId: string, emoji: string) => {
+    if (!user) return;
+    const existing = reactions[messageId]?.find(r => r.user_id === user.id && r.emoji === emoji);
+    if (existing) {
+      await supabase.from('reactions').delete().eq('id', existing.id);
+    } else {
+      await supabase.from('reactions').insert({ message_id: messageId, user_id: user.id, emoji });
+    }
+    setEmojiPickerMsgId(null);
+  }, [user, reactions]);
+
+  // Close emoji picker on outside click
+  useEffect(() => {
+    if (!emojiPickerMsgId) return;
+    const handler = () => setEmojiPickerMsgId(null);
+    window.addEventListener('click', handler);
+    return () => window.removeEventListener('click', handler);
+  }, [emojiPickerMsgId]);
+
   if (!activeConversation) {
     return (
       <div className="flex-1 flex items-center justify-center bg-tg-chat">
@@ -821,12 +885,62 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
                         <span className="text-[9px] text-primary/70 ml-0.5">Đã xem</span>
                       )}
                     </div>
+                    {/* Reactions display */}
+                    {reactions[msg.id] && reactions[msg.id].length > 0 && (() => {
+                      const grouped: Record<string, string[]> = {};
+                      reactions[msg.id].forEach(r => {
+                        if (!grouped[r.emoji]) grouped[r.emoji] = [];
+                        grouped[r.emoji].push(r.user_id);
+                      });
+                      return (
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {Object.entries(grouped).map(([emoji, userIds]) => (
+                            <button
+                              key={emoji}
+                              onClick={() => toggleReaction(msg.id, emoji)}
+                              className={cn(
+                                'inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs transition-colors border',
+                                userIds.includes(user?.id || '') ? 'bg-primary/15 border-primary/30' : 'bg-secondary border-transparent hover:bg-muted'
+                              )}
+                            >
+                              <span>{emoji}</span>
+                              <span className="text-[10px] text-muted-foreground">{userIds.length}</span>
+                            </button>
+                          ))}
+                        </div>
+                      );
+                    })()}
                     {/* Hover action buttons */}
                     <div className={cn('absolute top-0 opacity-0 group-hover:opacity-100 transition-opacity flex gap-0.5', isOwn ? 'left-0 -translate-x-full pr-1' : 'right-0 translate-x-full pl-1')}>
                       <button onClick={() => setReplyTo(msg)} className="p-1 rounded bg-secondary hover:bg-tg-hover" title="Trả lời">
                         <Reply className="h-3.5 w-3.5 text-muted-foreground" />
                       </button>
+                      <button onClick={(e) => { e.stopPropagation(); setEmojiPickerMsgId(prev => prev === msg.id ? null : msg.id); }} className="p-1 rounded bg-secondary hover:bg-tg-hover" title="Thả cảm xúc">
+                        <Smile className="h-3.5 w-3.5 text-muted-foreground" />
+                      </button>
                     </div>
+                    {/* Emoji picker */}
+                    <AnimatePresence>
+                      {emojiPickerMsgId === msg.id && (
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0.9 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.9 }}
+                          onClick={e => e.stopPropagation()}
+                          className={cn('absolute z-50 bg-popover border border-border rounded-xl shadow-lg p-1.5 flex gap-1', isOwn ? 'right-0 bottom-full mb-1' : 'left-0 bottom-full mb-1')}
+                        >
+                          {QUICK_EMOJIS.map(emoji => (
+                            <button
+                              key={emoji}
+                              onClick={() => toggleReaction(msg.id, emoji)}
+                              className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-muted transition-colors text-lg"
+                            >
+                              {emoji}
+                            </button>
+                          ))}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
                 </motion.div>
               );
