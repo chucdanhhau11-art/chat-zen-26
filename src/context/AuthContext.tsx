@@ -45,13 +45,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        if (session?.user) {
+      async (_event, newSession) => {
+        // Avoid unnecessary re-renders if user hasn't changed
+        setSession(prev => {
+          if (prev?.access_token === newSession?.access_token) return prev;
+          return newSession;
+        });
+        setUser(prev => {
+          const newUser = newSession?.user ?? null;
+          if (prev?.id === newUser?.id) return prev;
+          return newUser;
+        });
+        if (newSession?.user) {
           setTimeout(() => {
-            fetchProfile(session.user.id);
-            fetchRoles(session.user.id);
+            fetchProfile(newSession.user.id);
+            fetchRoles(newSession.user.id);
           }, 0);
         } else {
           setProfile(null);
@@ -61,12 +69,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     );
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchProfile(session.user.id);
-        fetchRoles(session.user.id);
+    supabase.auth.getSession().then(({ data: { session: initSession } }) => {
+      setSession(initSession);
+      setUser(initSession?.user ?? null);
+      if (initSession?.user) {
+        fetchProfile(initSession.user.id);
+        fetchRoles(initSession.user.id);
       }
       setLoading(false);
     });

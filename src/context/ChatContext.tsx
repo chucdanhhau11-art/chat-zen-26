@@ -268,8 +268,11 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [user]);
 
 
+  const userIdRef = useRef<string | null>(null);
+  useEffect(() => { userIdRef.current = user?.id ?? null; }, [user]);
+
   useEffect(() => {
-    if (!activeConversationId || !user) { setMessages([]); return; }
+    if (!activeConversationId || !userIdRef.current) { setMessages([]); return; }
     const fetchMessages = async () => {
       setLoadingMessages(true);
       const { data } = await supabase.from('messages').select('*').eq('conversation_id', activeConversationId).order('created_at', { ascending: true }).limit(100);
@@ -277,7 +280,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setLoadingMessages(false);
     };
     fetchMessages();
-  }, [activeConversationId, user]);
+  }, [activeConversationId]);
 
   // Realtime messages
   useEffect(() => {
