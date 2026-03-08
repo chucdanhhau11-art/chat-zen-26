@@ -64,8 +64,8 @@ const InfoPanel: React.FC = () => {
               {activeConversation.type !== 'private' && (
                 <InfoButton icon={Users} label="Thành viên" detail={`${activeConversation.members.length}`} />
               )}
-              <InfoButton icon={Image} label="Ảnh & Video" detail={`${mediaCount}`} />
-              <InfoButton icon={FileText} label="Tệp" detail={`${fileCount}`} />
+              <InfoButton icon={Image} label="Ảnh & Video" detail={`${mediaCount}`} onClick={() => setGalleryTab('media')} />
+              <InfoButton icon={FileText} label="Tệp" detail={`${fileCount}`} onClick={() => setGalleryTab('files')} />
             </div>
 
             {activeConversation.type !== 'private' && (
