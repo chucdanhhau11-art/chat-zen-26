@@ -482,7 +482,7 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
         recordingStreamRef.current = null;
         if (recordingTimerRef.current) { clearInterval(recordingTimerRef.current); recordingTimerRef.current = null; }
 
-        if (recordingCancelled || audioChunksRef.current.length === 0) {
+        if (recordingCancelledRef.current || audioChunksRef.current.length === 0) {
           setIsRecording(false);
           setRecordingTime(0);
           return;
