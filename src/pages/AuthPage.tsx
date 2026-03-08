@@ -45,7 +45,7 @@ const AuthPage: React.FC = () => {
         navigate('/');
       }
     } else {
-      if (!username.trim() || !displayName.trim()) { toast.error('Vui lòng điền đầy đủ thông tin'); setLoading(false); return; }
+      if (!username.trim() || !displayName.trim()) { toast.error('Vui lòng điền đầy đủ thông tin'); setSubmitting(false); return; }
       const { error } = await signUp(email, password, username, displayName);
       if (error) {
         toast.error(error.message);
