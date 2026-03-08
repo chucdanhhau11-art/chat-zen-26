@@ -324,12 +324,12 @@ serve(async (req) => {
             });
 
             if (botErr) {
-              responseText = `Error: ${botErr.message}`;
+              responseText = `Lỗi: ${botErr.message}`;
               newState = "idle";
               break;
             }
 
-            responseText = `✅ Done! Congratulations on your new bot.\n\n🤖 **Name:** ${botName}\n👤 **Username:** @${username}\n\n🔑 **Your API Token:**\n\`${botToken}\`\n\nKeep your token secure!`;
+            responseText = `✅ Xong! Chúc mừng bạn đã tạo bot mới.\n\n🤖 **Tên:** ${botName}\n👤 **Username:** @${username}\n\n🔑 **Token API của bạn:**\n\`${botToken}\`\n\nHãy giữ bí mật token!`;
             newState = "idle";
             break;
           }
