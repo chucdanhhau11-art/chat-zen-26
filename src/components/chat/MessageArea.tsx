@@ -211,6 +211,8 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
   const [searchActiveIdx, setSearchActiveIdx] = useState(0);
   const [reactions, setReactions] = useState<Record<string, { emoji: string; user_id: string; id: string }[]>>({});
   const [emojiPickerMsgId, setEmojiPickerMsgId] = useState<string | null>(null);
+  const [showInputEmoji, setShowInputEmoji] = useState(false);
+  const inputEmojiRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const inlineDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
