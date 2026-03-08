@@ -283,7 +283,7 @@ serve(async (req) => {
               });
 
               if (authErr) {
-                responseText = `Error creating bot: ${authErr.message}. Please try again.`;
+                responseText = `Lỗi tạo bot: ${authErr.message}. Vui lòng thử lại.`;
                 newState = "idle";
                 break;
               }
