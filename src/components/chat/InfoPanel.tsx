@@ -114,6 +114,7 @@ const InfoPanel: React.FC = () => {
             </div>
           </div>
           {viewProfileId && <ProfileViewDialog userId={viewProfileId} onClose={() => setViewProfileId(null)} />}
+          {galleryTab && <MediaGalleryDialog defaultTab={galleryTab} onClose={() => setGalleryTab(null)} />}
         </motion.div>
       )}
     </AnimatePresence>
