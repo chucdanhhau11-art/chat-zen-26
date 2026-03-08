@@ -81,6 +81,15 @@ interface ConversationWithDetails extends Conversation {
   unreadCount: number;
 }
 
+interface Friendship {
+  id: string;
+  requester_id: string;
+  addressee_id: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+}
+
 interface ChatContextType {
   conversations: ConversationWithDetails[];
   activeConversationId: string | null;
@@ -108,6 +117,16 @@ interface ChatContextType {
   clearUnread: (convId: string) => void;
   openBotFatherChat: () => Promise<void>;
   isBotFatherConversation: (convId: string | null) => boolean;
+  // Friendship
+  friendships: Friendship[];
+  friends: Profile[];
+  pendingRequests: Friendship[];
+  sendFriendRequest: (userId: string) => Promise<void>;
+  acceptFriendRequest: (friendshipId: string) => Promise<void>;
+  declineFriendRequest: (friendshipId: string) => Promise<void>;
+  removeFriend: (friendshipId: string) => Promise<void>;
+  getFriendshipWith: (userId: string) => Friendship | null;
+  addMemberToGroup: (convId: string, userId: string) => Promise<void>;
 }
 
 const ChatContext = createContext<ChatContextType | null>(null);
