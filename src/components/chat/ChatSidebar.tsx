@@ -40,6 +40,8 @@ const ChatSidebar: React.FC = () => {
   const [showEditProfile, setShowEditProfile] = React.useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [userSearchQuery, setUserSearchQuery] = useState('');
+  const [localSearch, setLocalSearch] = useState('');
   const notifIdCounter = useRef(0);
 
   // Listen for unread count changes to generate notifications
