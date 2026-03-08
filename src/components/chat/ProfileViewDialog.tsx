@@ -106,7 +106,7 @@ const ProfileViewDialog: React.FC<Props> = ({ userId, onClose }) => {
               )}
               {status === 'friend' && (
                 <button
-                  onClick={() => friendship && removeFriend(friendship.id)}
+                  onClick={() => setShowConfirm('unfriend')}
                   className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-destructive/10 text-destructive text-sm font-medium hover:bg-destructive/20 transition-colors"
                 >
                   <UserMinus className="h-4 w-4" />
