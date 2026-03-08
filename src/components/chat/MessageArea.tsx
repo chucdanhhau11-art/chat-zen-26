@@ -288,6 +288,21 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
     if (fileInputRef.current) fileInputRef.current.value = '';
   }, []);
 
+  const handlePaste = useCallback((e: React.ClipboardEvent) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (const item of items) {
+      if (item.type.startsWith('image/')) {
+        e.preventDefault();
+        const file = item.getAsFile();
+        if (!file) return;
+        if (file.size > 20 * 1024 * 1024) { toast.error('File quá lớn. Tối đa 20MB.'); return; }
+        setPreviewFile({ file, url: URL.createObjectURL(file) });
+        return;
+      }
+    }
+  }, []);
+
   const cancelPreview = useCallback(() => {
     if (previewFile) { URL.revokeObjectURL(previewFile.url); setPreviewFile(null); }
   }, [previewFile]);
@@ -715,6 +730,28 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
             <button onClick={() => { setReplyTo(contextMenu.msg); setContextMenu(null); }} className="flex items-center gap-3 w-full px-4 py-2.5 text-sm hover:bg-tg-hover transition-colors text-left">
               <Reply className="h-4 w-4 text-muted-foreground" /> Trả lời
             </button>
+            {contextMenu.msg.message_type === 'image' && contextMenu.msg.file_url && (
+              <button onClick={async () => {
+                try {
+                  const res = await fetch(contextMenu.msg.file_url);
+                  const blob = await res.blob();
+                  await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })]);
+                  toast.success('Đã sao chép ảnh');
+                } catch { toast.error('Không thể sao chép ảnh'); }
+                setContextMenu(null);
+              }} className="flex items-center gap-3 w-full px-4 py-2.5 text-sm hover:bg-tg-hover transition-colors text-left">
+                <ImageIcon className="h-4 w-4 text-muted-foreground" /> Sao chép ảnh
+              </button>
+            )}
+            {contextMenu.msg.content && (
+              <button onClick={() => {
+                navigator.clipboard.writeText(contextMenu.msg.content || '');
+                toast.success('Đã sao chép');
+                setContextMenu(null);
+              }} className="flex items-center gap-3 w-full px-4 py-2.5 text-sm hover:bg-tg-hover transition-colors text-left">
+                <Eye className="h-4 w-4 text-muted-foreground" /> Sao chép text
+              </button>
+            )}
             <button onClick={() => handleDeleteForMe(contextMenu.msg.id)} className="flex items-center gap-3 w-full px-4 py-2.5 text-sm hover:bg-tg-hover transition-colors text-left">
               <Trash2 className="h-4 w-4 text-muted-foreground" /> Xoá ở phía bạn
             </button>
@@ -812,6 +849,7 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
+              onPaste={handlePaste}
               placeholder={previewFile ? "Thêm chú thích..." : "Nhập tin nhắn hoặc @botname query..."}
               rows={1}
               className="w-full bg-secondary rounded-xl px-4 py-2.5 text-sm outline-none placeholder:text-muted-foreground resize-none focus:ring-2 focus:ring-primary/30 transition-all max-h-32"
