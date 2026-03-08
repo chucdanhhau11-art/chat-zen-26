@@ -434,6 +434,8 @@ const ChatSidebar: React.FC = () => {
             onClear={handleClearNotifications}
             onClickNotification={handleClickNotification}
             onMarkAllRead={handleMarkAllRead}
+            onAcceptFriend={handleAcceptFriend}
+            onRejectFriend={handleRejectFriend}
           />
         )}
       </AnimatePresence>
