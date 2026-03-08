@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Send, Smile, Paperclip, Mic, MoreVertical, Phone, Video, Search, Info, X, FileText, Film, Image as ImageIcon, Reply, Trash2, RotateCcw, Eye, ImageIcon as GalleryIcon, ArrowLeft, ChevronDown } from 'lucide-react';
+import { Send, Smile, Paperclip, Mic, MoreVertical, Phone, Video, Search, Info, X, FileText, Film, Image as ImageIcon, Reply, Trash2, RotateCcw, Eye, ImageIcon as GalleryIcon, ArrowLeft, ChevronDown, ChevronUp } from 'lucide-react';
 import type { CallType } from '@/hooks/useWebRTC';
 import { useChatContext } from '@/context/ChatContext';
 import { useAuth } from '@/context/AuthContext';
@@ -114,6 +114,11 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
   const [miniApp, setMiniApp] = useState<{ url: string; botName: string; botId?: string } | null>(null);
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
   const [showScrollBtn, setShowScrollBtn] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
+  const [msgSearchQuery, setMsgSearchQuery] = useState('');
+  const [searchMatchIds, setSearchMatchIds] = useState<string[]>([]);
+  const [searchActiveIdx, setSearchActiveIdx] = useState(0);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const inlineDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -424,6 +429,36 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
     setContextMenu({ msg, x: e.clientX, y: e.clientY });
   };
 
+  // Filter visible messages (not deleted_for me, not recalled)
+  const visibleMessages = messages.filter(m => {
+    if (m.deleted && m.sender_id !== user?.id) return true;
+    if (m.deleted_for && user && (m.deleted_for as string[]).includes(user.id)) return false;
+    return true;
+  });
+
+  // Message search logic
+  useEffect(() => {
+    if (!msgSearchQuery.trim()) { setSearchMatchIds([]); setSearchActiveIdx(0); return; }
+    const q = msgSearchQuery.toLowerCase();
+    const ids = visibleMessages.filter(m => m.content?.toLowerCase().includes(q)).map(m => m.id);
+    setSearchMatchIds(ids);
+    setSearchActiveIdx(ids.length > 0 ? ids.length - 1 : 0);
+  }, [msgSearchQuery, messages]);
+
+  useEffect(() => {
+    if (searchMatchIds.length > 0 && searchMatchIds[searchActiveIdx]) {
+      document.getElementById(`msg-${searchMatchIds[searchActiveIdx]}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [searchActiveIdx, searchMatchIds]);
+
+  const toggleSearch = useCallback(() => {
+    setShowSearch(prev => {
+      if (!prev) setTimeout(() => searchInputRef.current?.focus(), 100);
+      else { setMsgSearchQuery(''); setSearchMatchIds([]); }
+      return !prev;
+    });
+  }, []);
+
   if (!activeConversation) {
     return (
       <div className="flex-1 flex items-center justify-center bg-tg-chat">
@@ -477,13 +512,6 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
     return messages.find(m => m.id === replyId) || null;
   };
 
-  // Filter visible messages (not deleted_for me, not recalled)
-  const visibleMessages = messages.filter(m => {
-    if (m.deleted && m.sender_id !== user?.id) return true; // show "recalled" placeholder
-    if (m.deleted_for && user && (m.deleted_for as string[]).includes(user.id)) return false;
-    return true;
-  });
-
   return (
     <div className="flex-1 flex flex-col bg-tg-chat h-full">
       {/* Header */}
@@ -514,7 +542,7 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
         </div>
         <span className="text-[10px] font-display font-semibold text-muted-foreground/60 tracking-wider uppercase mr-1 hidden sm:inline">Chim Cu Gáy</span>
         <div className="flex items-center gap-1">
-          <button className="p-2 rounded-lg hover:bg-tg-hover transition-colors"><Search className="h-4 w-4 text-muted-foreground" /></button>
+          <button onClick={toggleSearch} className={cn("p-2 rounded-lg hover:bg-tg-hover transition-colors", showSearch && "bg-tg-hover")}><Search className="h-4 w-4 text-muted-foreground" /></button>
           {activeConversation.type === 'private' && onStartCall && (
             <>
               <button onClick={() => onStartCall('voice')} className="p-2 rounded-lg hover:bg-tg-hover transition-colors" title="Gọi thoại"><Phone className="h-4 w-4 text-muted-foreground" /></button>
@@ -562,6 +590,53 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
         </div>
       </div>
 
+      {/* Search bar */}
+      <AnimatePresence>
+        {showSearch && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden border-b border-border bg-tg-sidebar"
+          >
+            <div className="flex items-center gap-2 px-3 py-2">
+              <Search className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+              <input
+                ref={searchInputRef}
+                value={msgSearchQuery}
+                onChange={e => setMsgSearchQuery(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && searchMatchIds.length > 0) {
+                    setSearchActiveIdx(prev => (prev - 1 + searchMatchIds.length) % searchMatchIds.length);
+                  } else if (e.key === 'Escape') {
+                    toggleSearch();
+                  }
+                }}
+                placeholder="Tìm tin nhắn..."
+                className="flex-1 bg-transparent text-sm outline-none text-foreground placeholder:text-muted-foreground"
+              />
+              {searchMatchIds.length > 0 && (
+                <span className="text-xs text-muted-foreground whitespace-nowrap">
+                  {searchActiveIdx + 1}/{searchMatchIds.length}
+                </span>
+              )}
+              {msgSearchQuery && searchMatchIds.length === 0 && (
+                <span className="text-xs text-muted-foreground">Không tìm thấy</span>
+              )}
+              <button onClick={() => setSearchActiveIdx(prev => (prev - 1 + searchMatchIds.length) % searchMatchIds.length)} disabled={searchMatchIds.length === 0} className="p-1 rounded hover:bg-tg-hover disabled:opacity-30">
+                <ChevronUp className="h-4 w-4 text-muted-foreground" />
+              </button>
+              <button onClick={() => setSearchActiveIdx(prev => (prev + 1) % searchMatchIds.length)} disabled={searchMatchIds.length === 0} className="p-1 rounded hover:bg-tg-hover disabled:opacity-30">
+                <ChevronDown className="h-4 w-4 text-muted-foreground" />
+              </button>
+              <button onClick={toggleSearch} className="p-1 rounded hover:bg-tg-hover">
+                <X className="h-4 w-4 text-muted-foreground" />
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Messages */}
       <div ref={messagesContainerRef} onScroll={handleMessagesScroll} className="relative flex-1 overflow-y-auto scrollbar-thin px-4 py-4 space-y-1">
         {loadingMessages ? (
@@ -583,7 +658,7 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
               // Recalled message
               if (msg.deleted) {
                 return (
-                  <motion.div key={msg.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className={cn('flex gap-2', isOwn ? 'justify-end' : 'justify-start')}>
+                  <motion.div key={msg.id} id={`msg-${msg.id}`} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className={cn('flex gap-2', isOwn ? 'justify-end' : 'justify-start')}>
                     {!isOwn && <div className="w-8 flex-shrink-0" />}
                     <div className="max-w-[70%] px-3 py-2 rounded-2xl text-sm bg-muted/50 italic text-muted-foreground">
                       🚫 Tin nhắn đã được thu hồi
@@ -595,10 +670,11 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
               return (
                 <motion.div
                   key={msg.id}
+                  id={`msg-${msg.id}`}
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.15 }}
-                  className={cn('flex gap-2', isOwn ? 'justify-end' : 'justify-start')}
+                  className={cn('flex gap-2', isOwn ? 'justify-end' : 'justify-start', searchMatchIds.includes(msg.id) && 'bg-primary/10 rounded-lg -mx-1 px-1')}
                 >
                   {!isOwn && (
                     <div className="w-8 flex-shrink-0 cursor-pointer" onClick={() => setViewProfileId(msg.sender_id)}>
