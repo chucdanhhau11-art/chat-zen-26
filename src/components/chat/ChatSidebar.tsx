@@ -259,6 +259,17 @@ const ChatSidebar: React.FC = () => {
       {showNewChat && <NewChatDialog onClose={() => setShowNewChat(false)} />}
       {showEmailApproval && <AdminEmailApproval onClose={() => setShowEmailApproval(false)} />}
       {showEditProfile && <EditProfileDialog onClose={() => setShowEditProfile(false)} />}
+      <AnimatePresence>
+        {showNotifications && (
+          <NotificationPanel
+            notifications={notifications}
+            onClose={() => setShowNotifications(false)}
+            onClear={handleClearNotifications}
+            onClickNotification={handleClickNotification}
+            onMarkAllRead={handleMarkAllRead}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 };
