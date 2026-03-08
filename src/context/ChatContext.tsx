@@ -5,6 +5,26 @@ import type { Tables } from '@/integrations/supabase/types';
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import { toast } from 'sonner';
 
+const playNotificationSound = () => {
+  try {
+    const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const playTone = (freq: number, startTime: number, duration: number) => {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, audioCtx.currentTime + startTime);
+      gain.gain.setValueAtTime(0.15, audioCtx.currentTime + startTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + startTime + duration);
+      osc.start(audioCtx.currentTime + startTime);
+      osc.stop(audioCtx.currentTime + startTime + duration);
+    };
+    playTone(800, 0, 0.1);
+    playTone(1200, 0.08, 0.12);
+  } catch (e) {}
+};
+
 type Profile = Tables<'profiles'>;
 type Conversation = Tables<'conversations'>;
 type ConversationMember = Tables<'conversation_members'>;
