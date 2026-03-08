@@ -2,3 +2,9 @@ project_id = "asniziunwhienotphgfa"
 
 [functions.seed-admin]
 verify_jwt = false
+
+[functions.bot-manage]
+verify_jwt = false
+
+[functions.bot-api]
+verify_jwt = false
