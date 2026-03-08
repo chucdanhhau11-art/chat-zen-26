@@ -3,9 +3,9 @@ import { X, FileText } from 'lucide-react';
 import { useChatContext } from '@/context/ChatContext';
 import { motion } from 'framer-motion';
 
-const MediaGalleryDialog: React.FC<{ onClose: () => void }> = ({ onClose }) => {
+const MediaGalleryDialog: React.FC<{ onClose: () => void; defaultTab?: 'media' | 'files' }> = ({ onClose, defaultTab = 'media' }) => {
   const { messages } = useChatContext();
-  const [tab, setTab] = useState<'media' | 'files'>('media');
+  const [tab, setTab] = useState<'media' | 'files'>(defaultTab);
 
   const mediaMessages = messages.filter(m => m.message_type === 'image' || m.message_type === 'video');
   const fileMessages = messages.filter(m => m.message_type === 'file');
