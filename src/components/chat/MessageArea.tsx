@@ -620,6 +620,17 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
                                             className="flex-1 text-center px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-xs font-medium hover:bg-primary/20 transition-colors">
                                             {btn.text}
                                           </a>
+                                        ) : btn.web_app?.url ? (
+                                          <button key={bi} onClick={() => {
+                                            const senderProfile = profiles[msg.sender_id];
+                                            setMiniApp({
+                                              url: btn.web_app.url,
+                                              botName: senderProfile?.display_name || 'Mini App',
+                                              botId: msg.sender_id,
+                                            });
+                                          }} className="flex-1 text-center px-3 py-1.5 rounded-lg bg-primary/20 text-primary text-xs font-medium hover:bg-primary/30 transition-colors border border-primary/20">
+                                            ▶ {btn.text}
+                                          </button>
                                         ) : (
                                           <button key={bi} onClick={async () => {
                                             if (btn.callback_data) {
@@ -630,7 +641,6 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
                                                 message_type: 'text',
                                               });
                                               await supabase.from('conversations').update({ updated_at: new Date().toISOString() }).eq('id', activeConversation!.id);
-                                              // If BotFather conversation, process the callback
                                               if (isBotFatherConversation(activeConversation!.id)) {
                                                 try {
                                                   await supabase.functions.invoke('botfather', {
