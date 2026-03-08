@@ -136,6 +136,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => { supabase.removeChannel(channel); };
   }, [activeConversationId]);
 
+  // Realtime profile updates (online/offline status)
   useEffect(() => {
     const channel = supabase.channel('profiles-changes')
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles' },
@@ -143,10 +144,27 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (payload.eventType === 'UPDATE') {
             const updated = payload.new as Profile;
             setProfiles(prev => ({ ...prev, [updated.id]: updated }));
+            setAllProfiles(prev => prev.map(p => p.id === updated.id ? updated : p));
           }
         }).subscribe();
     return () => { supabase.removeChannel(channel); };
   }, []);
+
+  // Polling fallback for online status (every 15s)
+  useEffect(() => {
+    if (!user) return;
+    const pollProfiles = async () => {
+      const { data } = await supabase.from('profiles').select('*');
+      if (data) {
+        const map: Record<string, Profile> = {};
+        data.forEach(p => { map[p.id] = p; });
+        setProfiles(map);
+        setAllProfiles(data);
+      }
+    };
+    const interval = setInterval(pollProfiles, 15000);
+    return () => clearInterval(interval);
+  }, [user]);
 
   const sendMessage = useCallback(async (text: string) => {
     if (!activeConversationId || !user || !text.trim()) return;
