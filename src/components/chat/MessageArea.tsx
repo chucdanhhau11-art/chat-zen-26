@@ -542,7 +542,7 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
         </div>
         <span className="text-[10px] font-display font-semibold text-muted-foreground/60 tracking-wider uppercase mr-1 hidden sm:inline">Chim Cu Gáy</span>
         <div className="flex items-center gap-1">
-          <button className="p-2 rounded-lg hover:bg-tg-hover transition-colors"><Search className="h-4 w-4 text-muted-foreground" /></button>
+          <button onClick={toggleSearch} className={cn("p-2 rounded-lg hover:bg-tg-hover transition-colors", showSearch && "bg-tg-hover")}><Search className="h-4 w-4 text-muted-foreground" /></button>
           {activeConversation.type === 'private' && onStartCall && (
             <>
               <button onClick={() => onStartCall('voice')} className="p-2 rounded-lg hover:bg-tg-hover transition-colors" title="Gọi thoại"><Phone className="h-4 w-4 text-muted-foreground" /></button>
