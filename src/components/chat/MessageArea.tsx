@@ -1030,6 +1030,14 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
           onClose={() => setMiniApp(null)}
         />
       )}
+      {showTransferDialog && (
+        <TransferOwnerDialog
+          open={showTransferDialog}
+          onClose={() => setShowTransferDialog(false)}
+          members={otherMembers}
+          onTransferAndLeave={handleTransferAndLeave}
+        />
+      )}
     </div>
   );
 };
