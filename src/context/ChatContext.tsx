@@ -240,10 +240,9 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
     const { data: conv, error } = await supabase.from('conversations').insert({ type: 'private', created_by: user.id }).select().single();
     if (error || !conv) return null;
-    await supabase.from('conversation_members').insert([
-      { conversation_id: conv.id, user_id: user.id, role: 'member' as const },
-      { conversation_id: conv.id, user_id: userId, role: 'member' as const },
-    ]);
+    // Insert self first, then other user
+    await supabase.from('conversation_members').insert({ conversation_id: conv.id, user_id: user.id, role: 'member' as const });
+    await supabase.from('conversation_members').insert({ conversation_id: conv.id, user_id: userId, role: 'member' as const });
     await fetchConversations();
     return conv.id;
   }, [user, fetchConversations]);
