@@ -188,8 +188,9 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       ).subscribe();
     return () => { supabase.removeChannel(channel); };
+  }, [user]);
 
-  // Fetch messages for active conversation
+
   useEffect(() => {
     if (!activeConversationId || !user) { setMessages([]); return; }
     const fetchMessages = async () => {
