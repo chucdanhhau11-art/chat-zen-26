@@ -368,10 +368,10 @@ serve(async (req) => {
             
             replyMarkup = {
               inline_keyboard: [
-                [{ text: "✏️ Edit Name", callback_data: `action:setname:${selectedBotId}` }, { text: "📝 Edit Description", callback_data: `action:setdesc:${selectedBotId}` }],
-                [{ text: "🌐 Set Webhook", callback_data: `action:setwebhook:${selectedBotId}` }, { text: "⌨️ Set Commands", callback_data: `action:setcmds:${selectedBotId}` }],
-                [{ text: "🔑 Revoke Token", callback_data: `action:revoke:${selectedBotId}` }, { text: botDetail.status === 'active' ? "🔴 Disable" : "🟢 Enable", callback_data: `action:toggle:${selectedBotId}` }],
-                [{ text: "🗑️ Delete Bot", callback_data: `action:delete:${selectedBotId}` }],
+                [{ text: "✏️ Đổi tên", callback_data: `action:setname:${selectedBotId}` }, { text: "📝 Đổi mô tả", callback_data: `action:setdesc:${selectedBotId}` }],
+                [{ text: "🌐 Đặt Webhook", callback_data: `action:setwebhook:${selectedBotId}` }, { text: "⌨️ Đặt lệnh", callback_data: `action:setcmds:${selectedBotId}` }],
+                [{ text: "🔑 Đặt lại Token", callback_data: `action:revoke:${selectedBotId}` }, { text: botDetail.status === 'active' ? "🔴 Tắt bot" : "🟢 Bật bot", callback_data: `action:toggle:${selectedBotId}` }],
+                [{ text: "🗑️ Xoá Bot", callback_data: `action:delete:${selectedBotId}` }],
               ]
             };
             newState = "bot_actions";
