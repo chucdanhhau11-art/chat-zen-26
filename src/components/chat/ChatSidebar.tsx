@@ -123,6 +123,8 @@ const ChatSidebar: React.FC = () => {
           read: false,
         };
         setNotifications(prev => [newNotif, ...prev].slice(0, 50));
+        // Toast popup for new message
+        toast(`💬 ${senderName}`, { description: c.lastMessage.content || '📎 File', duration: 3000 });
       }
     });
     const map: Record<string, number> = {};
