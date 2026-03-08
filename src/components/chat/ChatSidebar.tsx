@@ -41,6 +41,8 @@ const ChatSidebar: React.FC = () => {
   const [showEmailApproval, setShowEmailApproval] = React.useState(false);
   const [showEditProfile, setShowEditProfile] = React.useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showBlockedList, setShowBlockedList] = useState(false);
+  const [viewProfileUserId, setViewProfileUserId] = useState<string | null>(null);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [userSearchQuery, setUserSearchQuery] = useState('');
   const [localSearch, setLocalSearch] = useState('');
