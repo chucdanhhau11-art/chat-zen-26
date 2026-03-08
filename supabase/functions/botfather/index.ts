@@ -520,9 +520,9 @@ serve(async (req) => {
             if (bot) {
               await supabase.from("profiles").update({ bio: desc }).eq("id", bot.profile_id);
               await supabase.from("bots").update({ description: desc }).eq("id", stateData.bot_id);
-              responseText = desc ? `✅ Description updated: ${desc}` : "✅ Description removed.";
+              responseText = desc ? `✅ Đã cập nhật mô tả: ${desc}` : "✅ Đã xoá mô tả.";
             } else {
-              responseText = "Bot not found.";
+              responseText = "Không tìm thấy bot.";
             }
             break;
           }
