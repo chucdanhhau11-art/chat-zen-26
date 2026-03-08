@@ -506,6 +506,52 @@ const ChatSidebar: React.FC = () => {
           </div>
         )}
       </AnimatePresence>
+
+      {/* Confirm action dialog */}
+      <AnimatePresence>
+        {confirmAction && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/60 backdrop-blur-sm" onClick={() => setConfirmAction(null)}>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              onClick={e => e.stopPropagation()}
+              className="bg-card rounded-2xl border border-border shadow-xl w-full max-w-xs p-5 text-center"
+            >
+              <p className="text-sm font-medium mb-1">
+                {confirmAction.type === 'unfriend' ? 'Huỷ kết bạn / Unfriend' : 'Chặn / Block'}
+              </p>
+              <p className="text-xs text-muted-foreground mb-4">
+                {confirmAction.type === 'unfriend'
+                  ? `Bạn có chắc muốn huỷ kết bạn với ${confirmAction.name}?`
+                  : `Bạn có chắc muốn chặn ${confirmAction.name}?`}
+              </p>
+              <div className="flex items-center gap-2 justify-center">
+                <button
+                  onClick={() => setConfirmAction(null)}
+                  className="px-4 py-2 rounded-xl bg-secondary text-foreground text-sm font-medium hover:bg-secondary/80 transition-colors"
+                >
+                  Huỷ
+                </button>
+                <button
+                  onClick={() => {
+                    if (confirmAction.type === 'unfriend') {
+                      const fs = getFriendshipWith(confirmAction.userId);
+                      if (fs) removeFriend(fs.id);
+                    } else {
+                      blockUser(confirmAction.userId);
+                    }
+                    setConfirmAction(null);
+                  }}
+                  className="px-4 py-2 rounded-xl bg-destructive text-destructive-foreground text-sm font-medium hover:bg-destructive/90 transition-colors"
+                >
+                  Xác nhận
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
