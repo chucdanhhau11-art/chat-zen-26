@@ -388,22 +388,22 @@ serve(async (req) => {
 
               switch (actionType) {
                 case "setname":
-                  responseText = "Send me the new name for your bot.";
+                  responseText = "Gửi cho tôi tên mới cho bot của bạn.";
                   newState = "setname_input";
                   newStateData = { bot_id: botId };
                   break;
                 case "setdesc":
-                  responseText = "Send me the new description for your bot (or 'none' to remove).";
+                  responseText = "Gửi cho tôi mô tả mới cho bot (hoặc 'none' để xoá).";
                   newState = "setdescription_input";
                   newStateData = { bot_id: botId };
                   break;
                 case "setwebhook":
-                  responseText = "Send me the webhook URL (or 'none' to remove).";
+                  responseText = "Gửi cho tôi webhook URL (hoặc 'none' để xoá).";
                   newState = "setwebhook_input";
                   newStateData = { bot_id: botId };
                   break;
                 case "setcmds":
-                  responseText = "Send me the commands list. Each line should have:\ncommand - description\n\nExample:\nstart - Start the bot\nhelp - Show help\nnews - Get latest news\n\nSend 'none' to clear all commands.";
+                  responseText = "Gửi cho tôi danh sách lệnh. Mỗi dòng có dạng:\nlệnh - mô tả\n\nVí dụ:\nstart - Khởi động bot\nhelp - Hiện trợ giúp\nnews - Lấy tin mới nhất\n\nGửi 'none' để xoá tất cả lệnh.";
                   newState = "setcommands_input";
                   newStateData = { bot_id: botId };
                   break;
