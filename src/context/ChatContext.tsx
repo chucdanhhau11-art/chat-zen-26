@@ -156,6 +156,8 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const activeConversationIdRef = useRef<string | null>(null);
   const initialLoadDone = useRef(false);
 
+  const [friendships, setFriendships] = useState<Friendship[]>([]);
+
   useEffect(() => { profilesRef.current = profiles; }, [profiles]);
   useEffect(() => { activeConversationIdRef.current = activeConversationId; }, [activeConversationId]);
   useEffect(() => { unreadCountsRef.current = unreadCounts; }, [unreadCounts]);
@@ -168,6 +170,27 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     if (user) requestNotificationPermission();
   }, [user]);
+
+  // Fetch friendships
+  const fetchFriendships = useCallback(async () => {
+    if (!user) return;
+    const { data } = await supabase.from('friendships').select('*').or(`requester_id.eq.${user.id},addressee_id.eq.${user.id}`);
+    if (data) setFriendships(data as Friendship[]);
+  }, [user]);
+
+  useEffect(() => {
+    if (user) fetchFriendships();
+  }, [user, fetchFriendships]);
+
+  // Realtime friendships
+  useEffect(() => {
+    if (!user) return;
+    const channel = supabase.channel('friendships-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'friendships' }, () => {
+        fetchFriendships();
+      }).subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [user, fetchFriendships]);
 
   // Fetch profiles once
   useEffect(() => {
