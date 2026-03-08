@@ -595,6 +595,33 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
 
       <input ref={fileInputRef} type="file" accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar" className="hidden" onChange={handleFileSelect} />
 
+      {/* Command suggestions */}
+      <AnimatePresence>
+        {showCommandSuggestions && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 10 }}
+            className="px-4 py-2 border-t border-border bg-tg-sidebar"
+          >
+            <div className="bg-card rounded-xl border border-border shadow-lg overflow-hidden max-h-40 overflow-y-auto">
+              {botCommands
+                .filter(c => c.command.startsWith(input) || input === '/')
+                .map((cmd, i) => (
+                  <button
+                    key={i}
+                    onClick={() => { setInput(cmd.command + ' '); setShowCommandSuggestions(false); }}
+                    className="flex items-center gap-3 w-full px-4 py-2.5 text-sm hover:bg-tg-hover transition-colors text-left"
+                  >
+                    <code className="text-primary font-mono font-semibold text-xs">{cmd.command}</code>
+                    <span className="text-muted-foreground text-xs truncate">{cmd.description}</span>
+                  </button>
+                ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Input */}
       <div className="px-4 py-3 border-t border-border bg-tg-sidebar">
         <div className="flex items-end gap-2">
