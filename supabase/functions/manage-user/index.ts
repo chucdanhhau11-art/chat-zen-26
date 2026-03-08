@@ -34,7 +34,7 @@ serve(async (req) => {
       .select("role")
       .eq("user_id", caller.id);
 
-    const isAdmin = roles?.some(r => r.role === "admin" || r.role === "super_admin");
+    const isAdmin = roles?.some(r => r.role === "admin");
     if (!isAdmin) {
       return new Response(JSON.stringify({ error: "Forbidden" }), {
         status: 403,

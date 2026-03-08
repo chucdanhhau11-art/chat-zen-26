@@ -25,6 +25,31 @@ const playNotificationSound = () => {
   } catch (e) {}
 };
 
+// Request browser notification permission on load
+const requestNotificationPermission = () => {
+  if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission();
+  }
+};
+
+const showBrowserNotification = (title: string, body: string, onClick?: () => void) => {
+  if ('Notification' in window && Notification.permission === 'granted') {
+    const notif = new Notification(title, {
+      body,
+      icon: '/favicon.ico',
+      tag: 'chat-message',
+    });
+    if (onClick) {
+      notif.onclick = () => {
+        window.focus();
+        onClick();
+      };
+    }
+    // Auto close after 5s
+    setTimeout(() => notif.close(), 5000);
+  }
+};
+
 type Profile = Tables<'profiles'>;
 type Conversation = Tables<'conversations'>;
 type ConversationMember = Tables<'conversation_members'>;
