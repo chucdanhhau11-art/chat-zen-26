@@ -458,6 +458,112 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
     }
   }, [previewFile, user, activeConversation, input, cancelPreview, replyTo]);
 
+  // Voice recording functions
+  const startRecording = useCallback(async () => {
+    if (!activeConversation || !user) return;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      recordingStreamRef.current = stream;
+      audioChunksRef.current = [];
+      setRecordingCancelled(false);
+
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : 'audio/webm';
+      const recorder = new MediaRecorder(stream, { mimeType });
+      mediaRecorderRef.current = recorder;
+
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data);
+      };
+
+      recorder.onstop = async () => {
+        stream.getTracks().forEach(t => t.stop());
+        recordingStreamRef.current = null;
+        if (recordingTimerRef.current) { clearInterval(recordingTimerRef.current); recordingTimerRef.current = null; }
+
+        if (recordingCancelled || audioChunksRef.current.length === 0) {
+          setIsRecording(false);
+          setRecordingTime(0);
+          return;
+        }
+
+        const blob = new Blob(audioChunksRef.current, { type: mimeType });
+        if (blob.size < 500) { setIsRecording(false); setRecordingTime(0); return; }
+
+        // Upload voice
+        setUploading(true);
+        try {
+          const ext = mimeType.includes('webm') ? 'webm' : 'ogg';
+          const path = `${user.id}/voice_${Date.now()}.${ext}`;
+          const { error: upErr } = await supabase.storage.from('chat-files').upload(path, blob, { contentType: mimeType });
+          if (upErr) throw upErr;
+          const { data: urlData } = supabase.storage.from('chat-files').getPublicUrl(path);
+          await supabase.from('messages').insert({
+            conversation_id: activeConversation.id,
+            sender_id: user.id,
+            content: null,
+            message_type: 'voice',
+            file_url: urlData.publicUrl,
+            file_name: `voice_${Date.now()}.${ext}`,
+            file_size: blob.size,
+            reply_to: replyTo?.id || null,
+          });
+          await supabase.from('conversations').update({ updated_at: new Date().toISOString() }).eq('id', activeConversation.id);
+          setReplyTo(null);
+        } catch (err: any) {
+          toast.error('Lỗi gửi ghi âm: ' + (err.message || 'Unknown'));
+        } finally {
+          setUploading(false);
+        }
+
+        setIsRecording(false);
+        setRecordingTime(0);
+      };
+
+      recorder.start(100);
+      setIsRecording(true);
+      setRecordingTime(0);
+      recordingTimerRef.current = setInterval(() => setRecordingTime(t => t + 1), 1000);
+    } catch (err: any) {
+      toast.error('Không thể truy cập microphone');
+    }
+  }, [activeConversation, user, replyTo, recordingCancelled]);
+
+  const stopRecording = useCallback(() => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      setRecordingCancelled(false);
+      mediaRecorderRef.current.stop();
+    }
+  }, []);
+
+  const cancelRecording = useCallback(() => {
+    setRecordingCancelled(true);
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop();
+    }
+    if (recordingStreamRef.current) {
+      recordingStreamRef.current.getTracks().forEach(t => t.stop());
+      recordingStreamRef.current = null;
+    }
+    if (recordingTimerRef.current) { clearInterval(recordingTimerRef.current); recordingTimerRef.current = null; }
+    setIsRecording(false);
+    setRecordingTime(0);
+    audioChunksRef.current = [];
+  }, []);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+      if (recordingStreamRef.current) recordingStreamRef.current.getTracks().forEach(t => t.stop());
+    };
+  }, []);
+
+  const formatRecordingTime = (s: number) => {
+    const m = Math.floor(s / 60);
+    const sec = s % 60;
+    return `${m}:${sec.toString().padStart(2, '0')}`;
+  };
+
   const handleSend = async () => {
     if (previewFile) { await uploadAndSend(); return; }
     if (!input.trim() || !activeConversation || !user) return;
