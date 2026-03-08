@@ -19,6 +19,87 @@ serve(async (req) => {
     const body = await req.json();
     const { bot_token, action } = body;
 
+    // ==================== clientInlineQuery (no auth required) ====================
+    if (action === "clientInlineQuery") {
+      const { bot_profile_id, query, user_id, chat_id } = body;
+      if (!bot_profile_id) {
+        return new Response(JSON.stringify({ error: "bot_profile_id is required" }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const { data: clientBot } = await supabase
+        .from("bots")
+        .select("id, webhook_url")
+        .eq("profile_id", bot_profile_id)
+        .eq("status", "active")
+        .maybeSingle();
+
+      if (!clientBot) {
+        return new Response(JSON.stringify({ results: [] }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      if (user_id) {
+        await supabase.from("inline_queries").insert({
+          bot_id: clientBot.id,
+          user_id,
+          query_text: query || "",
+          chat_id: chat_id || null,
+        });
+      }
+
+      if (clientBot.webhook_url) {
+        try {
+          const webhookResp = await fetch(clientBot.webhook_url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              event_type: "inline_query",
+              bot_id: clientBot.id,
+              query, user_id, chat_id,
+            }),
+          });
+          if (webhookResp.ok) {
+            const webhookData = await webhookResp.json();
+            if (webhookData.results && Array.isArray(webhookData.results)) {
+              await supabase.from("inline_results").delete().eq("bot_id", clientBot.id);
+              const rows = webhookData.results.map((r: any) => ({
+                bot_id: clientBot.id,
+                result_id: r.id || crypto.randomUUID(),
+                result_type: r.type || "article",
+                title: r.title || "",
+                description: r.description || null,
+                content: r.message_text || r.content || null,
+                thumbnail_url: r.thumbnail_url || r.thumb_url || null,
+                reply_markup: r.reply_markup || null,
+                expires_at: new Date(Date.now() + 3600000).toISOString(),
+              }));
+              await supabase.from("inline_results").insert(rows);
+            }
+          }
+        } catch (e) {}
+      }
+
+      await supabase.from("bot_events").insert({
+        bot_id: clientBot.id,
+        event_type: "inline_query",
+        payload: { query, user_id, chat_id },
+      });
+
+      const { data: results } = await supabase
+        .from("inline_results").select("*")
+        .eq("bot_id", clientBot.id)
+        .gt("expires_at", new Date().toISOString())
+        .order("created_at", { ascending: false })
+        .limit(50);
+
+      return new Response(JSON.stringify({ results: results || [] }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     if (!bot_token) {
       return new Response(JSON.stringify({ error: "bot_token is required" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -201,16 +282,19 @@ serve(async (req) => {
 
     // ==================== processInlineQuery ====================
     // Called by the client when user types @botname query
+    // Can be called with bot_token OR bot_profile_id (for client-side calls)
     if (action === "processInlineQuery") {
       const { query, user_id, chat_id } = body;
 
-      // Log the inline query
-      await supabase.from("inline_queries").insert({
-        bot_id: bot.id,
-        user_id: user_id || "anonymous",
-        query_text: query || "",
-        chat_id: chat_id || null,
-      });
+      // Log the inline query (only if valid user_id provided)
+      if (user_id) {
+        await supabase.from("inline_queries").insert({
+          bot_id: bot.id,
+          user_id,
+          query_text: query || "",
+          chat_id: chat_id || null,
+        });
+      }
 
       // If bot has a webhook, forward the inline query
       if (bot.webhook_url) {

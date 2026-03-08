@@ -185,15 +185,11 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
           .select('id').eq('username', botUsername).eq('is_bot', true).maybeSingle();
         if (!botProfile) { setInlineResults([]); setShowInlineResults(false); return; }
 
-        const { data: bot } = await supabase.from('bots')
-          .select('id, bot_token').eq('profile_id', botProfile.id).eq('status', 'active').maybeSingle();
-        if (!bot) { setInlineResults([]); setShowInlineResults(false); return; }
-
-        // Call processInlineQuery
+        // Use clientInlineQuery - no bot_token needed
         const { data } = await supabase.functions.invoke('bot-api', {
           body: {
-            bot_token: bot.bot_token,
-            action: 'processInlineQuery',
+            action: 'clientInlineQuery',
+            bot_profile_id: botProfile.id,
             query,
             user_id: user?.id,
             chat_id: activeConversation?.id,

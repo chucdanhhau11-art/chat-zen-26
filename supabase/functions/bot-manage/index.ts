@@ -62,23 +62,33 @@ serve(async (req) => {
         });
       }
 
-      // Create a profile for the bot (using service role to bypass RLS)
-      const profileId = crypto.randomUUID();
-      const { error: profileErr } = await supabase.from("profiles").insert({
-        id: profileId,
-        username,
-        display_name: bot_name,
+      // Create auth user for the bot (required due to FK constraint on profiles)
+      const { data: authData, error: authErr } = await supabase.auth.admin.createUser({
+        email: `${username}@bot.internal`,
+        password: crypto.randomUUID() + crypto.randomUUID(),
+        email_confirm: true,
+        user_metadata: { username, display_name: bot_name },
+      });
+
+      if (authErr) {
+        return new Response(JSON.stringify({ error: "Failed to create bot: " + authErr.message }), {
+          status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Update the auto-created profile
+      await supabase.from("profiles").update({
         avatar_url: avatar_url || null,
         bio: description || null,
         is_bot: true,
         online: true,
-      });
-      if (profileErr) throw profileErr;
+        display_name: bot_name,
+      }).eq("id", authData.user.id);
 
       // Create bot record
       const botToken = generateToken();
       const { data: bot, error: botErr } = await supabase.from("bots").insert({
-        profile_id: profileId,
+        profile_id: authData.user.id,
         owner_id: caller.id,
         bot_token: botToken,
         description: description || null,
