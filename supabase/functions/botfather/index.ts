@@ -507,9 +507,9 @@ serve(async (req) => {
             const { data: bot } = await supabase.from("bots").select("profile_id").eq("id", stateData.bot_id).eq("owner_id", caller.id).single();
             if (bot) {
               await supabase.from("profiles").update({ display_name: text }).eq("id", bot.profile_id);
-              responseText = `✅ Bot name updated to: **${text}**`;
+              responseText = `✅ Đã cập nhật tên bot: **${text}**`;
             } else {
-              responseText = "Bot not found.";
+              responseText = "Không tìm thấy bot.";
             }
             break;
           }
