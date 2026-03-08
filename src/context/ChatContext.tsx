@@ -84,7 +84,9 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [profiles, setProfiles] = useState<Record<string, Profile>>({});
   const [allProfiles, setAllProfiles] = useState<Profile[]>([]);
   const [isMobileShowingChat, setMobileShowingChat] = useState(false);
+  const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
   const profilesRef = useRef<Record<string, Profile>>({});
+  const activeConversationIdRef = useRef<string | null>(null);
   const initialLoadDone = useRef(false);
 
   useEffect(() => { profilesRef.current = profiles; }, [profiles]);
