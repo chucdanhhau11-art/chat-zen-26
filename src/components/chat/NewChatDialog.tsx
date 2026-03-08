@@ -26,11 +26,6 @@ const NewChatDialog: React.FC<NewChatDialogProps> = ({ onClose }) => {
     p.username.toLowerCase().includes(search.toLowerCase())
   );
 
-  // All users filtered by search (for search tab)
-  const filteredAll = otherProfiles.filter(p =>
-    p.display_name.toLowerCase().includes(search.toLowerCase()) ||
-    p.username.toLowerCase().includes(search.toLowerCase())
-  );
 
   const handlePrivateChat = async (userId: string) => {
     const convId = await createPrivateChat(userId);
