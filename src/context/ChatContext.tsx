@@ -90,6 +90,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const initialLoadDone = useRef(false);
 
   useEffect(() => { profilesRef.current = profiles; }, [profiles]);
+  useEffect(() => { activeConversationIdRef.current = activeConversationId; }, [activeConversationId]);
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', darkMode);
