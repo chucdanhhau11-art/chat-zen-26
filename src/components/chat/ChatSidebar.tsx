@@ -153,6 +153,10 @@ const ChatSidebar: React.FC = () => {
                   <Bookmark className="h-4 w-4 text-primary" />
                   <span>Saved Messages</span>
                 </button>
+                <a href="/bots" onClick={() => setShowMenu(false)} className="flex items-center gap-3 w-full px-4 py-2.5 text-sm hover:bg-tg-hover transition-colors text-left">
+                  <Bot className="h-4 w-4 text-primary" />
+                  <span>Bot Management</span>
+                </a>
                 {isAdmin && (
                   <>
                     <div className="border-t border-border" />
