@@ -43,6 +43,7 @@ const ChatSidebar: React.FC = () => {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showBlockedList, setShowBlockedList] = useState(false);
   const [viewProfileUserId, setViewProfileUserId] = useState<string | null>(null);
+  const [confirmAction, setConfirmAction] = useState<{ type: 'unfriend' | 'block'; userId: string; name: string } | null>(null);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [userSearchQuery, setUserSearchQuery] = useState('');
   const [localSearch, setLocalSearch] = useState('');
