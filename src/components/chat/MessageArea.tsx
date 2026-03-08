@@ -131,12 +131,16 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
   const [msgSearchQuery, setMsgSearchQuery] = useState('');
   const [searchMatchIds, setSearchMatchIds] = useState<string[]>([]);
   const [searchActiveIdx, setSearchActiveIdx] = useState(0);
+  const [reactions, setReactions] = useState<Record<string, { emoji: string; user_id: string; id: string }[]>>({});
+  const [emojiPickerMsgId, setEmojiPickerMsgId] = useState<string | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const inlineDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const prevMessagesLenRef = useRef(0);
+
+  const QUICK_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🔥', '👏', '🎉'];
 
   // Fetch bot commands for the active conversation
   const isBotFather = isBotFatherConversation(activeConversation?.id || null);
