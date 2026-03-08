@@ -100,7 +100,7 @@ serve(async (req) => {
       await supabase.from("profiles").update({
         is_bot: true,
         online: true,
-        bio: "I am BotFather. I can help you create and manage bots.",
+        bio: "Tôi là BotFather. Tôi có thể giúp bạn tạo và quản lý bot.",
         display_name: "BotFather",
       }).eq("id", authData.user.id);
 
