@@ -429,6 +429,36 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
     setContextMenu({ msg, x: e.clientX, y: e.clientY });
   };
 
+  // Filter visible messages (not deleted_for me, not recalled)
+  const visibleMessages = messages.filter(m => {
+    if (m.deleted && m.sender_id !== user?.id) return true;
+    if (m.deleted_for && user && (m.deleted_for as string[]).includes(user.id)) return false;
+    return true;
+  });
+
+  // Message search logic
+  useEffect(() => {
+    if (!msgSearchQuery.trim()) { setSearchMatchIds([]); setSearchActiveIdx(0); return; }
+    const q = msgSearchQuery.toLowerCase();
+    const ids = visibleMessages.filter(m => m.content?.toLowerCase().includes(q)).map(m => m.id);
+    setSearchMatchIds(ids);
+    setSearchActiveIdx(ids.length > 0 ? ids.length - 1 : 0);
+  }, [msgSearchQuery, messages]);
+
+  useEffect(() => {
+    if (searchMatchIds.length > 0 && searchMatchIds[searchActiveIdx]) {
+      document.getElementById(`msg-${searchMatchIds[searchActiveIdx]}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [searchActiveIdx, searchMatchIds]);
+
+  const toggleSearch = useCallback(() => {
+    setShowSearch(prev => {
+      if (!prev) setTimeout(() => searchInputRef.current?.focus(), 100);
+      else { setMsgSearchQuery(''); setSearchMatchIds([]); }
+      return !prev;
+    });
+  }, []);
+
   if (!activeConversation) {
     return (
       <div className="flex-1 flex items-center justify-center bg-tg-chat">
