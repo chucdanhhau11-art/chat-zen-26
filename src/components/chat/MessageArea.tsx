@@ -775,6 +775,18 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
     return () => window.removeEventListener('click', handler);
   }, [emojiPickerMsgId]);
 
+  // Close input emoji picker on outside click
+  useEffect(() => {
+    if (!showInputEmoji) return;
+    const handler = (e: MouseEvent) => {
+      if (inputEmojiRef.current && !inputEmojiRef.current.contains(e.target as Node)) {
+        setShowInputEmoji(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [showInputEmoji]);
+
   if (!activeConversation) {
     return (
       <div className="flex-1 flex items-center justify-center bg-tg-chat">
