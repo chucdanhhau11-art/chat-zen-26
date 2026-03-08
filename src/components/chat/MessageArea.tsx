@@ -455,6 +455,48 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
                     )}
                     {msg.message_type === 'text' ? (
                       <p className="whitespace-pre-wrap break-words">{renderContent(msg.content)}</p>
+                    ) : msg.message_type === 'bot_message' ? (
+                      <div>
+                        <p className="whitespace-pre-wrap break-words">{renderContent(msg.content)}</p>
+                        {msg.file_name && (() => {
+                          try {
+                            const markup = JSON.parse(msg.file_name);
+                            if (markup?.inline_keyboard) {
+                              return (
+                                <div className="mt-2 space-y-1">
+                                  {markup.inline_keyboard.map((row: any[], ri: number) => (
+                                    <div key={ri} className="flex gap-1">
+                                      {row.map((btn: any, bi: number) => (
+                                        btn.url ? (
+                                          <a key={bi} href={btn.url} target="_blank" rel="noopener noreferrer"
+                                            className="flex-1 text-center px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-xs font-medium hover:bg-primary/20 transition-colors">
+                                            {btn.text}
+                                          </a>
+                                        ) : (
+                                          <button key={bi} onClick={() => {
+                                            // Send callback_data as a message
+                                            if (btn.callback_data) {
+                                              supabase.from('messages').insert({
+                                                conversation_id: activeConversation!.id,
+                                                sender_id: user!.id,
+                                                content: btn.callback_data,
+                                                message_type: 'text',
+                                              });
+                                            }
+                                          }} className="flex-1 text-center px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-xs font-medium hover:bg-primary/20 transition-colors">
+                                            {btn.text}
+                                          </button>
+                                        )
+                                      ))}
+                                    </div>
+                                  ))}
+                                </div>
+                              );
+                            }
+                          } catch {}
+                          return null;
+                        })()}
+                      </div>
                     ) : (
                       <MessageBubbleFile msg={msg} isOwn={isOwn} />
                     )}
