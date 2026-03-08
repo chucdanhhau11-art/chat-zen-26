@@ -157,10 +157,95 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
   useEffect(() => {
     if (input.startsWith('/') && botCommands.length > 0) {
       setShowCommandSuggestions(true);
+      setShowInlineResults(false);
     } else {
       setShowCommandSuggestions(false);
     }
   }, [input, botCommands]);
+
+  // Inline query detection: @botname query
+  useEffect(() => {
+    const match = input.match(/^@(\w+)\s*(.*)/);
+    if (!match) {
+      setShowInlineResults(false);
+      setInlineResults([]);
+      return;
+    }
+
+    const botUsername = match[1];
+    const query = match[2] || '';
+    setInlineBotUsername(botUsername);
+
+    // Debounce the inline query
+    if (inlineDebounceRef.current) clearTimeout(inlineDebounceRef.current);
+    inlineDebounceRef.current = setTimeout(async () => {
+      try {
+        // Find bot by username
+        const { data: botProfile } = await supabase.from('profiles')
+          .select('id').eq('username', botUsername).eq('is_bot', true).maybeSingle();
+        if (!botProfile) { setInlineResults([]); setShowInlineResults(false); return; }
+
+        const { data: bot } = await supabase.from('bots')
+          .select('id, bot_token').eq('profile_id', botProfile.id).eq('status', 'active').maybeSingle();
+        if (!bot) { setInlineResults([]); setShowInlineResults(false); return; }
+
+        // Call processInlineQuery
+        const { data } = await supabase.functions.invoke('bot-api', {
+          body: {
+            bot_token: bot.bot_token,
+            action: 'processInlineQuery',
+            query,
+            user_id: user?.id,
+            chat_id: activeConversation?.id,
+          },
+        });
+
+        if (data?.results && data.results.length > 0) {
+          setInlineResults(data.results);
+          setShowInlineResults(true);
+        } else {
+          setInlineResults([]);
+          setShowInlineResults(false);
+        }
+      } catch (err) {
+        console.error('Inline query error:', err);
+        setInlineResults([]);
+        setShowInlineResults(false);
+      }
+    }, 400);
+
+    return () => {
+      if (inlineDebounceRef.current) clearTimeout(inlineDebounceRef.current);
+    };
+  }, [input, user, activeConversation]);
+
+  // Handle inline result selection
+  const handleSelectInlineResult = useCallback(async (result: any) => {
+    if (!activeConversation || !user) return;
+    
+    const content = result.content || result.title;
+    const msgInsert: Record<string, any> = {
+      conversation_id: activeConversation.id,
+      sender_id: user.id,
+      content,
+      message_type: result.reply_markup ? 'bot_message' : 'text',
+    };
+    if (result.reply_markup) {
+      msgInsert.file_name = JSON.stringify(result.reply_markup);
+    }
+    if (result.thumbnail_url && (result.result_type === 'photo' || result.result_type === 'gif')) {
+      msgInsert.message_type = 'image';
+      msgInsert.file_url = result.thumbnail_url;
+      msgInsert.file_name = result.title || 'inline_result';
+    }
+
+    await supabase.from('messages').insert(msgInsert);
+    await supabase.from('conversations').update({ updated_at: new Date().toISOString() }).eq('id', activeConversation.id);
+    
+    setInput('');
+    setShowInlineResults(false);
+    setInlineResults([]);
+  }, [activeConversation, user]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
