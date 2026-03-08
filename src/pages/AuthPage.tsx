@@ -48,7 +48,7 @@ const AuthPage: React.FC = () => {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-md">
         <div className="text-center mb-8">
-          <img src={logoImg} alt="Chim Cu Gáy" className="w-14 h-14 mx-auto mb-4 drop-shadow-lg" />
+          <img src={logoImg} alt="Chim Cu Gáy" className="w-14 h-14 mx-auto mb-4 drop-shadow-lg rounded-full" />
           <h1 className="text-2xl font-display font-bold">Chim Cu Gáy</h1>
           <p className="text-muted-foreground text-sm mt-1">{isLogin ? 'Đăng nhập để tiếp tục' : 'Tạo tài khoản mới'}</p>
         </div>
