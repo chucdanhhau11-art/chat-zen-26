@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { X, Bell, Trash2, Users, Image, FileText, Link, LogOut } from 'lucide-react';
+import { X, Bell, Trash2, Users, Image, FileText, LogOut } from 'lucide-react';
 import { useChatContext } from '@/context/ChatContext';
 import { useAuth } from '@/context/AuthContext';
 import ChatAvatar from './ChatAvatar';
 import ProfileViewDialog from './ProfileViewDialog';
 import MediaGalleryDialog from './MediaGalleryDialog';
+import TransferOwnerDialog from './TransferOwnerDialog';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const InfoPanel: React.FC = () => {
@@ -12,6 +13,7 @@ const InfoPanel: React.FC = () => {
   const { user } = useAuth();
   const [viewProfileId, setViewProfileId] = useState<string | null>(null);
   const [galleryTab, setGalleryTab] = useState<'media' | 'files' | null>(null);
+  const [showTransferDialog, setShowTransferDialog] = useState(false);
 
   if (!activeConversation) return null;
 
@@ -32,6 +34,32 @@ const InfoPanel: React.FC = () => {
 
   const mediaCount = messages.filter(m => m.message_type === 'image' || m.message_type === 'video').length;
   const fileCount = messages.filter(m => m.message_type === 'file').length;
+
+  const isOwner = user && activeConversation.members.find(m => m.user_id === user.id)?.role === 'owner';
+  const otherMembers = activeConversation.members.filter(m => m.user_id !== user?.id).map(m => ({
+    ...m,
+    profile: profiles[m.user_id] || null,
+  }));
+
+  const handleLeaveGroup = async () => {
+    if (!activeConversation || activeConversation.type === 'private') return;
+    
+    // If owner and there are other members, show transfer dialog
+    if (isOwner && otherMembers.length > 0) {
+      setShowTransferDialog(true);
+      return;
+    }
+    
+    // If owner but no other members, just leave (will auto-delete group)
+    // Or if not owner, just leave
+    if (window.confirm('Rời khỏi nhóm này?')) {
+      await leaveGroup(activeConversation.id);
+    }
+  };
+
+  const handleTransferAndLeave = async (newOwnerId: string) => {
+    await leaveGroup(activeConversation.id, newOwnerId);
+  };
 
   return (
     <AnimatePresence>
@@ -93,9 +121,7 @@ const InfoPanel: React.FC = () => {
             <div className="mt-auto px-2 pb-4 pt-4 space-y-1">
               {activeConversation.type !== 'private' && (
                 <button
-                  onClick={async () => {
-                    if (window.confirm('Rời khỏi nhóm này?')) await leaveGroup(activeConversation.id);
-                  }}
+                  onClick={handleLeaveGroup}
                   className="flex items-center gap-3 w-full px-4 py-2.5 rounded-lg hover:bg-muted text-muted-foreground transition-colors text-sm"
                 >
                   <LogOut className="h-4 w-4" />
@@ -115,6 +141,14 @@ const InfoPanel: React.FC = () => {
           </div>
           {viewProfileId && <ProfileViewDialog userId={viewProfileId} onClose={() => setViewProfileId(null)} />}
           {galleryTab && <MediaGalleryDialog defaultTab={galleryTab} onClose={() => setGalleryTab(null)} />}
+          {showTransferDialog && (
+            <TransferOwnerDialog
+              open={showTransferDialog}
+              onClose={() => setShowTransferDialog(false)}
+              members={otherMembers}
+              onTransferAndLeave={handleTransferAndLeave}
+            />
+          )}
         </motion.div>
       )}
     </AnimatePresence>
