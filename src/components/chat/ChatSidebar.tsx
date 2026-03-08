@@ -1,5 +1,5 @@
-import React from 'react';
-import { Search, Menu, Moon, Sun, Plus, Shield, Mail, User, Bookmark } from 'lucide-react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
+import { Search, Menu, Moon, Sun, Plus, Shield, Mail, User, Bookmark, Bell } from 'lucide-react';
 import { useChatContext } from '@/context/ChatContext';
 import { useAuth } from '@/context/AuthContext';
 import ChatAvatar from './ChatAvatar';
@@ -10,6 +10,7 @@ import type { Tables } from '@/integrations/supabase/types';
 import NewChatDialog from './NewChatDialog';
 import AdminEmailApproval from './AdminEmailApproval';
 import EditProfileDialog from './EditProfileDialog';
+import NotificationPanel, { type NotificationItem } from './NotificationPanel';
 
 type ConversationMember = Tables<'conversation_members'>;
 type Profile = Tables<'profiles'>;
