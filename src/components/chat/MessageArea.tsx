@@ -79,15 +79,26 @@ const MessageBubbleFile: React.FC<{ msg: any; isOwn: boolean; onImageClick?: (ur
   return <p className="whitespace-pre-wrap break-words">{msg.content}</p>;
 };
 
-const renderContent = (content: string | null) => {
+const highlightText = (text: string, query: string): React.ReactNode => {
+  if (!query.trim()) return text;
+  const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+  const parts = text.split(regex);
+  return parts.map((part, i) =>
+    regex.test(part) ? (
+      <mark key={i} className="bg-yellow-400/70 dark:bg-yellow-500/50 text-foreground rounded-sm px-0.5">{part}</mark>
+    ) : part
+  );
+};
+
+const renderContent = (content: string | null, searchQuery?: string) => {
   if (!content) return null;
   const urlRegex = /(https?:\/\/[^\s]+)/g;
   const parts = content.split(urlRegex);
   return parts.map((part, i) => {
     if (urlRegex.test(part)) {
-      return <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="text-blue-400 underline hover:text-blue-300 break-all">{part}</a>;
+      return <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="text-blue-400 underline hover:text-blue-300 break-all">{searchQuery ? highlightText(part, searchQuery) : part}</a>;
     }
-    return part;
+    return searchQuery ? <React.Fragment key={i}>{highlightText(part, searchQuery)}</React.Fragment> : part;
   });
 };
 
