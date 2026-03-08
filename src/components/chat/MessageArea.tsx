@@ -125,6 +125,7 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
   const [showInlineResults, setShowInlineResults] = useState(false);
   const [miniApp, setMiniApp] = useState<{ url: string; botName: string; botId?: string } | null>(null);
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
+  const [showTransferDialog, setShowTransferDialog] = useState(false);
   const [showScrollBtn, setShowScrollBtn] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [msgSearchQuery, setMsgSearchQuery] = useState('');
