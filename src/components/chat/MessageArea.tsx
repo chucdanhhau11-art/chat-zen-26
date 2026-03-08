@@ -88,7 +88,11 @@ const renderContent = (content: string | null) => {
   });
 };
 
-const MessageArea: React.FC = () => {
+interface MessageAreaProps {
+  onStartCall?: (type: CallType) => void;
+}
+
+const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
   const { activeConversation, messages, sendMessage, toggleInfoPanel, profiles, loadingMessages, deleteConversation, leaveGroup, setMobileShowingChat } = useChatContext();
   const { user } = useAuth();
   const [input, setInput] = useState('');
