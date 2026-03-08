@@ -117,6 +117,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => { profilesRef.current = profiles; }, [profiles]);
   useEffect(() => { activeConversationIdRef.current = activeConversationId; }, [activeConversationId]);
+  useEffect(() => { unreadCountsRef.current = unreadCounts; }, [unreadCounts]);
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', darkMode);
