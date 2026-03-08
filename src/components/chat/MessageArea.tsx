@@ -658,9 +658,15 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
     await leaveGroup(activeConversation.id, newOwnerId);
   };
 
+  const contextMenuRef = useRef<HTMLDivElement>(null);
+
   const handleMessageContextMenu = (e: React.MouseEvent, msg: any) => {
     e.preventDefault();
-    setContextMenu({ msg, x: e.clientX, y: e.clientY });
+    // Estimate menu size for boundary clamping
+    const menuW = 200, menuH = 220;
+    const x = Math.min(e.clientX, window.innerWidth - menuW - 8);
+    const y = Math.min(e.clientY, window.innerHeight - menuH - 8);
+    setContextMenu({ msg, x: Math.max(8, x), y: Math.max(8, y) });
   };
 
   // Filter visible messages (not deleted_for me, not recalled)
