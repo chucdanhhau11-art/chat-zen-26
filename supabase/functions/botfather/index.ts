@@ -256,7 +256,7 @@ serve(async (req) => {
             // Check username uniqueness
             const { data: existingUser } = await supabase.from("profiles").select("id").eq("username", username).maybeSingle();
             if (existingUser) {
-              responseText = `Sorry, the username @${username} is already taken. Please try another one.`;
+              responseText = `Username @${username} đã được sử dụng. Vui lòng thử username khác.`;
               newState = "creating_bot_username";
               newStateData = stateData;
               break;
