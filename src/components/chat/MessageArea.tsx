@@ -336,10 +336,24 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
           <ArrowLeft className="h-5 w-5 text-muted-foreground" />
         </button>
         <div className="cursor-pointer flex-shrink-0" onClick={handleAvatarClick}>
-          <ChatAvatar name={getConvName()} online={getOtherOnline()} size="sm" />
+          <ChatAvatar name={getConvName()} online={getOtherOnline()} size="sm" isBot={(() => {
+            if (activeConversation.type === 'private' && user) {
+              const other = activeConversation.members.find(m => m.user_id !== user.id);
+              return other ? !!profiles[other.user_id]?.is_bot : false;
+            }
+            return false;
+          })()}/>
         </div>
         <div className="flex-1 min-w-0 cursor-pointer" onClick={toggleInfoPanel}>
-          <h3 className="font-semibold text-sm truncate">{getConvName()}</h3>
+          <h3 className="font-semibold text-sm truncate flex items-center gap-1.5">
+            {getConvName()}
+            {activeConversation.type === 'private' && user && (() => {
+              const other = activeConversation.members.find(m => m.user_id !== user.id);
+              return other && profiles[other.user_id]?.is_bot ? (
+                <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary font-bold uppercase tracking-wider">BOT</span>
+              ) : null;
+            })()}
+          </h3>
           <p className={cn('text-xs', getOtherOnline() ? 'text-tg-online' : 'text-muted-foreground')}>{getStatusText()}</p>
         </div>
         <span className="text-[10px] font-display font-semibold text-muted-foreground/60 tracking-wider uppercase mr-1 hidden sm:inline">Chim Cu Gáy</span>
