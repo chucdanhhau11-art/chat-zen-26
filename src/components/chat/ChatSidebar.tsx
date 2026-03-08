@@ -43,6 +43,7 @@ const ChatSidebar: React.FC = () => {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showBlockedList, setShowBlockedList] = useState(false);
   const [viewProfileUserId, setViewProfileUserId] = useState<string | null>(null);
+  const [confirmAction, setConfirmAction] = useState<{ type: 'unfriend' | 'block'; userId: string; name: string } | null>(null);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [userSearchQuery, setUserSearchQuery] = useState('');
   const [localSearch, setLocalSearch] = useState('');
@@ -371,18 +372,18 @@ const ChatSidebar: React.FC = () => {
               return (
                 <div
                   key={p.id}
-                  className="flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-tg-hover"
+                  className="flex items-center gap-2 px-4 py-2.5 transition-colors hover:bg-tg-hover"
                 >
                   <ChatAvatar name={p.display_name} online={p.online ?? false} size="md" />
-                  <div className="flex-1 min-w-0">
+                  <div className="flex-1 min-w-0 mr-1">
                     <p className="text-sm font-medium truncate">{p.display_name}</p>
-                    <p className="text-xs text-muted-foreground">@{p.username}</p>
+                    <p className="text-xs text-muted-foreground truncate">@{p.username}</p>
                   </div>
-                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                  <div className="flex items-center gap-1 flex-shrink-0">
                     {status === 'none' && (
                       <button
                         onClick={() => sendFriendRequest(p.id)}
-                        className="flex items-center gap-1 px-2 py-1 rounded-lg bg-primary text-primary-foreground text-[11px] font-medium hover:bg-primary/90 transition-colors"
+                        className="flex items-center gap-1 px-2 py-1 rounded-lg bg-primary text-primary-foreground text-[11px] font-medium hover:bg-primary/90 transition-colors whitespace-nowrap"
                       >
                         <UserPlus className="h-3 w-3" /> Kết bạn
                       </button>
@@ -390,51 +391,34 @@ const ChatSidebar: React.FC = () => {
                     {status === 'sent' && (
                       <button
                         onClick={() => { const fs = getFriendshipWith(p.id); if (fs) cancelFriendRequest(fs.id); }}
-                        className="flex items-center gap-1 px-2 py-1 rounded-lg bg-muted text-muted-foreground text-[11px] hover:bg-destructive/10 hover:text-destructive transition-colors"
-                        title="Huỷ lời mời / Cancel"
+                        className="flex items-center gap-1 px-2 py-1 rounded-lg bg-muted text-muted-foreground text-[11px] hover:bg-destructive/10 hover:text-destructive transition-colors whitespace-nowrap"
                       >
                         <XCircle className="h-3 w-3" /> Đã gửi
                       </button>
                     )}
                     {status === 'received' && (
                       <button
-                        onClick={() => {
-                          const fs = getFriendshipWith(p.id);
-                          if (fs) acceptFriendRequest(fs.id);
-                        }}
-                        className="flex items-center gap-1 px-2 py-1 rounded-lg bg-primary text-primary-foreground text-[11px] font-medium hover:bg-primary/90 transition-colors"
+                        onClick={() => { const fs = getFriendshipWith(p.id); if (fs) acceptFriendRequest(fs.id); }}
+                        className="flex items-center gap-1 px-2 py-1 rounded-lg bg-primary text-primary-foreground text-[11px] font-medium hover:bg-primary/90 transition-colors whitespace-nowrap"
                       >
                         <Check className="h-3 w-3" /> Chấp nhận
                       </button>
                     )}
                     {status === 'friend' && (
                       <button
-                        onClick={() => { const fs = getFriendshipWith(p.id); if (fs) removeFriend(fs.id); }}
-                        className="flex items-center gap-1 px-2 py-1 rounded-lg bg-primary/10 text-primary text-[11px] hover:bg-destructive/10 hover:text-destructive transition-colors"
-                        title="Huỷ kết bạn / Unfriend"
+                        onClick={() => setConfirmAction({ type: 'unfriend', userId: p.id, name: p.display_name })}
+                        className="flex items-center gap-1 px-2 py-1 rounded-lg bg-primary/10 text-primary text-[11px] hover:bg-destructive/10 hover:text-destructive transition-colors whitespace-nowrap"
                       >
                         <UserMinus className="h-3 w-3" /> Bạn bè
                       </button>
                     )}
-                    <button
-                      onClick={() => setViewProfileUserId(p.id)}
-                      className="p-1.5 rounded-lg hover:bg-tg-hover transition-colors"
-                      title="Xem profile / View profile"
-                    >
+                    <button onClick={() => setViewProfileUserId(p.id)} className="p-1 rounded-lg hover:bg-tg-hover transition-colors" title="Xem profile">
                       <Eye className="h-3.5 w-3.5 text-muted-foreground" />
                     </button>
-                    <button
-                      onClick={() => handleUserChat(p.id)}
-                      className="p-1.5 rounded-lg hover:bg-tg-hover transition-colors"
-                      title="Nhắn tin / Message"
-                    >
+                    <button onClick={() => handleUserChat(p.id)} className="p-1 rounded-lg hover:bg-tg-hover transition-colors" title="Nhắn tin">
                       <MessageCircle className="h-3.5 w-3.5 text-muted-foreground" />
                     </button>
-                    <button
-                      onClick={() => blockUser(p.id)}
-                      className="p-1.5 rounded-lg hover:bg-destructive/10 transition-colors"
-                      title="Chặn / Block"
-                    >
+                    <button onClick={() => setConfirmAction({ type: 'block', userId: p.id, name: p.display_name })} className="p-1 rounded-lg hover:bg-destructive/10 transition-colors" title="Chặn">
                       <Ban className="h-3.5 w-3.5 text-muted-foreground hover:text-destructive" />
                     </button>
                   </div>
@@ -518,6 +502,52 @@ const ChatSidebar: React.FC = () => {
                   })}
                 </div>
               )}
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Confirm action dialog */}
+      <AnimatePresence>
+        {confirmAction && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/60 backdrop-blur-sm" onClick={() => setConfirmAction(null)}>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              onClick={e => e.stopPropagation()}
+              className="bg-card rounded-2xl border border-border shadow-xl w-full max-w-xs p-5 text-center"
+            >
+              <p className="text-sm font-medium mb-1">
+                {confirmAction.type === 'unfriend' ? 'Huỷ kết bạn / Unfriend' : 'Chặn / Block'}
+              </p>
+              <p className="text-xs text-muted-foreground mb-4">
+                {confirmAction.type === 'unfriend'
+                  ? `Bạn có chắc muốn huỷ kết bạn với ${confirmAction.name}?`
+                  : `Bạn có chắc muốn chặn ${confirmAction.name}?`}
+              </p>
+              <div className="flex items-center gap-2 justify-center">
+                <button
+                  onClick={() => setConfirmAction(null)}
+                  className="px-4 py-2 rounded-xl bg-secondary text-foreground text-sm font-medium hover:bg-secondary/80 transition-colors"
+                >
+                  Huỷ
+                </button>
+                <button
+                  onClick={() => {
+                    if (confirmAction.type === 'unfriend') {
+                      const fs = getFriendshipWith(confirmAction.userId);
+                      if (fs) removeFriend(fs.id);
+                    } else {
+                      blockUser(confirmAction.userId);
+                    }
+                    setConfirmAction(null);
+                  }}
+                  className="px-4 py-2 rounded-xl bg-destructive text-destructive-foreground text-sm font-medium hover:bg-destructive/90 transition-colors"
+                >
+                  Xác nhận
+                </button>
+              </div>
             </motion.div>
           </div>
         )}

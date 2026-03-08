@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { X, UserPlus, Check, Clock, UserMinus, MessageCircle, Ban, XCircle } from 'lucide-react';
 import { useChatContext } from '@/context/ChatContext';
 import { useAuth } from '@/context/AuthContext';
@@ -16,11 +16,11 @@ const ProfileViewDialog: React.FC<Props> = ({ userId, onClose }) => {
   const { user } = useAuth();
   const profile = profiles[userId];
   const friendship = getFriendshipWith(userId);
-
-  if (!profile) return null;
-
   const isMe = user?.id === userId;
   const blocked = isBlocked(userId);
+  const [showConfirm, setShowConfirm] = useState<'unfriend' | 'block' | null>(null);
+
+  if (!profile) return null;
 
   const getFriendStatus = () => {
     if (!friendship) return 'none';
@@ -105,7 +105,7 @@ const ProfileViewDialog: React.FC<Props> = ({ userId, onClose }) => {
               )}
               {status === 'friend' && (
                 <button
-                  onClick={() => friendship && removeFriend(friendship.id)}
+                  onClick={() => setShowConfirm('unfriend')}
                   className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-destructive/10 text-destructive text-sm font-medium hover:bg-destructive/20 transition-colors"
                 >
                   <UserMinus className="h-4 w-4" />
@@ -125,12 +125,38 @@ const ProfileViewDialog: React.FC<Props> = ({ userId, onClose }) => {
           {/* Block button */}
           {!isMe && !profile.is_bot && (
             <button
-              onClick={() => { blockUser(userId); onClose(); }}
+              onClick={() => setShowConfirm('block')}
               className="flex items-center gap-1.5 mt-3 px-4 py-2 rounded-xl bg-destructive/10 text-destructive text-sm font-medium hover:bg-destructive/20 transition-colors"
             >
               <Ban className="h-4 w-4" />
               {blocked ? 'Đã chặn' : 'Chặn người dùng'}
             </button>
+          )}
+
+          {/* Confirm dialog inline */}
+          {showConfirm && (
+            <div className="mt-3 w-full p-3 rounded-xl border border-destructive/30 bg-destructive/5 text-center">
+              <p className="text-xs text-muted-foreground mb-2">
+                {showConfirm === 'unfriend'
+                  ? `Bạn có chắc muốn huỷ kết bạn với ${profile.display_name}?`
+                  : `Bạn có chắc muốn chặn ${profile.display_name}?`}
+              </p>
+              <div className="flex gap-2 justify-center">
+                <button onClick={() => setShowConfirm(null)} className="px-3 py-1.5 rounded-lg bg-secondary text-foreground text-xs font-medium hover:bg-secondary/80 transition-colors">
+                  Huỷ
+                </button>
+                <button
+                  onClick={() => {
+                    if (showConfirm === 'unfriend' && friendship) removeFriend(friendship.id);
+                    if (showConfirm === 'block') { blockUser(userId); onClose(); }
+                    setShowConfirm(null);
+                  }}
+                  className="px-3 py-1.5 rounded-lg bg-destructive text-destructive-foreground text-xs font-medium hover:bg-destructive/90 transition-colors"
+                >
+                  Xác nhận
+                </button>
+              </div>
+            </div>
           )}
 
           <div className="mt-4 w-full space-y-2 text-sm">
