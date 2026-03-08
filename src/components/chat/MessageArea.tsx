@@ -522,10 +522,15 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'reactions' }, (payload: any) => {
         if (payload.eventType === 'INSERT') {
           const r = payload.new;
-          setReactions(prev => ({
-            ...prev,
-            [r.message_id]: [...(prev[r.message_id] || []), { emoji: r.emoji, user_id: r.user_id, id: r.id }],
-          }));
+          setReactions(prev => {
+            const existing = prev[r.message_id] || [];
+            // Skip if already exists (from optimistic update) - match by real id or by temp + same user/emoji
+            if (existing.some(x => x.id === r.id || (x.id.startsWith('temp-') && x.user_id === r.user_id && x.emoji === r.emoji))) {
+              // Replace temp id with real id
+              return { ...prev, [r.message_id]: existing.map(x => x.id.startsWith('temp-') && x.user_id === r.user_id && x.emoji === r.emoji ? { ...x, id: r.id } : x) };
+            }
+            return { ...prev, [r.message_id]: [...existing, { emoji: r.emoji, user_id: r.user_id, id: r.id }] };
+          });
         } else if (payload.eventType === 'DELETE') {
           const r = payload.old;
           setReactions(prev => ({
