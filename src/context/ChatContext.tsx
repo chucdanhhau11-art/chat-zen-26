@@ -171,11 +171,27 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     initialLoadDone.current = true;
   }, [user]);
 
-  // Initial load
+  // Initial load + auto-create Saved Messages
   useEffect(() => {
     if (!user) return;
-    // Wait a tick for profiles to load
-    const timer = setTimeout(() => fetchConversations(true), 300);
+    const timer = setTimeout(async () => {
+      await fetchConversations(true);
+      // Auto-create Saved Messages if not exists
+      const { data: existingConvs } = await supabase.from('conversations')
+        .select('id').eq('name', 'Saved Messages').eq('created_by', user.id);
+      if (!existingConvs || existingConvs.length === 0) {
+        const { data: conv } = await supabase.from('conversations').insert({
+          type: 'private' as const,
+          name: 'Saved Messages',
+          created_by: user.id,
+          pinned: true,
+        }).select().single();
+        if (conv) {
+          await supabase.from('conversation_members').insert({ conversation_id: conv.id, user_id: user.id, role: 'owner' as const });
+          await fetchConversations(false);
+        }
+      }
+    }, 300);
     return () => clearTimeout(timer);
   }, [user, fetchConversations]);
 
