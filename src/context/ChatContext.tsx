@@ -110,12 +110,14 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [allProfiles, setAllProfiles] = useState<Profile[]>([]);
   const [isMobileShowingChat, setMobileShowingChat] = useState(false);
   const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
+  const unreadCountsRef = useRef<Record<string, number>>({});
   const profilesRef = useRef<Record<string, Profile>>({});
   const activeConversationIdRef = useRef<string | null>(null);
   const initialLoadDone = useRef(false);
 
   useEffect(() => { profilesRef.current = profiles; }, [profiles]);
   useEffect(() => { activeConversationIdRef.current = activeConversationId; }, [activeConversationId]);
+  useEffect(() => { unreadCountsRef.current = unreadCounts; }, [unreadCounts]);
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', darkMode);
@@ -163,7 +165,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const members = (allMembers || []).filter(m => m.conversation_id === conv.id).map(m => ({ ...m, profile: currentProfiles[m.user_id] }));
         const { data: lastMsgData } = await supabase.from('messages').select('*').eq('conversation_id', conv.id).order('created_at', { ascending: false }).limit(1);
         const lastMessage = lastMsgData?.[0] ? { ...lastMsgData[0], sender: currentProfiles[lastMsgData[0].sender_id] } : undefined;
-        return { ...conv, members, lastMessage, unreadCount: unreadCounts[conv.id] || 0 };
+        return { ...conv, members, lastMessage, unreadCount: unreadCountsRef.current[conv.id] || 0 };
       })
     );
     setConversations(conversationsWithDetails);
