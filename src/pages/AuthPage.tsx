@@ -31,7 +31,7 @@ const AuthPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    setSubmitting(true);
     if (isLogin) {
       const { error } = await signIn(email, password);
       if (error) {
