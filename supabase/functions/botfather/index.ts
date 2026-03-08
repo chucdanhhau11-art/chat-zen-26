@@ -530,7 +530,7 @@ serve(async (req) => {
           case "setwebhook_input": {
             const url = text.toLowerCase() === 'none' ? null : text;
             if (url && !url.startsWith('http')) {
-              responseText = "Please send a valid URL starting with http:// or https://, or 'none' to remove.";
+              responseText = "Vui lòng gửi URL hợp lệ bắt đầu bằng http:// hoặc https://, hoặc 'none' để xoá.";
               newState = "setwebhook_input";
               newStateData = stateData;
               break;
