@@ -91,8 +91,8 @@ const AuthPage: React.FC = () => {
                 </button>
               </div>
             </div>
-            <button type="submit" disabled={loading} className="w-full bg-primary text-primary-foreground rounded-xl py-2.5 text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50">
-              {loading ? 'Đang xử lý...' : isLogin ? 'Đăng nhập' : 'Đăng ký'}
+            <button type="submit" disabled={submitting} className="w-full bg-primary text-primary-foreground rounded-xl py-2.5 text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50">
+              {submitting ? 'Đang xử lý...' : isLogin ? 'Đăng nhập' : 'Đăng ký'}
             </button>
           </form>
           <div className="mt-4 text-center">
