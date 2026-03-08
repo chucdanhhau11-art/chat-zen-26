@@ -151,12 +151,12 @@ const ChatSidebar: React.FC = () => {
     return undefined;
   };
 
-  // User search results (only when searching)
-  const searchedUsers = searchQuery.trim().length >= 2
+  // User search results (only when user presses Enter)
+  const searchedUsers = userSearchQuery.trim().length >= 2
     ? allProfiles.filter(p =>
         p.id !== user?.id && !p.is_bot &&
-        (p.display_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-         p.username.toLowerCase().includes(searchQuery.toLowerCase()))
+        (p.display_name.toLowerCase().includes(userSearchQuery.toLowerCase()) ||
+         p.username.toLowerCase().includes(userSearchQuery.toLowerCase()))
       )
     : [];
 
