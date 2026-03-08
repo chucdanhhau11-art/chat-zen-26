@@ -348,7 +348,7 @@ serve(async (req) => {
             }
 
             if (!selectedBotId) {
-              responseText = "Please send a valid bot number from the list, or use /cancel.";
+              responseText = "Vui lòng gửi số thứ tự hợp lệ từ danh sách, hoặc dùng /cancel.";
               newState = "selecting_bot";
               newStateData = stateData;
               break;
