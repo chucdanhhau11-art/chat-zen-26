@@ -724,6 +724,22 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
           </AnimatePresence>
         )}
         <div ref={messagesEndRef} />
+
+        {/* Scroll to bottom button */}
+        <AnimatePresence>
+          {showScrollBtn && (
+            <motion.button
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.8 }}
+              onClick={() => scrollToBottom('smooth')}
+              className="sticky bottom-4 left-1/2 -translate-x-1/2 ml-auto mr-auto w-10 h-10 flex items-center justify-center bg-primary text-primary-foreground rounded-full shadow-lg hover:bg-primary/90 transition-colors z-10"
+              title="Về tin nhắn mới nhất"
+            >
+              <ChevronDown className="h-5 w-5" />
+            </motion.button>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Context menu for messages */}
