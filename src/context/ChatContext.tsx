@@ -106,6 +106,8 @@ interface ChatContextType {
   isMobileShowingChat: boolean;
   setMobileShowingChat: (v: boolean) => void;
   clearUnread: (convId: string) => void;
+  openBotFatherChat: () => Promise<void>;
+  isBotFatherConversation: (convId: string | null) => boolean;
 }
 
 const ChatContext = createContext<ChatContextType | null>(null);
