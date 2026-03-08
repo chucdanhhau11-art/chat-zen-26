@@ -244,7 +244,12 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
   }, [activeConversation, user]);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    // Only scroll to bottom when messages are loaded (not on reset to empty)
+    if (messages.length > 0) {
+      requestAnimationFrame(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      });
+    }
   }, [messages.length]);
 
   useEffect(() => {
