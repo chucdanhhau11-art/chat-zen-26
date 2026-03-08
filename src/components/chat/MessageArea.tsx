@@ -240,9 +240,7 @@ const MessageArea: React.FC = () => {
     return (
       <div className="flex-1 flex items-center justify-center bg-tg-chat">
         <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="text-center">
-          <div className="w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-6">
-            <Send className="h-10 w-10 text-foreground" />
-          </div>
+          <img src={logoImg} alt="Chim Cu Gáy" className="w-24 h-24 mx-auto mb-6 drop-shadow-lg" />
           <h2 className="text-xl font-display font-semibold mb-2">Chim Cu Gáy</h2>
           <p className="text-muted-foreground text-sm max-w-xs">Chọn một cuộc trò chuyện để bắt đầu nhắn tin</p>
         </motion.div>
