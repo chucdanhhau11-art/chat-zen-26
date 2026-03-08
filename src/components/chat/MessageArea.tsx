@@ -528,7 +528,7 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
     } catch (err: any) {
       toast.error('Không thể truy cập microphone');
     }
-  }, [activeConversation, user, replyTo, recordingCancelled]);
+  }, [activeConversation, user, replyTo]);
 
   const stopRecording = useCallback(() => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
