@@ -497,6 +497,66 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
     });
   }, []);
 
+  // Fetch reactions for current conversation messages
+  useEffect(() => {
+    if (!activeConversation || visibleMessages.length === 0) { setReactions({}); return; }
+    const msgIds = visibleMessages.map(m => m.id);
+    const fetchReactions = async () => {
+      const { data } = await supabase.from('reactions').select('*').in('message_id', msgIds);
+      if (data) {
+        const grouped: Record<string, { emoji: string; user_id: string; id: string }[]> = {};
+        data.forEach(r => {
+          if (!grouped[r.message_id]) grouped[r.message_id] = [];
+          grouped[r.message_id].push({ emoji: r.emoji, user_id: r.user_id, id: r.id });
+        });
+        setReactions(grouped);
+      }
+    };
+    fetchReactions();
+  }, [activeConversation?.id, messages.length]);
+
+  // Realtime reactions
+  useEffect(() => {
+    if (!activeConversation) return;
+    const channel = supabase.channel(`reactions-${activeConversation.id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'reactions' }, (payload: any) => {
+        if (payload.eventType === 'INSERT') {
+          const r = payload.new;
+          setReactions(prev => ({
+            ...prev,
+            [r.message_id]: [...(prev[r.message_id] || []), { emoji: r.emoji, user_id: r.user_id, id: r.id }],
+          }));
+        } else if (payload.eventType === 'DELETE') {
+          const r = payload.old;
+          setReactions(prev => ({
+            ...prev,
+            [r.message_id]: (prev[r.message_id] || []).filter(x => x.id !== r.id),
+          }));
+        }
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [activeConversation?.id]);
+
+  const toggleReaction = useCallback(async (messageId: string, emoji: string) => {
+    if (!user) return;
+    const existing = reactions[messageId]?.find(r => r.user_id === user.id && r.emoji === emoji);
+    if (existing) {
+      await supabase.from('reactions').delete().eq('id', existing.id);
+    } else {
+      await supabase.from('reactions').insert({ message_id: messageId, user_id: user.id, emoji });
+    }
+    setEmojiPickerMsgId(null);
+  }, [user, reactions]);
+
+  // Close emoji picker on outside click
+  useEffect(() => {
+    if (!emojiPickerMsgId) return;
+    const handler = () => setEmojiPickerMsgId(null);
+    window.addEventListener('click', handler);
+    return () => window.removeEventListener('click', handler);
+  }, [emojiPickerMsgId]);
+
   if (!activeConversation) {
     return (
       <div className="flex-1 flex items-center justify-center bg-tg-chat">
