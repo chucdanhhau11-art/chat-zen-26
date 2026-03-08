@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { motion } from 'framer-motion';
-import { Send, Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff } from 'lucide-react';
+import logoImg from '@/assets/logo.png';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
