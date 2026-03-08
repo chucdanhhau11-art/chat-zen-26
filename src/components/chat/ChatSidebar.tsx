@@ -383,9 +383,13 @@ const ChatSidebar: React.FC = () => {
                       </button>
                     )}
                     {status === 'sent' && (
-                      <span className="flex items-center gap-1 px-2 py-1 rounded-lg bg-muted text-muted-foreground text-[11px]">
-                        <Clock className="h-3 w-3" /> Đã gửi
-                      </span>
+                      <button
+                        onClick={() => { const fs = getFriendshipWith(p.id); if (fs) cancelFriendRequest(fs.id); }}
+                        className="flex items-center gap-1 px-2 py-1 rounded-lg bg-muted text-muted-foreground text-[11px] hover:bg-destructive/10 hover:text-destructive transition-colors"
+                        title="Huỷ lời mời / Cancel"
+                      >
+                        <XCircle className="h-3 w-3" /> Đã gửi
+                      </button>
                     )}
                     {status === 'received' && (
                       <button
@@ -399,16 +403,34 @@ const ChatSidebar: React.FC = () => {
                       </button>
                     )}
                     {status === 'friend' && (
-                      <span className="flex items-center gap-1 px-2 py-1 rounded-lg bg-primary/10 text-primary text-[11px]">
-                        <Check className="h-3 w-3" /> Bạn bè
-                      </span>
+                      <button
+                        onClick={() => { const fs = getFriendshipWith(p.id); if (fs) removeFriend(fs.id); }}
+                        className="flex items-center gap-1 px-2 py-1 rounded-lg bg-primary/10 text-primary text-[11px] hover:bg-destructive/10 hover:text-destructive transition-colors"
+                        title="Huỷ kết bạn / Unfriend"
+                      >
+                        <UserMinus className="h-3 w-3" /> Bạn bè
+                      </button>
                     )}
+                    <button
+                      onClick={() => setViewProfileUserId(p.id)}
+                      className="p-1.5 rounded-lg hover:bg-tg-hover transition-colors"
+                      title="Xem profile / View profile"
+                    >
+                      <Eye className="h-3.5 w-3.5 text-muted-foreground" />
+                    </button>
                     <button
                       onClick={() => handleUserChat(p.id)}
                       className="p-1.5 rounded-lg hover:bg-tg-hover transition-colors"
                       title="Nhắn tin / Message"
                     >
                       <MessageCircle className="h-3.5 w-3.5 text-muted-foreground" />
+                    </button>
+                    <button
+                      onClick={() => blockUser(p.id)}
+                      className="p-1.5 rounded-lg hover:bg-destructive/10 transition-colors"
+                      title="Chặn / Block"
+                    >
+                      <Ban className="h-3.5 w-3.5 text-muted-foreground hover:text-destructive" />
                     </button>
                   </div>
                 </div>
