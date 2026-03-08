@@ -375,10 +375,28 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [user, fetchConversations]);
 
+  const clearUnread = useCallback((convId: string) => {
+    setUnreadCounts(prev => {
+      const next = { ...prev };
+      delete next[convId];
+      return next;
+    });
+    setConversations(prev => prev.map(c => c.id === convId ? { ...c, unreadCount: 0 } : c));
+  }, []);
+
   const setActiveConversation = useCallback((id: string | null) => {
     setActiveConversationId(id);
-    if (id) setMobileShowingChat(true);
-  }, []);
+    if (id) {
+      setMobileShowingChat(true);
+      clearUnread(id);
+    }
+  }, [clearUnread]);
+
+  // Update page title with total unread
+  useEffect(() => {
+    const total = Object.values(unreadCounts).reduce((s, c) => s + c, 0);
+    document.title = total > 0 ? `(${total}) Chat` : 'Chat';
+  }, [unreadCounts]);
 
   const toggleInfoPanel = useCallback(() => setShowInfoPanel(p => !p), []);
   const toggleDarkMode = useCallback(() => setDarkMode(p => !p), []);
@@ -392,7 +410,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       activeConversation, loadingConversations, loadingMessages,
       profiles, createPrivateChat, createGroup, allProfiles,
       deleteConversation, leaveGroup, ensureSavedMessages,
-      isMobileShowingChat, setMobileShowingChat,
+      isMobileShowingChat, setMobileShowingChat, clearUnread,
     }}>
       {children}
     </ChatContext.Provider>
