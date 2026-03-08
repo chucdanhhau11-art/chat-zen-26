@@ -111,8 +111,12 @@ const ChatSidebar: React.FC = () => {
     getConversationName(c).toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // Sort: pinned first, then by updated_at
+  // Sort: Saved Messages always first, then pinned, then rest
   const sorted = [...filtered].sort((a, b) => {
+    const aIsSaved = a.name === 'Saved Messages';
+    const bIsSaved = b.name === 'Saved Messages';
+    if (aIsSaved && !bIsSaved) return -1;
+    if (!aIsSaved && bIsSaved) return 1;
     if (a.pinned && !b.pinned) return -1;
     if (!a.pinned && b.pinned) return 1;
     return 0;
