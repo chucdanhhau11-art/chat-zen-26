@@ -223,6 +223,7 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
   const audioChunksRef = useRef<Blob[]>([]);
   const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const recordingStreamRef = useRef<MediaStream | null>(null);
+  const recordingCancelledRef = useRef(false);
   const prevMessagesLenRef = useRef(0);
 
   const QUICK_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🔥', '👏', '🎉'];
