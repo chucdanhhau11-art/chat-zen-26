@@ -60,6 +60,7 @@ interface ChatContextType {
   ensureSavedMessages: () => Promise<void>;
   isMobileShowingChat: boolean;
   setMobileShowingChat: (v: boolean) => void;
+  clearUnread: (convId: string) => void;
 }
 
 const ChatContext = createContext<ChatContextType | null>(null);
