@@ -673,7 +673,7 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
                         })()}
                       </div>
                     ) : (
-                      <MessageBubbleFile msg={msg} isOwn={isOwn} />
+                      <MessageBubbleFile msg={msg} isOwn={isOwn} onImageClick={(url) => setLightboxImage(url)} />
                     )}
                     <div className={cn('flex items-center gap-1 mt-1', isOwn ? 'justify-end' : 'justify-start')}>
                       <span className="text-[10px] text-muted-foreground">{formatTime(new Date(msg.created_at))}</span>
