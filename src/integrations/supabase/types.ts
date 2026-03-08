@@ -95,6 +95,30 @@ export type Database = {
           },
         ]
       }
+      botfather_sessions: {
+        Row: {
+          data: Json | null
+          id: string
+          state: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          data?: Json | null
+          id?: string
+          state?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          data?: Json | null
+          id?: string
+          state?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       bots: {
         Row: {
           bot_token: string
