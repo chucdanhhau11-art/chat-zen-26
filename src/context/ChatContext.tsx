@@ -5,6 +5,26 @@ import type { Tables } from '@/integrations/supabase/types';
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import { toast } from 'sonner';
 
+const playNotificationSound = () => {
+  try {
+    const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const playTone = (freq: number, startTime: number, duration: number) => {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, audioCtx.currentTime + startTime);
+      gain.gain.setValueAtTime(0.15, audioCtx.currentTime + startTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + startTime + duration);
+      osc.start(audioCtx.currentTime + startTime);
+      osc.stop(audioCtx.currentTime + startTime + duration);
+    };
+    playTone(800, 0, 0.1);
+    playTone(1200, 0.08, 0.12);
+  } catch (e) {}
+};
+
 type Profile = Tables<'profiles'>;
 type Conversation = Tables<'conversations'>;
 type ConversationMember = Tables<'conversation_members'>;
@@ -40,6 +60,7 @@ interface ChatContextType {
   ensureSavedMessages: () => Promise<void>;
   isMobileShowingChat: boolean;
   setMobileShowingChat: (v: boolean) => void;
+  clearUnread: (convId: string) => void;
 }
 
 const ChatContext = createContext<ChatContextType | null>(null);
@@ -63,10 +84,13 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [profiles, setProfiles] = useState<Record<string, Profile>>({});
   const [allProfiles, setAllProfiles] = useState<Profile[]>([]);
   const [isMobileShowingChat, setMobileShowingChat] = useState(false);
+  const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
   const profilesRef = useRef<Record<string, Profile>>({});
+  const activeConversationIdRef = useRef<string | null>(null);
   const initialLoadDone = useRef(false);
 
   useEffect(() => { profilesRef.current = profiles; }, [profiles]);
+  useEffect(() => { activeConversationIdRef.current = activeConversationId; }, [activeConversationId]);
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', darkMode);
@@ -109,7 +133,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const members = (allMembers || []).filter(m => m.conversation_id === conv.id).map(m => ({ ...m, profile: currentProfiles[m.user_id] }));
         const { data: lastMsgData } = await supabase.from('messages').select('*').eq('conversation_id', conv.id).order('created_at', { ascending: false }).limit(1);
         const lastMessage = lastMsgData?.[0] ? { ...lastMsgData[0], sender: currentProfiles[lastMsgData[0].sender_id] } : undefined;
-        return { ...conv, members, lastMessage, unreadCount: 0 };
+        return { ...conv, members, lastMessage, unreadCount: unreadCounts[conv.id] || 0 };
       })
     );
     setConversations(conversationsWithDetails);
@@ -139,7 +163,34 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => { supabase.removeChannel(channel); };
   }, [user, fetchConversations]);
 
-  // Fetch messages for active conversation
+  // Global listener for new messages → unread counts + notification sound
+  useEffect(() => {
+    if (!user) return;
+    const channel = supabase.channel('global-messages-notify')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' },
+        (payload: RealtimePostgresChangesPayload<Message>) => {
+          const newMsg = payload.new as Message;
+          if (!newMsg || newMsg.sender_id === user.id) return;
+          // Only count if not currently viewing that conversation
+          if (activeConversationIdRef.current !== newMsg.conversation_id) {
+            setUnreadCounts(prev => ({
+              ...prev,
+              [newMsg.conversation_id]: (prev[newMsg.conversation_id] || 0) + 1,
+            }));
+            playNotificationSound();
+            // Update conversations to reflect new unread
+            setConversations(prev => prev.map(c =>
+              c.id === newMsg.conversation_id
+                ? { ...c, unreadCount: (c.unreadCount || 0) + 1, lastMessage: { ...newMsg, sender: profilesRef.current[newMsg.sender_id] } }
+                : c
+            ));
+          }
+        }
+      ).subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [user]);
+
+
   useEffect(() => {
     if (!activeConversationId || !user) { setMessages([]); return; }
     const fetchMessages = async () => {
@@ -324,10 +375,28 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [user, fetchConversations]);
 
+  const clearUnread = useCallback((convId: string) => {
+    setUnreadCounts(prev => {
+      const next = { ...prev };
+      delete next[convId];
+      return next;
+    });
+    setConversations(prev => prev.map(c => c.id === convId ? { ...c, unreadCount: 0 } : c));
+  }, []);
+
   const setActiveConversation = useCallback((id: string | null) => {
     setActiveConversationId(id);
-    if (id) setMobileShowingChat(true);
-  }, []);
+    if (id) {
+      setMobileShowingChat(true);
+      clearUnread(id);
+    }
+  }, [clearUnread]);
+
+  // Update page title with total unread
+  useEffect(() => {
+    const total = Object.values(unreadCounts).reduce((s, c) => s + c, 0);
+    document.title = total > 0 ? `(${total}) Chat` : 'Chat';
+  }, [unreadCounts]);
 
   const toggleInfoPanel = useCallback(() => setShowInfoPanel(p => !p), []);
   const toggleDarkMode = useCallback(() => setDarkMode(p => !p), []);
@@ -341,7 +410,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       activeConversation, loadingConversations, loadingMessages,
       profiles, createPrivateChat, createGroup, allProfiles,
       deleteConversation, leaveGroup, ensureSavedMessages,
-      isMobileShowingChat, setMobileShowingChat,
+      isMobileShowingChat, setMobileShowingChat, clearUnread,
     }}>
       {children}
     </ChatContext.Provider>
