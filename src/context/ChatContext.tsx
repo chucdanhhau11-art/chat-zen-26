@@ -121,6 +121,11 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     document.documentElement.classList.toggle('dark', darkMode);
   }, [darkMode]);
 
+  // Request browser notification permission
+  useEffect(() => {
+    if (user) requestNotificationPermission();
+  }, [user]);
+
   // Fetch profiles once
   useEffect(() => {
     if (!user) return;
