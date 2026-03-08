@@ -57,9 +57,8 @@ const showBrowserNotification = async (title: string, body: string) => {
         body,
         icon: '/favicon.ico',
         tag: 'chat-message-' + Date.now(),
-        renotify: true,
         vibrate: [200, 100, 200],
-      });
+      } as NotificationOptions);
       return;
     }
   } catch (e) {}
