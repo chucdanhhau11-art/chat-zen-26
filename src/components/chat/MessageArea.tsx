@@ -247,14 +247,22 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
     setInlineResults([]);
   }, [activeConversation, user]);
 
+  const scrollToBottom = useCallback((behavior: ScrollBehavior = 'smooth') => {
+    requestAnimationFrame(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior });
+    });
+  }, []);
+
+  const handleMessagesScroll = useCallback(() => {
+    const el = messagesContainerRef.current;
+    if (!el) return;
+    const distFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    setShowScrollBtn(distFromBottom > 200);
+  }, []);
+
   useEffect(() => {
-    // Only scroll to bottom when messages are loaded (not on reset to empty)
-    if (messages.length > 0) {
-      requestAnimationFrame(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-      });
-    }
-  }, [messages.length]);
+    if (messages.length > 0) scrollToBottom('smooth');
+  }, [messages.length, scrollToBottom]);
 
   useEffect(() => {
     if (messages.length > prevMessagesLenRef.current && prevMessagesLenRef.current > 0) {
