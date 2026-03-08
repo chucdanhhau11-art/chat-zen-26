@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, FileText } from 'lucide-react';
 import { useChatContext } from '@/context/ChatContext';
 import { motion } from 'framer-motion';
+import ImageLightbox from './ImageLightbox';
 
 const MediaGalleryDialog: React.FC<{ onClose: () => void; defaultTab?: 'media' | 'files' }> = ({ onClose, defaultTab = 'media' }) => {
   const { messages } = useChatContext();
