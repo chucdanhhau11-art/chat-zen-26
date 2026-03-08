@@ -557,7 +557,7 @@ serve(async (req) => {
             if (cmds.length > 0) {
               await supabase.from("bot_commands").insert(cmds);
             }
-            responseText = `✅ Commands updated:\n\n${cmds.map(c => `${c.command} - ${c.description}`).join("\n")}`;
+            responseText = `✅ Đã cập nhật lệnh:\n\n${cmds.map(c => `${c.command} - ${c.description}`).join("\n")}`;
             break;
           }
 
