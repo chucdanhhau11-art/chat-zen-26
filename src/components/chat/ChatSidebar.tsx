@@ -107,9 +107,15 @@ const ChatSidebar: React.FC = () => {
     return undefined;
   };
 
-  const filtered = conversations.filter(c =>
-    getConversationName(c).toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filtered = conversations.filter(c => {
+    if (!getConversationName(c).toLowerCase().includes(searchQuery.toLowerCase())) return false;
+    // Hide private chats with no messages (except Saved Messages) so the other user only sees it after a message is sent
+    if (c.type === 'private' && c.name !== 'Saved Messages' && !c.lastMessage) {
+      // Only show to the creator
+      if (c.created_by !== user?.id) return false;
+    }
+    return true;
+  });
 
   // Sort: Saved Messages always first, then pinned, then rest
   const sorted = [...filtered].sort((a, b) => {
