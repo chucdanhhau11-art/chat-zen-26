@@ -124,9 +124,24 @@ const ChatSidebar: React.FC = () => {
 
   const handleClickNotification = useCallback((notif: NotificationItem) => {
     setNotifications(prev => prev.map(n => n.id === notif.id ? { ...n, read: true } : n));
-    setActiveConversation(notif.conversationId);
+    if (notif.type === 'friend_request') return; // don't navigate for friend requests
+    if (notif.conversationId) setActiveConversation(notif.conversationId);
     setShowNotifications(false);
   }, [setActiveConversation]);
+
+  const handleAcceptFriend = useCallback(async (notif: NotificationItem) => {
+    if (notif.friendRequestId) {
+      await acceptFriendRequest(notif.friendRequestId);
+      setNotifications(prev => prev.map(n => n.id === notif.id ? { ...n, read: true, friendRequestId: undefined, content: '✅ Đã chấp nhận / Accepted' } : n));
+    }
+  }, [acceptFriendRequest]);
+
+  const handleRejectFriend = useCallback(async (notif: NotificationItem) => {
+    if (notif.friendRequestId) {
+      await declineFriendRequest(notif.friendRequestId);
+      setNotifications(prev => prev.map(n => n.id === notif.id ? { ...n, read: true, friendRequestId: undefined, content: '❌ Đã từ chối / Declined' } : n));
+    }
+  }, [declineFriendRequest]);
 
   const handleMarkAllRead = useCallback(() => {
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
