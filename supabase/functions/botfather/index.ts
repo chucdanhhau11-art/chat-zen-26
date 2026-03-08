@@ -448,13 +448,13 @@ serve(async (req) => {
             const uname = text.replace("@", "").toLowerCase();
             const { data: bp } = await supabase.from("profiles").select("id").eq("username", uname).maybeSingle();
             if (!bp) {
-              responseText = `Bot @${uname} not found. Please check the username and try again, or use /cancel.`;
+              responseText = `Không tìm thấy bot @${uname}. Vui lòng kiểm tra username và thử lại, hoặc dùng /cancel.`;
               newState = state;
               break;
             }
             const { data: foundBot } = await supabase.from("bots").select("id").eq("profile_id", bp.id).eq("owner_id", caller.id).maybeSingle();
             if (!foundBot) {
-              responseText = `You don't own a bot with username @${uname}. Use /mybots to see your bots.`;
+              responseText = `Bạn không sở hữu bot có username @${uname}. Dùng /mybots để xem danh sách bot.`;
               newState = state;
               break;
             }
