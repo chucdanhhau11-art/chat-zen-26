@@ -149,11 +149,32 @@ const ChatSidebar: React.FC = () => {
     return undefined;
   };
 
+  // User search results (only when searching)
+  const searchedUsers = searchQuery.trim().length >= 2
+    ? allProfiles.filter(p =>
+        p.id !== user?.id && !p.is_bot &&
+        (p.display_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+         p.username.toLowerCase().includes(searchQuery.toLowerCase()))
+      )
+    : [];
+
+  const getFriendStatus = (userId: string) => {
+    const fs = getFriendshipWith(userId);
+    if (!fs) return 'none';
+    if (fs.status === 'accepted') return 'friend';
+    if (fs.status === 'pending' && fs.requester_id === user?.id) return 'sent';
+    if (fs.status === 'pending' && fs.addressee_id === user?.id) return 'received';
+    return 'none';
+  };
+
+  const handleUserChat = async (userId: string) => {
+    const convId = await createPrivateChat(userId);
+    if (convId) setActiveConversation(convId);
+  };
+
   const filtered = conversations.filter(c => {
     if (!getConversationName(c).toLowerCase().includes(searchQuery.toLowerCase())) return false;
-    // Hide private chats with no messages (except Saved Messages) so the other user only sees it after a message is sent
     if (c.type === 'private' && c.name !== 'Saved Messages' && !c.lastMessage) {
-      // Only show to the creator
       if (c.created_by !== user?.id) return false;
     }
     return true;
