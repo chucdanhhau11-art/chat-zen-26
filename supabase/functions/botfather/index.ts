@@ -564,7 +564,7 @@ serve(async (req) => {
           case "setprivacy_input": {
             const mode = text.toLowerCase();
             if (mode !== 'enabled' && mode !== 'disabled') {
-              responseText = "Please send 'enabled' or 'disabled'.";
+              responseText = "Vui lòng gửi 'enabled' hoặc 'disabled'.";
               newState = "setprivacy_input";
               newStateData = stateData;
               break;
