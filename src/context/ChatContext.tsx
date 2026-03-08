@@ -163,6 +163,32 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => { supabase.removeChannel(channel); };
   }, [user, fetchConversations]);
 
+  // Global listener for new messages → unread counts + notification sound
+  useEffect(() => {
+    if (!user) return;
+    const channel = supabase.channel('global-messages-notify')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' },
+        (payload: RealtimePostgresChangesPayload<Message>) => {
+          const newMsg = payload.new as Message;
+          if (!newMsg || newMsg.sender_id === user.id) return;
+          // Only count if not currently viewing that conversation
+          if (activeConversationIdRef.current !== newMsg.conversation_id) {
+            setUnreadCounts(prev => ({
+              ...prev,
+              [newMsg.conversation_id]: (prev[newMsg.conversation_id] || 0) + 1,
+            }));
+            playNotificationSound();
+            // Update conversations to reflect new unread
+            setConversations(prev => prev.map(c =>
+              c.id === newMsg.conversation_id
+                ? { ...c, unreadCount: (c.unreadCount || 0) + 1, lastMessage: { ...newMsg, sender: profilesRef.current[newMsg.sender_id] } }
+                : c
+            ));
+          }
+        }
+      ).subscribe();
+    return () => { supabase.removeChannel(channel); };
+
   // Fetch messages for active conversation
   useEffect(() => {
     if (!activeConversationId || !user) { setMessages([]); return; }
