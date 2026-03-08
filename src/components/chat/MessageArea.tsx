@@ -288,6 +288,21 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
     if (fileInputRef.current) fileInputRef.current.value = '';
   }, []);
 
+  const handlePaste = useCallback((e: React.ClipboardEvent) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (const item of items) {
+      if (item.type.startsWith('image/')) {
+        e.preventDefault();
+        const file = item.getAsFile();
+        if (!file) return;
+        if (file.size > 20 * 1024 * 1024) { toast.error('File quá lớn. Tối đa 20MB.'); return; }
+        setPreviewFile({ file, url: URL.createObjectURL(file) });
+        return;
+      }
+    }
+  }, []);
+
   const cancelPreview = useCallback(() => {
     if (previewFile) { URL.revokeObjectURL(previewFile.url); setPreviewFile(null); }
   }, [previewFile]);
