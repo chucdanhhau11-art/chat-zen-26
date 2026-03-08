@@ -429,12 +429,33 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
     setHeaderMenu(false);
   };
 
+  // Determine ownership status for leave handling
+  const isOwner = user && activeConversation?.members.find(m => m.user_id === user.id)?.role === 'owner';
+  const otherMembers = (activeConversation?.members || []).filter(m => m.user_id !== user?.id).map(m => ({
+    ...m,
+    profile: profiles[m.user_id] || null,
+  }));
+
   const handleLeaveGroup = async () => {
     if (!activeConversation) return;
+    
+    // If owner and there are other members, show transfer dialog
+    if (isOwner && otherMembers.length > 0) {
+      setShowTransferDialog(true);
+      setHeaderMenu(false);
+      return;
+    }
+    
+    // If owner but no other members, or if not owner, just leave
     if (window.confirm('Rời khỏi nhóm này?')) {
       await leaveGroup(activeConversation.id);
     }
     setHeaderMenu(false);
+  };
+
+  const handleTransferAndLeave = async (newOwnerId: string) => {
+    if (!activeConversation) return;
+    await leaveGroup(activeConversation.id, newOwnerId);
   };
 
   const handleMessageContextMenu = (e: React.MouseEvent, msg: any) => {
