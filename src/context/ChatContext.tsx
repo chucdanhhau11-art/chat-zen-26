@@ -232,15 +232,28 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const createGroup = useCallback(async (name: string, memberIds: string[]): Promise<string | null> => {
     if (!user) return null;
-    const { data: conv, error } = await supabase.from('conversations').insert({ type: 'group', name, created_by: user.id }).select().single();
-    if (error || !conv) return null;
-    const members = [
-      { conversation_id: conv.id, user_id: user.id, role: 'owner' as const },
-      ...memberIds.map(id => ({ conversation_id: conv.id, user_id: id, role: 'member' as const })),
-    ];
-    await supabase.from('conversation_members').insert(members);
-    await fetchConversations();
-    return conv.id;
+    try {
+      const { data: conv, error } = await supabase.from('conversations').insert({ type: 'group', name, created_by: user.id }).select().single();
+      if (error || !conv) { console.error('Create group conv error:', error); toast.error('Lỗi tạo nhóm'); return null; }
+      
+      // Insert owner FIRST (RLS requires owner to exist before adding other members)
+      const { error: ownerErr } = await supabase.from('conversation_members').insert({ conversation_id: conv.id, user_id: user.id, role: 'owner' as const });
+      if (ownerErr) { console.error('Add owner error:', ownerErr); toast.error('Lỗi thêm chủ nhóm'); return null; }
+      
+      // Then insert other members
+      if (memberIds.length > 0) {
+        const otherMembers = memberIds.map(id => ({ conversation_id: conv.id, user_id: id, role: 'member' as const }));
+        const { error: membersErr } = await supabase.from('conversation_members').insert(otherMembers);
+        if (membersErr) { console.error('Add members error:', membersErr); toast.error('Lỗi thêm thành viên, nhưng nhóm đã được tạo'); }
+      }
+      
+      await fetchConversations();
+      return conv.id;
+    } catch (err: any) {
+      console.error('Create group error:', err);
+      toast.error('Lỗi tạo nhóm: ' + (err.message || 'Unknown'));
+      return null;
+    }
   }, [user, fetchConversations]);
 
   const toggleInfoPanel = useCallback(() => setShowInfoPanel(p => !p), []);
