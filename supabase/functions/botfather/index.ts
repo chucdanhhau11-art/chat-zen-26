@@ -167,12 +167,12 @@ serve(async (req) => {
               .order("created_at", { ascending: false });
 
             if (!bots || bots.length === 0) {
-              responseText = "You don't have any bots yet. Use /newbot to create one.";
+              responseText = "Bạn chưa có bot nào. Dùng /newbot để tạo bot mới.";
             } else {
               const botList = bots.map((b: any, i: number) =>
-                `${i + 1}. **${b.profiles?.display_name}** (@${b.profiles?.username}) - ${b.status === 'active' ? '🟢 Active' : '🔴 Disabled'}`
+                `${i + 1}. **${b.profiles?.display_name}** (@${b.profiles?.username}) - ${b.status === 'active' ? '🟢 Hoạt động' : '🔴 Đã tắt'}`
               ).join("\n");
-              responseText = `📋 **Your Bots:**\n\n${botList}\n\nSelect a bot by sending its number, or use other commands.`;
+              responseText = `📋 **Bot của bạn:**\n\n${botList}\n\nChọn bot bằng cách gửi số thứ tự, hoặc dùng lệnh khác.`;
               newState = "selecting_bot";
               newStateData = { bots: bots.map((b: any) => ({ id: b.id, name: b.profiles?.display_name, username: b.profiles?.username })) };
               
