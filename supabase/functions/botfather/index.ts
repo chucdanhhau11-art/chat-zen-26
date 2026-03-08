@@ -596,7 +596,7 @@ serve(async (req) => {
           }
 
           default:
-            responseText = "I don't understand. Use /help to see available commands.";
+            responseText = "Tôi không hiểu. Dùng /help để xem các lệnh có sẵn.";
         }
       }
 
