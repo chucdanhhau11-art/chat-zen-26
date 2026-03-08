@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { Send, Smile, Paperclip, Mic, MoreVertical, Phone, Video, Search, Info, X, FileText, Film, Image as ImageIcon, Reply, Trash2, RotateCcw, Eye, ImageIcon as GalleryIcon, ArrowLeft, ChevronDown, ChevronUp, Plus } from 'lucide-react';
+import { Send, Smile, Paperclip, Mic, MicOff, MoreVertical, Phone, Video, Search, Info, X, FileText, Film, Image as ImageIcon, Reply, Trash2, RotateCcw, Eye, ImageIcon as GalleryIcon, ArrowLeft, ChevronDown, ChevronUp, Plus, Play, Pause, Square } from 'lucide-react';
 import type { CallType } from '@/hooks/useWebRTC';
 import { useChatContext } from '@/context/ChatContext';
 import { useAuth } from '@/context/AuthContext';
@@ -40,12 +40,90 @@ const playNotificationSound = () => {
   } catch (e) {}
 };
 
+// Voice message player component
+const VoiceMessagePlayer: React.FC<{ url: string; duration?: number }> = ({ url, duration }) => {
+  const [playing, setPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [totalDuration, setTotalDuration] = useState(duration || 0);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const animFrameRef = useRef<number>(0);
+
+  useEffect(() => {
+    const audio = new Audio(url);
+    audioRef.current = audio;
+    audio.addEventListener('loadedmetadata', () => {
+      if (audio.duration && isFinite(audio.duration)) setTotalDuration(audio.duration);
+    });
+    audio.addEventListener('ended', () => { setPlaying(false); setCurrentTime(0); });
+    return () => { audio.pause(); audio.src = ''; cancelAnimationFrame(animFrameRef.current); };
+  }, [url]);
+
+  const tick = useCallback(() => {
+    if (audioRef.current) {
+      setCurrentTime(audioRef.current.currentTime);
+      if (!audioRef.current.paused) animFrameRef.current = requestAnimationFrame(tick);
+    }
+  }, []);
+
+  const togglePlay = () => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (playing) { audio.pause(); setPlaying(false); }
+    else { audio.play(); setPlaying(true); animFrameRef.current = requestAnimationFrame(tick); }
+  };
+
+  const progress = totalDuration > 0 ? (currentTime / totalDuration) * 100 : 0;
+  const formatDur = (s: number) => {
+    const m = Math.floor(s / 60);
+    const sec = Math.floor(s % 60);
+    return `${m}:${sec.toString().padStart(2, '0')}`;
+  };
+
+  // Generate waveform bars
+  const bars = 24;
+  const waveform = useMemo(() => Array.from({ length: bars }, (_, i) => {
+    const seed = (i * 7 + 3) % 10;
+    return 0.2 + (seed / 10) * 0.8;
+  }), []);
+
+  return (
+    <div className="flex items-center gap-2 min-w-[200px] max-w-[280px]">
+      <button onClick={togglePlay} className="p-1.5 rounded-full bg-primary/20 hover:bg-primary/30 transition-colors flex-shrink-0">
+        {playing ? <Pause className="h-4 w-4 text-primary" /> : <Play className="h-4 w-4 text-primary ml-0.5" />}
+      </button>
+      <div className="flex-1 flex flex-col gap-1">
+        <div className="flex items-end gap-[2px] h-6">
+          {waveform.map((h, i) => (
+            <div
+              key={i}
+              className="flex-1 rounded-full transition-colors duration-150"
+              style={{
+                height: `${h * 100}%`,
+                backgroundColor: i / bars * 100 < progress ? 'hsl(var(--primary))' : 'hsl(var(--muted-foreground) / 0.3)',
+              }}
+            />
+          ))}
+        </div>
+        <span className="text-[10px] text-muted-foreground">{formatDur(playing ? currentTime : totalDuration)}</span>
+      </div>
+    </div>
+  );
+};
+
 const MessageBubbleFile: React.FC<{ msg: any; isOwn: boolean; onImageClick?: (url: string) => void }> = ({ msg, isOwn, onImageClick }) => {
   const fileUrl = msg.file_url;
   const fileName = msg.file_name || 'file';
   const fileSize = msg.file_size;
   const msgType = msg.message_type;
 
+  if (msgType === 'voice' && fileUrl) {
+    return (
+      <div>
+        <VoiceMessagePlayer url={fileUrl} />
+        {msg.content && <p className="mt-1 whitespace-pre-wrap break-words text-sm">{msg.content}</p>}
+      </div>
+    );
+  }
   if (msgType === 'image' && fileUrl) {
     return (
       <div className="max-w-xs">
@@ -138,6 +216,14 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const [recordingCancelled, setRecordingCancelled] = useState(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const recordingStreamRef = useRef<MediaStream | null>(null);
+  const recordingCancelledRef = useRef(false);
   const prevMessagesLenRef = useRef(0);
 
   const QUICK_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🔥', '👏', '🎉'];
@@ -372,6 +458,114 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
       setUploading(false);
     }
   }, [previewFile, user, activeConversation, input, cancelPreview, replyTo]);
+
+  // Voice recording functions
+  const startRecording = useCallback(async () => {
+    if (!activeConversation || !user) return;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      recordingStreamRef.current = stream;
+      audioChunksRef.current = [];
+      recordingCancelledRef.current = false;
+      setRecordingCancelled(false);
+
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : 'audio/webm';
+      const recorder = new MediaRecorder(stream, { mimeType });
+      mediaRecorderRef.current = recorder;
+
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data);
+      };
+
+      recorder.onstop = async () => {
+        stream.getTracks().forEach(t => t.stop());
+        recordingStreamRef.current = null;
+        if (recordingTimerRef.current) { clearInterval(recordingTimerRef.current); recordingTimerRef.current = null; }
+
+        if (recordingCancelledRef.current || audioChunksRef.current.length === 0) {
+          setIsRecording(false);
+          setRecordingTime(0);
+          return;
+        }
+
+        const blob = new Blob(audioChunksRef.current, { type: mimeType });
+        if (blob.size < 500) { setIsRecording(false); setRecordingTime(0); return; }
+
+        // Upload voice
+        setUploading(true);
+        try {
+          const ext = mimeType.includes('webm') ? 'webm' : 'ogg';
+          const path = `${user.id}/voice_${Date.now()}.${ext}`;
+          const { error: upErr } = await supabase.storage.from('chat-files').upload(path, blob, { contentType: mimeType });
+          if (upErr) throw upErr;
+          const { data: urlData } = supabase.storage.from('chat-files').getPublicUrl(path);
+          await supabase.from('messages').insert({
+            conversation_id: activeConversation.id,
+            sender_id: user.id,
+            content: null,
+            message_type: 'voice',
+            file_url: urlData.publicUrl,
+            file_name: `voice_${Date.now()}.${ext}`,
+            file_size: blob.size,
+            reply_to: replyTo?.id || null,
+          });
+          await supabase.from('conversations').update({ updated_at: new Date().toISOString() }).eq('id', activeConversation.id);
+          setReplyTo(null);
+        } catch (err: any) {
+          toast.error('Lỗi gửi ghi âm: ' + (err.message || 'Unknown'));
+        } finally {
+          setUploading(false);
+        }
+
+        setIsRecording(false);
+        setRecordingTime(0);
+      };
+
+      recorder.start(100);
+      setIsRecording(true);
+      setRecordingTime(0);
+      recordingTimerRef.current = setInterval(() => setRecordingTime(t => t + 1), 1000);
+    } catch (err: any) {
+      toast.error('Không thể truy cập microphone');
+    }
+  }, [activeConversation, user, replyTo]);
+
+  const stopRecording = useCallback(() => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      recordingCancelledRef.current = false;
+      mediaRecorderRef.current.stop();
+    }
+  }, []);
+
+  const cancelRecording = useCallback(() => {
+    recordingCancelledRef.current = true;
+    setRecordingCancelled(true);
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop();
+    }
+    if (recordingStreamRef.current) {
+      recordingStreamRef.current.getTracks().forEach(t => t.stop());
+      recordingStreamRef.current = null;
+    }
+    if (recordingTimerRef.current) { clearInterval(recordingTimerRef.current); recordingTimerRef.current = null; }
+    setIsRecording(false);
+    setRecordingTime(0);
+    audioChunksRef.current = [];
+  }, []);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+      if (recordingStreamRef.current) recordingStreamRef.current.getTracks().forEach(t => t.stop());
+    };
+  }, []);
+
+  const formatRecordingTime = (s: number) => {
+    const m = Math.floor(s / 60);
+    const sec = s % 60;
+    return `${m}:${sec.toString().padStart(2, '0')}`;
+  };
 
   const handleSend = async () => {
     if (previewFile) { await uploadAndSend(); return; }
@@ -1144,39 +1338,108 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
 
       {/* Input */}
       <div className="px-4 py-3 border-t border-border bg-tg-sidebar">
-        <div className="flex items-end gap-2">
-          <button onClick={() => fileInputRef.current?.click()} className="p-2 rounded-lg hover:bg-tg-hover transition-colors flex-shrink-0">
-            <Paperclip className="h-5 w-5 text-muted-foreground" />
-          </button>
-          <div className="flex-1">
-            <textarea
-              value={input}
-              onChange={e => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              onPaste={handlePaste}
-              placeholder={previewFile ? "Thêm chú thích..." : "Nhập tin nhắn hoặc @botname query..."}
-              rows={1}
-              className="w-full bg-secondary rounded-xl px-4 py-2.5 text-sm outline-none placeholder:text-muted-foreground resize-none focus:ring-2 focus:ring-primary/30 transition-all max-h-32"
-              style={{ minHeight: '40px' }}
-            />
-          </div>
-          <button className="p-2 rounded-lg hover:bg-tg-hover transition-colors flex-shrink-0"><Smile className="h-5 w-5 text-muted-foreground" /></button>
-          {input.trim() || previewFile ? (
-           <motion.button
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              onMouseDown={(e) => e.preventDefault()}
-              onTouchStart={(e) => e.preventDefault()}
-              onClick={handleSend}
-              disabled={uploading}
-              className="p-2.5 rounded-full bg-primary hover:bg-primary/90 transition-colors flex-shrink-0 disabled:opacity-50"
+        <AnimatePresence mode="wait">
+          {isRecording ? (
+            <motion.div
+              key="recording"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 10 }}
+              transition={{ duration: 0.2 }}
+              className="flex items-center gap-3"
             >
-              {uploading ? <div className="h-4 w-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" /> : <Send className="h-4 w-4 text-primary-foreground" />}
-            </motion.button>
+              <motion.button
+                onClick={cancelRecording}
+                whileTap={{ scale: 0.9 }}
+                className="p-2.5 rounded-full bg-destructive/10 hover:bg-destructive/20 transition-colors flex-shrink-0"
+              >
+                <X className="h-5 w-5 text-destructive" />
+              </motion.button>
+              <div className="flex-1 flex items-center gap-3 bg-secondary rounded-xl px-4 py-2.5">
+                <motion.div
+                  animate={{ opacity: [1, 0.3, 1] }}
+                  transition={{ duration: 1.2, repeat: Infinity }}
+                  className="h-3 w-3 rounded-full bg-destructive flex-shrink-0"
+                />
+                <span className="text-sm font-medium text-foreground">{formatRecordingTime(recordingTime)}</span>
+                <div className="flex-1 flex items-center gap-[2px] h-5">
+                  {Array.from({ length: 30 }, (_, i) => (
+                    <motion.div
+                      key={i}
+                      className="flex-1 rounded-full bg-primary/40"
+                      animate={{
+                        height: ['20%', `${30 + Math.random() * 70}%`, '20%'],
+                      }}
+                      transition={{
+                        duration: 0.4 + Math.random() * 0.4,
+                        repeat: Infinity,
+                        delay: i * 0.03,
+                      }}
+                      style={{ minHeight: 2 }}
+                    />
+                  ))}
+                </div>
+              </div>
+              <motion.button
+                onClick={stopRecording}
+                whileTap={{ scale: 0.9 }}
+                className="p-2.5 rounded-full bg-primary hover:bg-primary/90 transition-colors flex-shrink-0"
+              >
+                {uploading ? (
+                  <div className="h-4 w-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4 text-primary-foreground" />
+                )}
+              </motion.button>
+            </motion.div>
           ) : (
-            <button className="p-2 rounded-lg hover:bg-tg-hover transition-colors flex-shrink-0"><Mic className="h-5 w-5 text-muted-foreground" /></button>
+            <motion.div
+              key="input"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="flex items-end gap-2"
+            >
+              <button onClick={() => fileInputRef.current?.click()} className="p-2 rounded-lg hover:bg-tg-hover transition-colors flex-shrink-0">
+                <Paperclip className="h-5 w-5 text-muted-foreground" />
+              </button>
+              <div className="flex-1">
+                <textarea
+                  value={input}
+                  onChange={e => setInput(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  onPaste={handlePaste}
+                  placeholder={previewFile ? "Thêm chú thích..." : "Nhập tin nhắn hoặc @botname query..."}
+                  rows={1}
+                  className="w-full bg-secondary rounded-xl px-4 py-2.5 text-sm outline-none placeholder:text-muted-foreground resize-none focus:ring-2 focus:ring-primary/30 transition-all max-h-32"
+                  style={{ minHeight: '40px' }}
+                />
+              </div>
+              <button className="p-2 rounded-lg hover:bg-tg-hover transition-colors flex-shrink-0"><Smile className="h-5 w-5 text-muted-foreground" /></button>
+              {input.trim() || previewFile ? (
+                <motion.button
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  onMouseDown={(e) => e.preventDefault()}
+                  onTouchStart={(e) => e.preventDefault()}
+                  onClick={handleSend}
+                  disabled={uploading}
+                  className="p-2.5 rounded-full bg-primary hover:bg-primary/90 transition-colors flex-shrink-0 disabled:opacity-50"
+                >
+                  {uploading ? <div className="h-4 w-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" /> : <Send className="h-4 w-4 text-primary-foreground" />}
+                </motion.button>
+              ) : (
+                <motion.button
+                  onClick={startRecording}
+                  whileTap={{ scale: 0.9 }}
+                  className="p-2 rounded-lg hover:bg-tg-hover transition-colors flex-shrink-0"
+                >
+                  <Mic className="h-5 w-5 text-muted-foreground" />
+                </motion.button>
+              )}
+            </motion.div>
           )}
-        </div>
+        </AnimatePresence>
       </div>
 
       {viewProfileId && <ProfileViewDialog userId={viewProfileId} onClose={() => setViewProfileId(null)} />}
