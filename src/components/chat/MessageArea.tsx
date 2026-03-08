@@ -40,12 +40,90 @@ const playNotificationSound = () => {
   } catch (e) {}
 };
 
+// Voice message player component
+const VoiceMessagePlayer: React.FC<{ url: string; duration?: number }> = ({ url, duration }) => {
+  const [playing, setPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [totalDuration, setTotalDuration] = useState(duration || 0);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const animFrameRef = useRef<number>(0);
+
+  useEffect(() => {
+    const audio = new Audio(url);
+    audioRef.current = audio;
+    audio.addEventListener('loadedmetadata', () => {
+      if (audio.duration && isFinite(audio.duration)) setTotalDuration(audio.duration);
+    });
+    audio.addEventListener('ended', () => { setPlaying(false); setCurrentTime(0); });
+    return () => { audio.pause(); audio.src = ''; cancelAnimationFrame(animFrameRef.current); };
+  }, [url]);
+
+  const tick = useCallback(() => {
+    if (audioRef.current) {
+      setCurrentTime(audioRef.current.currentTime);
+      if (!audioRef.current.paused) animFrameRef.current = requestAnimationFrame(tick);
+    }
+  }, []);
+
+  const togglePlay = () => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (playing) { audio.pause(); setPlaying(false); }
+    else { audio.play(); setPlaying(true); animFrameRef.current = requestAnimationFrame(tick); }
+  };
+
+  const progress = totalDuration > 0 ? (currentTime / totalDuration) * 100 : 0;
+  const formatDur = (s: number) => {
+    const m = Math.floor(s / 60);
+    const sec = Math.floor(s % 60);
+    return `${m}:${sec.toString().padStart(2, '0')}`;
+  };
+
+  // Generate waveform bars
+  const bars = 24;
+  const waveform = useMemo(() => Array.from({ length: bars }, (_, i) => {
+    const seed = (i * 7 + 3) % 10;
+    return 0.2 + (seed / 10) * 0.8;
+  }), []);
+
+  return (
+    <div className="flex items-center gap-2 min-w-[200px] max-w-[280px]">
+      <button onClick={togglePlay} className="p-1.5 rounded-full bg-primary/20 hover:bg-primary/30 transition-colors flex-shrink-0">
+        {playing ? <Pause className="h-4 w-4 text-primary" /> : <Play className="h-4 w-4 text-primary ml-0.5" />}
+      </button>
+      <div className="flex-1 flex flex-col gap-1">
+        <div className="flex items-end gap-[2px] h-6">
+          {waveform.map((h, i) => (
+            <div
+              key={i}
+              className="flex-1 rounded-full transition-colors duration-150"
+              style={{
+                height: `${h * 100}%`,
+                backgroundColor: i / bars * 100 < progress ? 'hsl(var(--primary))' : 'hsl(var(--muted-foreground) / 0.3)',
+              }}
+            />
+          ))}
+        </div>
+        <span className="text-[10px] text-muted-foreground">{formatDur(playing ? currentTime : totalDuration)}</span>
+      </div>
+    </div>
+  );
+};
+
 const MessageBubbleFile: React.FC<{ msg: any; isOwn: boolean; onImageClick?: (url: string) => void }> = ({ msg, isOwn, onImageClick }) => {
   const fileUrl = msg.file_url;
   const fileName = msg.file_name || 'file';
   const fileSize = msg.file_size;
   const msgType = msg.message_type;
 
+  if (msgType === 'voice' && fileUrl) {
+    return (
+      <div>
+        <VoiceMessagePlayer url={fileUrl} />
+        {msg.content && <p className="mt-1 whitespace-pre-wrap break-words text-sm">{msg.content}</p>}
+      </div>
+    );
+  }
   if (msgType === 'image' && fileUrl) {
     return (
       <div className="max-w-xs">
