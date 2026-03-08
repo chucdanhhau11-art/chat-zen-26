@@ -239,19 +239,19 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
     // BotFather has its own hardcoded commands
     if (isBotFather) {
       setBotCommands([
-        { command: '/start', description: 'Bắt đầu tương tác với BotFather' },
-        { command: '/help', description: 'Hiện tất cả lệnh' },
-        { command: '/newbot', description: 'Tạo bot mới' },
-        { command: '/mybots', description: 'Danh sách bot của bạn' },
-        { command: '/setname', description: 'Đổi tên bot' },
-        { command: '/setdescription', description: 'Đổi mô tả bot' },
-        { command: '/setabouttext', description: 'Đặt giới thiệu bot' },
-        { command: '/setcommands', description: 'Đặt danh sách lệnh bot' },
-        { command: '/setwebhook', description: 'Cấu hình webhook URL' },
-        { command: '/setprivacy', description: 'Cài đặt chế độ riêng tư' },
-        { command: '/revoke', description: 'Đặt lại token bot' },
-        { command: '/deletebot', description: 'Xoá bot' },
-        { command: '/cancel', description: 'Huỷ thao tác hiện tại' },
+        { command: '/start', description: 'Bắt đầu / Start' },
+        { command: '/help', description: 'Hiện tất cả lệnh / Show all commands' },
+        { command: '/newbot', description: 'Tạo bot mới / Create a new bot' },
+        { command: '/mybots', description: 'Danh sách bot / List your bots' },
+        { command: '/setname', description: 'Đổi tên bot / Rename bot' },
+        { command: '/setdescription', description: 'Đổi mô tả / Change description' },
+        { command: '/setabouttext', description: 'Đặt giới thiệu / Set about text' },
+        { command: '/setcommands', description: 'Đặt lệnh / Set commands' },
+        { command: '/setwebhook', description: 'Cấu hình webhook / Configure webhook' },
+        { command: '/setprivacy', description: 'Chế độ riêng tư / Privacy mode' },
+        { command: '/revoke', description: 'Đặt lại token / Reset token' },
+        { command: '/deletebot', description: 'Xoá bot / Delete bot' },
+        { command: '/cancel', description: 'Huỷ thao tác / Cancel operation' },
       ]);
       return;
     }
