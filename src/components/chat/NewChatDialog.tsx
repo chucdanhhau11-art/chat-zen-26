@@ -156,13 +156,12 @@ const NewChatDialog: React.FC<NewChatDialogProps> = ({ onClose }) => {
           </div>
         )}
 
-        {/* Search */}
         <div className="px-4 pt-3">
           <input
             type="text"
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder={tab === 'search' ? "Tìm người dùng / Search users..." : "Tìm bạn bè / Search friends..."}
+            placeholder="Tìm bạn bè / Search friends..."
             className="w-full bg-secondary rounded-xl px-4 py-2 text-sm outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-primary/30"
           />
         </div>
