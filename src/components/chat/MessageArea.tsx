@@ -1335,39 +1335,108 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
 
       {/* Input */}
       <div className="px-4 py-3 border-t border-border bg-tg-sidebar">
-        <div className="flex items-end gap-2">
-          <button onClick={() => fileInputRef.current?.click()} className="p-2 rounded-lg hover:bg-tg-hover transition-colors flex-shrink-0">
-            <Paperclip className="h-5 w-5 text-muted-foreground" />
-          </button>
-          <div className="flex-1">
-            <textarea
-              value={input}
-              onChange={e => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              onPaste={handlePaste}
-              placeholder={previewFile ? "Thêm chú thích..." : "Nhập tin nhắn hoặc @botname query..."}
-              rows={1}
-              className="w-full bg-secondary rounded-xl px-4 py-2.5 text-sm outline-none placeholder:text-muted-foreground resize-none focus:ring-2 focus:ring-primary/30 transition-all max-h-32"
-              style={{ minHeight: '40px' }}
-            />
-          </div>
-          <button className="p-2 rounded-lg hover:bg-tg-hover transition-colors flex-shrink-0"><Smile className="h-5 w-5 text-muted-foreground" /></button>
-          {input.trim() || previewFile ? (
-           <motion.button
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              onMouseDown={(e) => e.preventDefault()}
-              onTouchStart={(e) => e.preventDefault()}
-              onClick={handleSend}
-              disabled={uploading}
-              className="p-2.5 rounded-full bg-primary hover:bg-primary/90 transition-colors flex-shrink-0 disabled:opacity-50"
+        <AnimatePresence mode="wait">
+          {isRecording ? (
+            <motion.div
+              key="recording"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 10 }}
+              transition={{ duration: 0.2 }}
+              className="flex items-center gap-3"
             >
-              {uploading ? <div className="h-4 w-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" /> : <Send className="h-4 w-4 text-primary-foreground" />}
-            </motion.button>
+              <motion.button
+                onClick={cancelRecording}
+                whileTap={{ scale: 0.9 }}
+                className="p-2.5 rounded-full bg-destructive/10 hover:bg-destructive/20 transition-colors flex-shrink-0"
+              >
+                <X className="h-5 w-5 text-destructive" />
+              </motion.button>
+              <div className="flex-1 flex items-center gap-3 bg-secondary rounded-xl px-4 py-2.5">
+                <motion.div
+                  animate={{ opacity: [1, 0.3, 1] }}
+                  transition={{ duration: 1.2, repeat: Infinity }}
+                  className="h-3 w-3 rounded-full bg-destructive flex-shrink-0"
+                />
+                <span className="text-sm font-medium text-foreground">{formatRecordingTime(recordingTime)}</span>
+                <div className="flex-1 flex items-center gap-[2px] h-5">
+                  {Array.from({ length: 30 }, (_, i) => (
+                    <motion.div
+                      key={i}
+                      className="flex-1 rounded-full bg-primary/40"
+                      animate={{
+                        height: ['20%', `${30 + Math.random() * 70}%`, '20%'],
+                      }}
+                      transition={{
+                        duration: 0.4 + Math.random() * 0.4,
+                        repeat: Infinity,
+                        delay: i * 0.03,
+                      }}
+                      style={{ minHeight: 2 }}
+                    />
+                  ))}
+                </div>
+              </div>
+              <motion.button
+                onClick={stopRecording}
+                whileTap={{ scale: 0.9 }}
+                className="p-2.5 rounded-full bg-primary hover:bg-primary/90 transition-colors flex-shrink-0"
+              >
+                {uploading ? (
+                  <div className="h-4 w-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4 text-primary-foreground" />
+                )}
+              </motion.button>
+            </motion.div>
           ) : (
-            <button className="p-2 rounded-lg hover:bg-tg-hover transition-colors flex-shrink-0"><Mic className="h-5 w-5 text-muted-foreground" /></button>
+            <motion.div
+              key="input"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="flex items-end gap-2"
+            >
+              <button onClick={() => fileInputRef.current?.click()} className="p-2 rounded-lg hover:bg-tg-hover transition-colors flex-shrink-0">
+                <Paperclip className="h-5 w-5 text-muted-foreground" />
+              </button>
+              <div className="flex-1">
+                <textarea
+                  value={input}
+                  onChange={e => setInput(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  onPaste={handlePaste}
+                  placeholder={previewFile ? "Thêm chú thích..." : "Nhập tin nhắn hoặc @botname query..."}
+                  rows={1}
+                  className="w-full bg-secondary rounded-xl px-4 py-2.5 text-sm outline-none placeholder:text-muted-foreground resize-none focus:ring-2 focus:ring-primary/30 transition-all max-h-32"
+                  style={{ minHeight: '40px' }}
+                />
+              </div>
+              <button className="p-2 rounded-lg hover:bg-tg-hover transition-colors flex-shrink-0"><Smile className="h-5 w-5 text-muted-foreground" /></button>
+              {input.trim() || previewFile ? (
+                <motion.button
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  onMouseDown={(e) => e.preventDefault()}
+                  onTouchStart={(e) => e.preventDefault()}
+                  onClick={handleSend}
+                  disabled={uploading}
+                  className="p-2.5 rounded-full bg-primary hover:bg-primary/90 transition-colors flex-shrink-0 disabled:opacity-50"
+                >
+                  {uploading ? <div className="h-4 w-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" /> : <Send className="h-4 w-4 text-primary-foreground" />}
+                </motion.button>
+              ) : (
+                <motion.button
+                  onClick={startRecording}
+                  whileTap={{ scale: 0.9 }}
+                  className="p-2 rounded-lg hover:bg-tg-hover transition-colors flex-shrink-0"
+                >
+                  <Mic className="h-5 w-5 text-muted-foreground" />
+                </motion.button>
+              )}
+            </motion.div>
           )}
-        </div>
+        </AnimatePresence>
       </div>
 
       {viewProfileId && <ProfileViewDialog userId={viewProfileId} onClose={() => setViewProfileId(null)} />}
