@@ -885,12 +885,62 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
                         <span className="text-[9px] text-primary/70 ml-0.5">Đã xem</span>
                       )}
                     </div>
+                    {/* Reactions display */}
+                    {reactions[msg.id] && reactions[msg.id].length > 0 && (() => {
+                      const grouped: Record<string, string[]> = {};
+                      reactions[msg.id].forEach(r => {
+                        if (!grouped[r.emoji]) grouped[r.emoji] = [];
+                        grouped[r.emoji].push(r.user_id);
+                      });
+                      return (
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {Object.entries(grouped).map(([emoji, userIds]) => (
+                            <button
+                              key={emoji}
+                              onClick={() => toggleReaction(msg.id, emoji)}
+                              className={cn(
+                                'inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs transition-colors border',
+                                userIds.includes(user?.id || '') ? 'bg-primary/15 border-primary/30' : 'bg-secondary border-transparent hover:bg-muted'
+                              )}
+                            >
+                              <span>{emoji}</span>
+                              <span className="text-[10px] text-muted-foreground">{userIds.length}</span>
+                            </button>
+                          ))}
+                        </div>
+                      );
+                    })()}
                     {/* Hover action buttons */}
                     <div className={cn('absolute top-0 opacity-0 group-hover:opacity-100 transition-opacity flex gap-0.5', isOwn ? 'left-0 -translate-x-full pr-1' : 'right-0 translate-x-full pl-1')}>
                       <button onClick={() => setReplyTo(msg)} className="p-1 rounded bg-secondary hover:bg-tg-hover" title="Trả lời">
                         <Reply className="h-3.5 w-3.5 text-muted-foreground" />
                       </button>
+                      <button onClick={(e) => { e.stopPropagation(); setEmojiPickerMsgId(prev => prev === msg.id ? null : msg.id); }} className="p-1 rounded bg-secondary hover:bg-tg-hover" title="Thả cảm xúc">
+                        <Smile className="h-3.5 w-3.5 text-muted-foreground" />
+                      </button>
                     </div>
+                    {/* Emoji picker */}
+                    <AnimatePresence>
+                      {emojiPickerMsgId === msg.id && (
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0.9 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.9 }}
+                          onClick={e => e.stopPropagation()}
+                          className={cn('absolute z-50 bg-popover border border-border rounded-xl shadow-lg p-1.5 flex gap-1', isOwn ? 'right-0 bottom-full mb-1' : 'left-0 bottom-full mb-1')}
+                        >
+                          {QUICK_EMOJIS.map(emoji => (
+                            <button
+                              key={emoji}
+                              onClick={() => toggleReaction(msg.id, emoji)}
+                              className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-muted transition-colors text-lg"
+                            >
+                              {emoji}
+                            </button>
+                          ))}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
                 </motion.div>
               );
