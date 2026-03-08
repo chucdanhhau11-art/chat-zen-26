@@ -204,13 +204,15 @@ serve(async (req) => {
     if (action === "processInlineQuery") {
       const { query, user_id, chat_id } = body;
 
-      // Log the inline query
-      await supabase.from("inline_queries").insert({
-        bot_id: bot.id,
-        user_id: user_id || "anonymous",
-        query_text: query || "",
-        chat_id: chat_id || null,
-      });
+      // Log the inline query (only if valid user_id provided)
+      if (user_id) {
+        await supabase.from("inline_queries").insert({
+          bot_id: bot.id,
+          user_id,
+          query_text: query || "",
+          chat_id: chat_id || null,
+        });
+      }
 
       // If bot has a webhook, forward the inline query
       if (bot.webhook_url) {
