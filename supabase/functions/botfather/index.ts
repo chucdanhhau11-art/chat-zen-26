@@ -429,7 +429,7 @@ serve(async (req) => {
                   responseText = "Hành động không xác định. Dùng /help để xem các lệnh có sẵn.";
               }
             } else {
-              responseText = "Please select an action from the buttons above, or use /cancel.";
+              responseText = "Vui lòng chọn hành động từ các nút bên trên, hoặc dùng /cancel.";
               newState = "bot_actions";
               newStateData = stateData;
             }
