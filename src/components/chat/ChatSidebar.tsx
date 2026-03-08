@@ -40,6 +40,8 @@ const ChatSidebar: React.FC = () => {
   const [showEditProfile, setShowEditProfile] = React.useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [userSearchQuery, setUserSearchQuery] = useState('');
+  const [localSearch, setLocalSearch] = useState('');
   const notifIdCounter = useRef(0);
 
   // Listen for unread count changes to generate notifications
@@ -149,12 +151,12 @@ const ChatSidebar: React.FC = () => {
     return undefined;
   };
 
-  // User search results (only when searching)
-  const searchedUsers = searchQuery.trim().length >= 2
+  // User search results (only when user presses Enter)
+  const searchedUsers = userSearchQuery.trim().length >= 2
     ? allProfiles.filter(p =>
         p.id !== user?.id && !p.is_bot &&
-        (p.display_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-         p.username.toLowerCase().includes(searchQuery.toLowerCase()))
+        (p.display_name.toLowerCase().includes(userSearchQuery.toLowerCase()) ||
+         p.username.toLowerCase().includes(userSearchQuery.toLowerCase()))
       )
     : [];
 
@@ -249,7 +251,9 @@ const ChatSidebar: React.FC = () => {
         </div>
         <div className="flex-1 relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <input type="text" placeholder="Tìm kiếm..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+          <input type="text" placeholder="Tìm kiếm (Enter)..." value={localSearch}
+            onChange={e => { const v = e.target.value; setLocalSearch(v); setSearchQuery(v); if (!v.trim()) setUserSearchQuery(''); }}
+            onKeyDown={e => { if (e.key === 'Enter') setUserSearchQuery(localSearch.trim()); }}
             className="w-full bg-secondary rounded-xl pl-9 pr-4 py-2 text-sm outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-primary/30 transition-all" />
         </div>
         <div className="relative">
