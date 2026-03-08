@@ -542,9 +542,26 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
     if (!user) return;
     const existing = reactions[messageId]?.find(r => r.user_id === user.id && r.emoji === emoji);
     if (existing) {
+      // Optimistic remove
+      setReactions(prev => ({
+        ...prev,
+        [messageId]: (prev[messageId] || []).filter(x => x.id !== existing.id),
+      }));
       await supabase.from('reactions').delete().eq('id', existing.id);
     } else {
-      await supabase.from('reactions').insert({ message_id: messageId, user_id: user.id, emoji });
+      // Optimistic add with temp id
+      const tempId = `temp-${Date.now()}`;
+      setReactions(prev => ({
+        ...prev,
+        [messageId]: [...(prev[messageId] || []), { emoji, user_id: user.id, id: tempId }],
+      }));
+      const { data } = await supabase.from('reactions').insert({ message_id: messageId, user_id: user.id, emoji }).select().single();
+      if (data) {
+        setReactions(prev => ({
+          ...prev,
+          [messageId]: (prev[messageId] || []).map(r => r.id === tempId ? { ...r, id: data.id } : r),
+        }));
+      }
     }
     setEmojiPickerMsgId(null);
   }, [user, reactions]);
