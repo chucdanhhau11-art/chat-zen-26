@@ -622,6 +622,12 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     fetchFriendships();
   }, [fetchFriendships]);
 
+  const cancelFriendRequest = useCallback(async (friendshipId: string) => {
+    await supabase.from('friendships').delete().eq('id', friendshipId);
+    toast.success('Đã huỷ lời mời / Request cancelled');
+    fetchFriendships();
+  }, [fetchFriendships]);
+
   const getFriendshipWith = useCallback((userId: string): Friendship | null => {
     if (!user) return null;
     return friendships.find(f =>
@@ -629,6 +635,42 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       (f.addressee_id === user.id && f.requester_id === userId)
     ) || null;
   }, [friendships, user]);
+
+  // Block/unblock
+  const myProfile = user ? profiles[user.id] : null;
+  const blockedUsers = myProfile?.blocked_users || [];
+
+  const isBlocked = useCallback((userId: string) => {
+    return blockedUsers.includes(userId);
+  }, [blockedUsers]);
+
+  const isBlockedBy = useCallback((userId: string) => {
+    const theirProfile = profiles[userId];
+    return theirProfile?.blocked_users?.includes(user?.id || '') ?? false;
+  }, [profiles, user]);
+
+  const blockUser = useCallback(async (userId: string) => {
+    if (!user) return;
+    const newBlocked = [...new Set([...blockedUsers, userId])];
+    await supabase.from('profiles').update({ blocked_users: newBlocked }).eq('id', user.id);
+    setProfiles(prev => ({ ...prev, [user.id]: { ...prev[user.id], blocked_users: newBlocked } }));
+    // Also remove friendship if exists
+    const fs = friendships.find(f =>
+      (f.requester_id === user.id && f.addressee_id === userId) ||
+      (f.addressee_id === user.id && f.requester_id === userId)
+    );
+    if (fs) await supabase.from('friendships').delete().eq('id', fs.id);
+    fetchFriendships();
+    toast.success('Đã chặn người dùng / User blocked');
+  }, [user, blockedUsers, friendships, fetchFriendships]);
+
+  const unblockUser = useCallback(async (userId: string) => {
+    if (!user) return;
+    const newBlocked = blockedUsers.filter(id => id !== userId);
+    await supabase.from('profiles').update({ blocked_users: newBlocked }).eq('id', user.id);
+    setProfiles(prev => ({ ...prev, [user.id]: { ...prev[user.id], blocked_users: newBlocked } }));
+    toast.success('Đã bỏ chặn / User unblocked');
+  }, [user, blockedUsers]);
 
   const addMemberToGroup = useCallback(async (convId: string, userId: string) => {
     if (!user) return;
@@ -653,7 +695,8 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       openBotFatherChat, isBotFatherConversation,
       friendships, friends, pendingRequests,
       sendFriendRequest, acceptFriendRequest, declineFriendRequest,
-      removeFriend, getFriendshipWith, addMemberToGroup,
+      removeFriend, cancelFriendRequest, getFriendshipWith, addMemberToGroup,
+      blockUser, unblockUser, isBlocked, isBlockedBy, blockedUsers,
     }}>
       {children}
     </ChatContext.Provider>
