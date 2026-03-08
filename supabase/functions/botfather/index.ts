@@ -536,7 +536,7 @@ serve(async (req) => {
               break;
             }
             await supabase.from("bots").update({ webhook_url: url }).eq("id", stateData.bot_id).eq("owner_id", caller.id);
-            responseText = url ? `✅ Webhook set to: ${url}` : "✅ Webhook removed.";
+            responseText = url ? `✅ Đã đặt webhook: ${url}` : "✅ Đã xoá webhook.";
             break;
           }
 
