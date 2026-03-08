@@ -304,12 +304,12 @@ serve(async (req) => {
               }).select().single();
 
               if (botErr) {
-                responseText = `Error creating bot record: ${botErr.message}. Please try again.`;
+                responseText = `Lỗi tạo bản ghi bot: ${botErr.message}. Vui lòng thử lại.`;
                 newState = "idle";
                 break;
               }
 
-              responseText = `✅ Done! Congratulations on your new bot.\n\n🤖 **Name:** ${botName}\n👤 **Username:** @${username}\n\n🔑 **Your API Token:**\n\`${botToken}\`\n\nUse this token to access the Bot API.\nKeep your token secure and don't share it!\n\nFor a description of the Bot API, see /help.`;
+              responseText = `✅ Xong! Chúc mừng bạn đã tạo bot mới.\n\n🤖 **Tên:** ${botName}\n👤 **Username:** @${username}\n\n🔑 **Token API của bạn:**\n\`${botToken}\`\n\nDùng token này để truy cập Bot API.\nHãy giữ bí mật token và không chia sẻ!\n\nĐể xem hướng dẫn Bot API, dùng /help.`;
               newState = "idle";
               break;
             }
