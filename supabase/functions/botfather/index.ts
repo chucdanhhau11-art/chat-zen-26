@@ -241,7 +241,7 @@ serve(async (req) => {
           case "creating_bot_name":
             newState = "creating_bot_username";
             newStateData = { bot_name: text };
-            responseText = `Good. Now let's choose a username for your bot. It must end with "bot" (e.g. weatherbot, shop_bot).\n\nBot name: **${text}**`;
+            responseText = `Tốt lắm. Bây giờ hãy chọn username cho bot. Username phải kết thúc bằng "bot" (ví dụ: weatherbot, shop_bot).\n\nTên bot: **${text}**`;
             break;
 
           case "creating_bot_username": {
