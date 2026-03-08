@@ -532,7 +532,7 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
 
   const stopRecording = useCallback(() => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-      setRecordingCancelled(false);
+      recordingCancelledRef.current = false;
       mediaRecorderRef.current.stop();
     }
   }, []);
