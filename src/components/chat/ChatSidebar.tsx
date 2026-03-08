@@ -43,6 +43,36 @@ const ChatSidebar: React.FC = () => {
 
   // Listen for unread count changes to generate notifications
   const prevUnreadRef = useRef<Record<string, number>>({});
+  const prevPendingCountRef = useRef(0);
+
+  // Friend request notifications
+  const { pendingRequests, friends, friendships } = useChatContext();
+
+  useEffect(() => {
+    if (pendingRequests.length > prevPendingCountRef.current) {
+      // New friend requests arrived
+      const newCount = pendingRequests.length - prevPendingCountRef.current;
+      for (let i = 0; i < newCount; i++) {
+        const req = pendingRequests[i];
+        if (!req) continue;
+        const senderName = profiles[req.requester_id]?.display_name || 'Unknown';
+        notifIdCounter.current++;
+        const newNotif: NotificationItem = {
+          id: `notif-fr-${notifIdCounter.current}-${Date.now()}`,
+          conversationId: '', // no conversation
+          conversationName: '👥 Lời mời kết bạn / Friend Request',
+          senderName,
+          content: `${senderName} đã gửi lời mời kết bạn / sent you a friend request`,
+          timestamp: req.created_at,
+          read: false,
+        };
+        setNotifications(prev => [newNotif, ...prev].slice(0, 50));
+        playNotificationSound();
+        showBrowserNotification('Lời mời kết bạn / Friend Request', `${senderName} đã gửi lời mời kết bạn`);
+      }
+    }
+    prevPendingCountRef.current = pendingRequests.length;
+  }, [pendingRequests, profiles]);
   
   useEffect(() => {
     // When conversations update with new unread, create notification entries
