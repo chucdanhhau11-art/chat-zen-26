@@ -239,7 +239,7 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
       msgInsert.file_name = result.title || 'inline_result';
     }
 
-    await supabase.from('messages').insert(msgInsert);
+    await supabase.from('messages').insert(msgInsert as any);
     await supabase.from('conversations').update({ updated_at: new Date().toISOString() }).eq('id', activeConversation.id);
     
     setInput('');
