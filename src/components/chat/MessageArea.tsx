@@ -670,10 +670,11 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
               return (
                 <motion.div
                   key={msg.id}
+                  id={`msg-${msg.id}`}
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.15 }}
-                  className={cn('flex gap-2', isOwn ? 'justify-end' : 'justify-start')}
+                  className={cn('flex gap-2', isOwn ? 'justify-end' : 'justify-start', searchMatchIds.includes(msg.id) && 'bg-primary/10 rounded-lg -mx-1 px-1')}
                 >
                   {!isOwn && (
                     <div className="w-8 flex-shrink-0 cursor-pointer" onClick={() => setViewProfileId(msg.sender_id)}>
