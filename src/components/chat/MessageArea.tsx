@@ -107,6 +107,11 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
   const [showMediaGallery, setShowMediaGallery] = useState(false);
   const [showCommandSuggestions, setShowCommandSuggestions] = useState(false);
   const [botCommands, setBotCommands] = useState<{ command: string; description: string }[]>([]);
+  const [inlineResults, setInlineResults] = useState<any[]>([]);
+  const [inlineBotUsername, setInlineBotUsername] = useState('');
+  const [showInlineResults, setShowInlineResults] = useState(false);
+  const [miniApp, setMiniApp] = useState<{ url: string; botName: string; botId?: string } | null>(null);
+  const inlineDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const prevMessagesLenRef = useRef(0);
