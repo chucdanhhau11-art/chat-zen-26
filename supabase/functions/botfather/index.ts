@@ -359,12 +359,12 @@ serve(async (req) => {
               .eq("id", selectedBotId).eq("owner_id", caller.id).single();
 
             if (!botDetail) {
-              responseText = "Bot not found or you don't own it.";
+              responseText = "Không tìm thấy bot hoặc bạn không sở hữu bot này.";
               break;
             }
 
             const statusEmoji = botDetail.status === 'active' ? '🟢' : '🔴';
-            responseText = `🤖 **${botDetail.profiles?.display_name}** (@${botDetail.profiles?.username})\n\n${statusEmoji} Status: ${botDetail.status}\n📝 Description: ${botDetail.description || 'Not set'}\n🌐 Webhook: ${botDetail.webhook_url || 'Not set'}\n\nWhat would you like to do?`;
+            responseText = `🤖 **${botDetail.profiles?.display_name}** (@${botDetail.profiles?.username})\n\n${statusEmoji} Trạng thái: ${botDetail.status === 'active' ? 'Hoạt động' : 'Đã tắt'}\n📝 Mô tả: ${botDetail.description || 'Chưa đặt'}\n🌐 Webhook: ${botDetail.webhook_url || 'Chưa đặt'}\n\nBạn muốn làm gì?`;
             
             replyMarkup = {
               inline_keyboard: [
