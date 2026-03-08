@@ -512,35 +512,6 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
     return messages.find(m => m.id === replyId) || null;
   };
 
-  // Filter visible messages (not deleted_for me, not recalled)
-  const visibleMessages = messages.filter(m => {
-    if (m.deleted && m.sender_id !== user?.id) return true; // show "recalled" placeholder
-    if (m.deleted_for && user && (m.deleted_for as string[]).includes(user.id)) return false;
-    return true;
-  });
-
-  // Message search logic
-  useEffect(() => {
-    if (!msgSearchQuery.trim()) { setSearchMatchIds([]); setSearchActiveIdx(0); return; }
-    const q = msgSearchQuery.toLowerCase();
-    const ids = visibleMessages.filter(m => m.content?.toLowerCase().includes(q)).map(m => m.id);
-    setSearchMatchIds(ids);
-    setSearchActiveIdx(ids.length > 0 ? ids.length - 1 : 0);
-  }, [msgSearchQuery, visibleMessages.length]);
-
-  useEffect(() => {
-    if (searchMatchIds.length > 0 && searchMatchIds[searchActiveIdx]) {
-      document.getElementById(`msg-${searchMatchIds[searchActiveIdx]}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
-  }, [searchActiveIdx, searchMatchIds]);
-
-  const toggleSearch = useCallback(() => {
-    setShowSearch(prev => {
-      if (!prev) setTimeout(() => searchInputRef.current?.focus(), 100);
-      else { setMsgSearchQuery(''); setSearchMatchIds([]); }
-      return !prev;
-    });
-  }, []);
   return (
     <div className="flex-1 flex flex-col bg-tg-chat h-full">
       {/* Header */}
