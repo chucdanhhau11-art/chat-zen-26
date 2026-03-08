@@ -251,7 +251,9 @@ const ChatSidebar: React.FC = () => {
         </div>
         <div className="flex-1 relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <input type="text" placeholder="Tìm kiếm..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+          <input type="text" placeholder="Tìm kiếm (Enter)..." value={localSearch}
+            onChange={e => { setLocalSearch(e.target.value); setSearchQuery(e.target.value); }}
+            onKeyDown={e => { if (e.key === 'Enter') setUserSearchQuery(localSearch.trim()); }}
             className="w-full bg-secondary rounded-xl pl-9 pr-4 py-2 text-sm outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-primary/30 transition-all" />
         </div>
         <div className="relative">
