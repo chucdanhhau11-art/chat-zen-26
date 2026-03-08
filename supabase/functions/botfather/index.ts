@@ -188,52 +188,52 @@ serve(async (req) => {
           }
 
           case "/setname":
-            responseText = "Choose a bot to change its name. Send the bot username (e.g. @mybot)";
+            responseText = "Chọn bot để đổi tên. Gửi username của bot (ví dụ: @mybot)";
             newState = "setname_choose_bot";
             break;
 
           case "/setdescription":
-            responseText = "Choose a bot to change its description. Send the bot username (e.g. @mybot)";
+            responseText = "Chọn bot để đổi mô tả. Gửi username của bot (ví dụ: @mybot)";
             newState = "setdescription_choose_bot";
             break;
 
           case "/setabouttext":
-            responseText = "Choose a bot to set its about text. Send the bot username (e.g. @mybot)";
+            responseText = "Chọn bot để đặt giới thiệu. Gửi username của bot (ví dụ: @mybot)";
             newState = "setabouttext_choose_bot";
             break;
 
           case "/setcommands":
-            responseText = "Choose a bot to set its commands. Send the bot username (e.g. @mybot)";
+            responseText = "Chọn bot để đặt lệnh. Gửi username của bot (ví dụ: @mybot)";
             newState = "setcommands_choose_bot";
             break;
 
           case "/setwebhook":
-            responseText = "Choose a bot to configure its webhook. Send the bot username (e.g. @mybot)";
+            responseText = "Chọn bot để cấu hình webhook. Gửi username của bot (ví dụ: @mybot)";
             newState = "setwebhook_choose_bot";
             break;
 
           case "/setprivacy":
-            responseText = "Choose a bot to set privacy mode. Send the bot username (e.g. @mybot)";
+            responseText = "Chọn bot để cài đặt chế độ riêng tư. Gửi username của bot (ví dụ: @mybot)";
             newState = "setprivacy_choose_bot";
             break;
 
           case "/revoke":
-            responseText = "Choose a bot to revoke its token. Send the bot username (e.g. @mybot)";
+            responseText = "Chọn bot để đặt lại token. Gửi username của bot (ví dụ: @mybot)";
             newState = "revoke_choose_bot";
             break;
 
           case "/deletebot":
-            responseText = "Choose a bot to delete. Send the bot username (e.g. @mybot)\n\n⚠️ This action cannot be undone!";
+            responseText = "Chọn bot để xoá. Gửi username của bot (ví dụ: @mybot)\n\n⚠️ Hành động này không thể hoàn tác!";
             newState = "deletebot_choose_bot";
             break;
 
           case "/cancel":
-            responseText = "Command cancelled. Use /help to see available commands.";
+            responseText = "Đã huỷ lệnh. Dùng /help để xem các lệnh có sẵn.";
             newState = "idle";
             break;
 
           default:
-            responseText = `Unknown command: ${cmd}\n\nUse /help to see available commands.`;
+            responseText = `Lệnh không xác định: ${cmd}\n\nDùng /help để xem các lệnh có sẵn.`;
         }
       } else {
         // Process based on current state
