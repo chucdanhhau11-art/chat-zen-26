@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Send, Smile, Paperclip, Mic, MoreVertical, Phone, Search, Info, X, FileText, Film, Image as ImageIcon, Reply, Trash2, RotateCcw, Eye, ImageIcon as GalleryIcon, ArrowLeft } from 'lucide-react';
+import { Send, Smile, Paperclip, Mic, MoreVertical, Phone, Video, Search, Info, X, FileText, Film, Image as ImageIcon, Reply, Trash2, RotateCcw, Eye, ImageIcon as GalleryIcon, ArrowLeft } from 'lucide-react';
+import type { CallType } from '@/hooks/useWebRTC';
 import { useChatContext } from '@/context/ChatContext';
 import { useAuth } from '@/context/AuthContext';
 import ChatAvatar from './ChatAvatar';
@@ -87,7 +88,11 @@ const renderContent = (content: string | null) => {
   });
 };
 
-const MessageArea: React.FC = () => {
+interface MessageAreaProps {
+  onStartCall?: (type: CallType) => void;
+}
+
+const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
   const { activeConversation, messages, sendMessage, toggleInfoPanel, profiles, loadingMessages, deleteConversation, leaveGroup, setMobileShowingChat } = useChatContext();
   const { user } = useAuth();
   const [input, setInput] = useState('');
@@ -313,7 +318,15 @@ const MessageArea: React.FC = () => {
         <span className="text-[10px] font-display font-semibold text-muted-foreground/60 tracking-wider uppercase mr-1 hidden sm:inline">Chim Cu Gáy</span>
         <div className="flex items-center gap-1">
           <button className="p-2 rounded-lg hover:bg-tg-hover transition-colors"><Search className="h-4 w-4 text-muted-foreground" /></button>
-          <button className="p-2 rounded-lg hover:bg-tg-hover transition-colors"><Phone className="h-4 w-4 text-muted-foreground" /></button>
+          {activeConversation.type === 'private' && onStartCall && (
+            <>
+              <button onClick={() => onStartCall('voice')} className="p-2 rounded-lg hover:bg-tg-hover transition-colors" title="Gọi thoại"><Phone className="h-4 w-4 text-muted-foreground" /></button>
+              <button onClick={() => onStartCall('video')} className="p-2 rounded-lg hover:bg-tg-hover transition-colors" title="Gọi video"><Video className="h-4 w-4 text-muted-foreground" /></button>
+            </>
+          )}
+          {activeConversation.type !== 'private' && (
+            <button className="p-2 rounded-lg hover:bg-tg-hover transition-colors"><Phone className="h-4 w-4 text-muted-foreground" /></button>
+          )}
           <button onClick={toggleInfoPanel} className="p-2 rounded-lg hover:bg-tg-hover transition-colors"><Info className="h-4 w-4 text-muted-foreground" /></button>
           <div className="relative">
             <button onClick={() => setHeaderMenu(p => !p)} className="p-2 rounded-lg hover:bg-tg-hover transition-colors">
