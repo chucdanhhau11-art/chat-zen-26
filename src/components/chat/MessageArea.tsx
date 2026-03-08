@@ -39,7 +39,7 @@ const playNotificationSound = () => {
   } catch (e) {}
 };
 
-const MessageBubbleFile: React.FC<{ msg: any; isOwn: boolean }> = ({ msg, isOwn }) => {
+const MessageBubbleFile: React.FC<{ msg: any; isOwn: boolean; onImageClick?: (url: string) => void }> = ({ msg, isOwn, onImageClick }) => {
   const fileUrl = msg.file_url;
   const fileName = msg.file_name || 'file';
   const fileSize = msg.file_size;
@@ -48,7 +48,7 @@ const MessageBubbleFile: React.FC<{ msg: any; isOwn: boolean }> = ({ msg, isOwn 
   if (msgType === 'image' && fileUrl) {
     return (
       <div className="max-w-xs">
-        <img src={fileUrl} alt={fileName} className="rounded-lg max-w-full max-h-64 object-cover cursor-pointer" onClick={() => window.open(fileUrl, '_blank')} />
+        <img src={fileUrl} alt={fileName} className="rounded-lg max-w-full max-h-64 object-cover cursor-pointer" onClick={() => onImageClick?.(fileUrl)} />
         {msg.content && <p className="mt-1 whitespace-pre-wrap break-words text-sm">{msg.content}</p>}
       </div>
     );
