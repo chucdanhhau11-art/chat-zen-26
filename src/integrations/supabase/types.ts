@@ -199,6 +199,91 @@ export type Database = {
         }
         Relationships: []
       }
+      inline_queries: {
+        Row: {
+          bot_id: string
+          chat_id: string | null
+          created_at: string
+          id: string
+          query_text: string
+          user_id: string
+        }
+        Insert: {
+          bot_id: string
+          chat_id?: string | null
+          created_at?: string
+          id?: string
+          query_text?: string
+          user_id: string
+        }
+        Update: {
+          bot_id?: string
+          chat_id?: string | null
+          created_at?: string
+          id?: string
+          query_text?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inline_queries_bot_id_fkey"
+            columns: ["bot_id"]
+            isOneToOne: false
+            referencedRelation: "bots"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inline_results: {
+        Row: {
+          bot_id: string
+          content: string | null
+          created_at: string
+          description: string | null
+          expires_at: string
+          id: string
+          reply_markup: Json | null
+          result_id: string
+          result_type: string
+          thumbnail_url: string | null
+          title: string
+        }
+        Insert: {
+          bot_id: string
+          content?: string | null
+          created_at?: string
+          description?: string | null
+          expires_at?: string
+          id?: string
+          reply_markup?: Json | null
+          result_id: string
+          result_type?: string
+          thumbnail_url?: string | null
+          title: string
+        }
+        Update: {
+          bot_id?: string
+          content?: string | null
+          created_at?: string
+          description?: string | null
+          expires_at?: string
+          id?: string
+          reply_markup?: Json | null
+          result_id?: string
+          result_type?: string
+          thumbnail_url?: string | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inline_results_bot_id_fkey"
+            columns: ["bot_id"]
+            isOneToOne: false
+            referencedRelation: "bots"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       messages: {
         Row: {
           content: string | null

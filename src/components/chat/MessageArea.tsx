@@ -11,6 +11,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import ProfileViewDialog from './ProfileViewDialog';
 import MediaGalleryDialog from './MediaGalleryDialog';
+import InlineResultsDropdown from './InlineResultsDropdown';
+import MiniAppDialog from './MiniAppDialog';
 import logoImg from '@/assets/logo.png';
 
 const isImageType = (type: string) => type.startsWith('image/');
@@ -105,6 +107,11 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
   const [showMediaGallery, setShowMediaGallery] = useState(false);
   const [showCommandSuggestions, setShowCommandSuggestions] = useState(false);
   const [botCommands, setBotCommands] = useState<{ command: string; description: string }[]>([]);
+  const [inlineResults, setInlineResults] = useState<any[]>([]);
+  const [inlineBotUsername, setInlineBotUsername] = useState('');
+  const [showInlineResults, setShowInlineResults] = useState(false);
+  const [miniApp, setMiniApp] = useState<{ url: string; botName: string; botId?: string } | null>(null);
+  const inlineDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const prevMessagesLenRef = useRef(0);
@@ -150,10 +157,95 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
   useEffect(() => {
     if (input.startsWith('/') && botCommands.length > 0) {
       setShowCommandSuggestions(true);
+      setShowInlineResults(false);
     } else {
       setShowCommandSuggestions(false);
     }
   }, [input, botCommands]);
+
+  // Inline query detection: @botname query
+  useEffect(() => {
+    const match = input.match(/^@(\w+)\s*(.*)/);
+    if (!match) {
+      setShowInlineResults(false);
+      setInlineResults([]);
+      return;
+    }
+
+    const botUsername = match[1];
+    const query = match[2] || '';
+    setInlineBotUsername(botUsername);
+
+    // Debounce the inline query
+    if (inlineDebounceRef.current) clearTimeout(inlineDebounceRef.current);
+    inlineDebounceRef.current = setTimeout(async () => {
+      try {
+        // Find bot by username
+        const { data: botProfile } = await supabase.from('profiles')
+          .select('id').eq('username', botUsername).eq('is_bot', true).maybeSingle();
+        if (!botProfile) { setInlineResults([]); setShowInlineResults(false); return; }
+
+        const { data: bot } = await supabase.from('bots')
+          .select('id, bot_token').eq('profile_id', botProfile.id).eq('status', 'active').maybeSingle();
+        if (!bot) { setInlineResults([]); setShowInlineResults(false); return; }
+
+        // Call processInlineQuery
+        const { data } = await supabase.functions.invoke('bot-api', {
+          body: {
+            bot_token: bot.bot_token,
+            action: 'processInlineQuery',
+            query,
+            user_id: user?.id,
+            chat_id: activeConversation?.id,
+          },
+        });
+
+        if (data?.results && data.results.length > 0) {
+          setInlineResults(data.results);
+          setShowInlineResults(true);
+        } else {
+          setInlineResults([]);
+          setShowInlineResults(false);
+        }
+      } catch (err) {
+        console.error('Inline query error:', err);
+        setInlineResults([]);
+        setShowInlineResults(false);
+      }
+    }, 400);
+
+    return () => {
+      if (inlineDebounceRef.current) clearTimeout(inlineDebounceRef.current);
+    };
+  }, [input, user, activeConversation]);
+
+  // Handle inline result selection
+  const handleSelectInlineResult = useCallback(async (result: any) => {
+    if (!activeConversation || !user) return;
+    
+    const content = result.content || result.title;
+    const msgInsert: Record<string, any> = {
+      conversation_id: activeConversation.id,
+      sender_id: user.id,
+      content,
+      message_type: result.reply_markup ? 'bot_message' : 'text',
+    };
+    if (result.reply_markup) {
+      msgInsert.file_name = JSON.stringify(result.reply_markup);
+    }
+    if (result.thumbnail_url && (result.result_type === 'photo' || result.result_type === 'gif')) {
+      msgInsert.message_type = 'image';
+      msgInsert.file_url = result.thumbnail_url;
+      msgInsert.file_name = result.title || 'inline_result';
+    }
+
+    await supabase.from('messages').insert(msgInsert as any);
+    await supabase.from('conversations').update({ updated_at: new Date().toISOString() }).eq('id', activeConversation.id);
+    
+    setInput('');
+    setShowInlineResults(false);
+    setInlineResults([]);
+  }, [activeConversation, user]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -528,6 +620,17 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
                                             className="flex-1 text-center px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-xs font-medium hover:bg-primary/20 transition-colors">
                                             {btn.text}
                                           </a>
+                                        ) : btn.web_app?.url ? (
+                                          <button key={bi} onClick={() => {
+                                            const senderProfile = profiles[msg.sender_id];
+                                            setMiniApp({
+                                              url: btn.web_app.url,
+                                              botName: senderProfile?.display_name || 'Mini App',
+                                              botId: msg.sender_id,
+                                            });
+                                          }} className="flex-1 text-center px-3 py-1.5 rounded-lg bg-primary/20 text-primary text-xs font-medium hover:bg-primary/30 transition-colors border border-primary/20">
+                                            ▶ {btn.text}
+                                          </button>
                                         ) : (
                                           <button key={bi} onClick={async () => {
                                             if (btn.callback_data) {
@@ -538,7 +641,6 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
                                                 message_type: 'text',
                                               });
                                               await supabase.from('conversations').update({ updated_at: new Date().toISOString() }).eq('id', activeConversation!.id);
-                                              // If BotFather conversation, process the callback
                                               if (isBotFatherConversation(activeConversation!.id)) {
                                                 try {
                                                   await supabase.functions.invoke('botfather', {
@@ -659,9 +761,19 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
 
       <input ref={fileInputRef} type="file" accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar" className="hidden" onChange={handleFileSelect} />
 
+      {/* Inline results dropdown */}
+      {showInlineResults && (
+        <InlineResultsDropdown
+          results={inlineResults}
+          botUsername={inlineBotUsername}
+          onSelectResult={handleSelectInlineResult}
+          onClose={() => { setShowInlineResults(false); setInlineResults([]); }}
+        />
+      )}
+
       {/* Command suggestions */}
       <AnimatePresence>
-        {showCommandSuggestions && (
+        {showCommandSuggestions && !showInlineResults && (
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -697,7 +809,7 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder={previewFile ? "Thêm chú thích..." : "Nhập tin nhắn..."}
+              placeholder={previewFile ? "Thêm chú thích..." : "Nhập tin nhắn hoặc @botname query..."}
               rows={1}
               className="w-full bg-secondary rounded-xl px-4 py-2.5 text-sm outline-none placeholder:text-muted-foreground resize-none focus:ring-2 focus:ring-primary/30 transition-all max-h-32"
               style={{ minHeight: '40px' }}
@@ -724,6 +836,15 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
 
       {viewProfileId && <ProfileViewDialog userId={viewProfileId} onClose={() => setViewProfileId(null)} />}
       {showMediaGallery && <MediaGalleryDialog onClose={() => setShowMediaGallery(false)} />}
+      {miniApp && (
+        <MiniAppDialog
+          url={miniApp.url}
+          botName={miniApp.botName}
+          chatId={activeConversation?.id}
+          botId={miniApp.botId}
+          onClose={() => setMiniApp(null)}
+        />
+      )}
     </div>
   );
 };
