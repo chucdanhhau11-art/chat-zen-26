@@ -573,7 +573,7 @@ serve(async (req) => {
               ? { read_messages: true, send_messages: true, delete_messages: false, manage_users: false }
               : { read_messages: false, send_messages: true, delete_messages: false, manage_users: false };
             await supabase.from("bots").update({ permissions: perms }).eq("id", stateData.bot_id).eq("owner_id", caller.id);
-            responseText = `✅ Privacy mode ${mode}. ${mode === 'enabled' ? 'Bot will only receive commands.' : 'Bot will receive all messages.'}`;
+            responseText = `✅ Chế độ riêng tư: ${mode}. ${mode === 'enabled' ? 'Bot chỉ nhận lệnh.' : 'Bot nhận tất cả tin nhắn.'}`;
             break;
           }
 
