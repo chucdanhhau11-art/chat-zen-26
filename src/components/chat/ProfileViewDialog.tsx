@@ -1,6 +1,7 @@
 import React from 'react';
-import { X } from 'lucide-react';
+import { X, UserPlus, Check, Clock, UserMinus, MessageCircle } from 'lucide-react';
 import { useChatContext } from '@/context/ChatContext';
+import { useAuth } from '@/context/AuthContext';
 import ChatAvatar from './ChatAvatar';
 import { motion } from 'framer-motion';
 import { formatLastSeen } from '@/lib/chatUtils';
@@ -11,10 +12,32 @@ interface Props {
 }
 
 const ProfileViewDialog: React.FC<Props> = ({ userId, onClose }) => {
-  const { profiles } = useChatContext();
+  const { profiles, getFriendshipWith, sendFriendRequest, acceptFriendRequest, removeFriend, createPrivateChat, setActiveConversation } = useChatContext();
+  const { user } = useAuth();
   const profile = profiles[userId];
+  const friendship = getFriendshipWith(userId);
 
   if (!profile) return null;
+
+  const isMe = user?.id === userId;
+
+  const getFriendStatus = () => {
+    if (!friendship) return 'none';
+    if (friendship.status === 'accepted') return 'friend';
+    if (friendship.status === 'pending' && friendship.requester_id === user?.id) return 'sent';
+    if (friendship.status === 'pending' && friendship.addressee_id === user?.id) return 'received';
+    return 'none';
+  };
+
+  const status = getFriendStatus();
+
+  const handleMessage = async () => {
+    const convId = await createPrivateChat(userId);
+    if (convId) {
+      setActiveConversation(convId);
+      onClose();
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/60 backdrop-blur-sm" onClick={onClose}>
@@ -39,15 +62,68 @@ const ProfileViewDialog: React.FC<Props> = ({ userId, onClose }) => {
           {profile.bio && (
             <p className="text-sm text-foreground mt-4 text-center">{profile.bio}</p>
           )}
+
+          {/* Friend actions */}
+          {!isMe && !profile.is_bot && (
+            <div className="flex items-center gap-2 mt-4">
+              {status === 'none' && (
+                <button
+                  onClick={() => sendFriendRequest(userId)}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
+                >
+                  <UserPlus className="h-4 w-4" />
+                  Kết bạn / Add Friend
+                </button>
+              )}
+              {status === 'sent' && (
+                <span className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-muted text-muted-foreground text-sm">
+                  <Clock className="h-4 w-4" />
+                  Đã gửi lời mời / Request Sent
+                </span>
+              )}
+              {status === 'received' && (
+                <button
+                  onClick={() => friendship && acceptFriendRequest(friendship.id)}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
+                >
+                  <Check className="h-4 w-4" />
+                  Chấp nhận / Accept
+                </button>
+              )}
+              {status === 'friend' && (
+                <button
+                  onClick={() => friendship && removeFriend(friendship.id)}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-destructive/10 text-destructive text-sm font-medium hover:bg-destructive/20 transition-colors"
+                >
+                  <UserMinus className="h-4 w-4" />
+                  Huỷ kết bạn / Unfriend
+                </button>
+              )}
+              <button
+                onClick={handleMessage}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-secondary text-foreground text-sm font-medium hover:bg-secondary/80 transition-colors"
+              >
+                <MessageCircle className="h-4 w-4" />
+                Nhắn tin / Message
+              </button>
+            </div>
+          )}
+
           <div className="mt-4 w-full space-y-2 text-sm">
             <div className="flex justify-between px-2 py-1.5 rounded-lg bg-secondary/50">
               <span className="text-muted-foreground">Username</span>
               <span>@{profile.username}</span>
             </div>
             <div className="flex justify-between px-2 py-1.5 rounded-lg bg-secondary/50">
-              <span className="text-muted-foreground">Tham gia</span>
+              <span className="text-muted-foreground">Tham gia / Joined</span>
               <span>{new Date(profile.created_at).toLocaleDateString('vi-VN')}</span>
             </div>
+            {status === 'friend' && (
+              <div className="flex justify-between px-2 py-1.5 rounded-lg bg-primary/5">
+                <span className="text-muted-foreground">Trạng thái / Status</span>
+                <span className="text-primary font-medium">✓ Bạn bè / Friends</span>
+              </div>
+            )}
           </div>
         </div>
       </motion.div>
