@@ -93,7 +93,7 @@ interface MessageAreaProps {
 }
 
 const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
-  const { activeConversation, messages, sendMessage, toggleInfoPanel, profiles, loadingMessages, deleteConversation, leaveGroup, setMobileShowingChat } = useChatContext();
+  const { activeConversation, messages, sendMessage, toggleInfoPanel, profiles, loadingMessages, deleteConversation, leaveGroup, setMobileShowingChat, isBotFatherConversation, activeConversationId } = useChatContext();
   const { user } = useAuth();
   const [input, setInput] = useState('');
   const [uploading, setUploading] = useState(false);
@@ -110,20 +110,41 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
   const prevMessagesLenRef = useRef(0);
 
   // Fetch bot commands for the active conversation
+  const isBotFather = isBotFatherConversation(activeConversation?.id || null);
+
   useEffect(() => {
     if (!activeConversation) { setBotCommands([]); return; }
+    
+    // BotFather has its own hardcoded commands
+    if (isBotFather) {
+      setBotCommands([
+        { command: '/start', description: 'Start interacting with BotFather' },
+        { command: '/help', description: 'Show all commands' },
+        { command: '/newbot', description: 'Create a new bot' },
+        { command: '/mybots', description: 'List your bots' },
+        { command: '/setname', description: 'Change bot name' },
+        { command: '/setdescription', description: 'Change bot description' },
+        { command: '/setabouttext', description: 'Set bot about text' },
+        { command: '/setcommands', description: 'Set bot commands' },
+        { command: '/setwebhook', description: 'Configure webhook URL' },
+        { command: '/setprivacy', description: 'Set privacy mode' },
+        { command: '/revoke', description: 'Reset bot token' },
+        { command: '/deletebot', description: 'Delete a bot' },
+        { command: '/cancel', description: 'Cancel current operation' },
+      ]);
+      return;
+    }
+
     const fetchBotCommands = async () => {
-      // Find bot members in this conversation
       const botMembers = activeConversation.members.filter(m => profiles[m.user_id]?.is_bot);
       if (botMembers.length === 0) { setBotCommands([]); return; }
-      // Get bot ids from profile ids
       const { data: bots } = await supabase.from('bots').select('id, profile_id').in('profile_id', botMembers.map(m => m.user_id));
       if (!bots || bots.length === 0) { setBotCommands([]); return; }
       const { data: cmds } = await supabase.from('bot_commands').select('command, description').in('bot_id', bots.map(b => b.id));
       setBotCommands((cmds || []).map(c => ({ command: c.command, description: c.description || '' })));
     };
     fetchBotCommands();
-  }, [activeConversation, profiles]);
+  }, [activeConversation, profiles, isBotFather]);
 
   // Show command suggestions when typing "/"
   useEffect(() => {
@@ -225,6 +246,21 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
       reply_to: reply,
     });
     await supabase.from('conversations').update({ updated_at: new Date().toISOString() }).eq('id', activeConversation.id);
+
+    // If this is a BotFather conversation, process the message
+    if (isBotFatherConversation(activeConversation.id)) {
+      try {
+        await supabase.functions.invoke('botfather', {
+          body: {
+            action: 'process-message',
+            message: text.trim(),
+            conversation_id: activeConversation.id,
+          },
+        });
+      } catch (err) {
+        console.error('BotFather error:', err);
+      }
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -493,15 +529,29 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
                                             {btn.text}
                                           </a>
                                         ) : (
-                                          <button key={bi} onClick={() => {
-                                            // Send callback_data as a message
+                                          <button key={bi} onClick={async () => {
                                             if (btn.callback_data) {
-                                              supabase.from('messages').insert({
+                                              await supabase.from('messages').insert({
                                                 conversation_id: activeConversation!.id,
                                                 sender_id: user!.id,
                                                 content: btn.callback_data,
                                                 message_type: 'text',
                                               });
+                                              await supabase.from('conversations').update({ updated_at: new Date().toISOString() }).eq('id', activeConversation!.id);
+                                              // If BotFather conversation, process the callback
+                                              if (isBotFatherConversation(activeConversation!.id)) {
+                                                try {
+                                                  await supabase.functions.invoke('botfather', {
+                                                    body: {
+                                                      action: 'process-message',
+                                                      message: btn.callback_data,
+                                                      conversation_id: activeConversation!.id,
+                                                    },
+                                                  });
+                                                } catch (err) {
+                                                  console.error('BotFather callback error:', err);
+                                                }
+                                              }
                                             }
                                           }} className="flex-1 text-center px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-xs font-medium hover:bg-primary/20 transition-colors">
                                             {btn.text}

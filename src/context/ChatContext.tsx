@@ -106,6 +106,8 @@ interface ChatContextType {
   isMobileShowingChat: boolean;
   setMobileShowingChat: (v: boolean) => void;
   clearUnread: (convId: string) => void;
+  openBotFatherChat: () => Promise<void>;
+  isBotFatherConversation: (convId: string | null) => boolean;
 }
 
 const ChatContext = createContext<ChatContextType | null>(null);
@@ -424,6 +426,40 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [user, fetchConversations]);
 
+  // BotFather integration
+  const botFatherIdRef = useRef<string | null>(null);
+
+  const openBotFatherChat = useCallback(async () => {
+    if (!user) return;
+    try {
+      const { data: ensureData, error: ensureErr } = await supabase.functions.invoke('botfather', {
+        body: { action: 'ensure-botfather' },
+      });
+      if (ensureErr) throw ensureErr;
+      if (ensureData?.error) throw new Error(ensureData.error);
+      const botfatherId = ensureData.botfather_id;
+      botFatherIdRef.current = botfatherId;
+
+      const convId = await createPrivateChat(botfatherId);
+      if (convId) {
+        setActiveConversationId(convId);
+        setMobileShowingChat(true);
+      }
+    } catch (err: any) {
+      toast.error('Lỗi mở BotFather: ' + (err.message || 'Unknown'));
+    }
+  }, [user, createPrivateChat]);
+
+  const isBotFatherConversation = useCallback((convId: string | null) => {
+    if (!convId || !user) return false;
+    const conv = conversations.find(c => c.id === convId);
+    if (!conv || conv.type !== 'private') return false;
+    const otherMember = conv.members.find(m => m.user_id !== user.id);
+    if (!otherMember) return false;
+    const profile = profilesRef.current[otherMember.user_id];
+    return profile?.username === 'botfather';
+  }, [conversations, user]);
+
   const createGroup = useCallback(async (name: string, memberIds: string[]): Promise<string | null> => {
     if (!user) return null;
     try {
@@ -486,6 +522,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       profiles, createPrivateChat, createGroup, allProfiles,
       deleteConversation, leaveGroup, ensureSavedMessages,
       isMobileShowingChat, setMobileShowingChat, clearUnread,
+      openBotFatherChat, isBotFatherConversation,
     }}>
       {children}
     </ChatContext.Provider>

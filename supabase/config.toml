@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.bot-api]
 verify_jwt = false
+
+[functions.botfather]
+verify_jwt = false
