@@ -221,9 +221,12 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (!newMsg || newMsg.sender_id === user.id) return;
           // Only count if not currently viewing that conversation
           if (activeConversationIdRef.current !== newMsg.conversation_id) {
+            const newCount = (unreadCountsRef.current[newMsg.conversation_id] || 0) + 1;
+            // Update ref immediately so fetchConversations won't race-reset it
+            unreadCountsRef.current = { ...unreadCountsRef.current, [newMsg.conversation_id]: newCount };
             setUnreadCounts(prev => ({
               ...prev,
-              [newMsg.conversation_id]: (prev[newMsg.conversation_id] || 0) + 1,
+              [newMsg.conversation_id]: newCount,
             }));
             playNotificationSound();
             // Show browser notification
