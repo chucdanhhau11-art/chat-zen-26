@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { Search, Menu, Moon, Sun, Plus, Shield, Mail, User, Bookmark, Bell } from 'lucide-react';
+import { Search, Menu, Moon, Sun, Plus, Shield, Mail, User, Bookmark, Bell, Bot } from 'lucide-react';
 import { useChatContext } from '@/context/ChatContext';
 import { useAuth } from '@/context/AuthContext';
 import ChatAvatar from './ChatAvatar';
