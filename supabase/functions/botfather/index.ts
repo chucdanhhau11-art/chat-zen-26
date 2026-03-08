@@ -247,7 +247,7 @@ serve(async (req) => {
           case "creating_bot_username": {
             const username = text.replace("@", "").toLowerCase().replace(/[^a-z0-9_]/g, "");
             if (!username.endsWith("bot")) {
-              responseText = "Sorry, the username must end with \"bot\". Please try again.";
+              responseText = "Username phải kết thúc bằng \"bot\". Vui lòng thử lại.";
               newState = "creating_bot_username";
               newStateData = stateData;
               break;
