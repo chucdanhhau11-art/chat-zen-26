@@ -110,20 +110,41 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
   const prevMessagesLenRef = useRef(0);
 
   // Fetch bot commands for the active conversation
+  const isBotFather = isBotFatherConversation(activeConversation?.id || null);
+
   useEffect(() => {
     if (!activeConversation) { setBotCommands([]); return; }
+    
+    // BotFather has its own hardcoded commands
+    if (isBotFather) {
+      setBotCommands([
+        { command: '/start', description: 'Start interacting with BotFather' },
+        { command: '/help', description: 'Show all commands' },
+        { command: '/newbot', description: 'Create a new bot' },
+        { command: '/mybots', description: 'List your bots' },
+        { command: '/setname', description: 'Change bot name' },
+        { command: '/setdescription', description: 'Change bot description' },
+        { command: '/setabouttext', description: 'Set bot about text' },
+        { command: '/setcommands', description: 'Set bot commands' },
+        { command: '/setwebhook', description: 'Configure webhook URL' },
+        { command: '/setprivacy', description: 'Set privacy mode' },
+        { command: '/revoke', description: 'Reset bot token' },
+        { command: '/deletebot', description: 'Delete a bot' },
+        { command: '/cancel', description: 'Cancel current operation' },
+      ]);
+      return;
+    }
+
     const fetchBotCommands = async () => {
-      // Find bot members in this conversation
       const botMembers = activeConversation.members.filter(m => profiles[m.user_id]?.is_bot);
       if (botMembers.length === 0) { setBotCommands([]); return; }
-      // Get bot ids from profile ids
       const { data: bots } = await supabase.from('bots').select('id, profile_id').in('profile_id', botMembers.map(m => m.user_id));
       if (!bots || bots.length === 0) { setBotCommands([]); return; }
       const { data: cmds } = await supabase.from('bot_commands').select('command, description').in('bot_id', bots.map(b => b.id));
       setBotCommands((cmds || []).map(c => ({ command: c.command, description: c.description || '' })));
     };
     fetchBotCommands();
-  }, [activeConversation, profiles]);
+  }, [activeConversation, profiles, isBotFather]);
 
   // Show command suggestions when typing "/"
   useEffect(() => {
