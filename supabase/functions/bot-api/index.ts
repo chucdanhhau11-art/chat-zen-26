@@ -41,6 +41,7 @@ serve(async (req) => {
 
     const botProfileId = bot.profile_id;
 
+    // ==================== sendMessage ====================
     if (action === "sendMessage") {
       const { chat_id, text, reply_to, reply_markup } = body;
       if (!chat_id || !text) {
@@ -49,13 +50,9 @@ serve(async (req) => {
         });
       }
 
-      // Check bot is member of conversation
       const { data: membership } = await supabase
-        .from("conversation_members")
-        .select("id")
-        .eq("conversation_id", chat_id)
-        .eq("user_id", botProfileId)
-        .maybeSingle();
+        .from("conversation_members").select("id")
+        .eq("conversation_id", chat_id).eq("user_id", botProfileId).maybeSingle();
 
       if (!membership) {
         return new Response(JSON.stringify({ error: "Bot is not a member of this conversation" }), {
@@ -63,20 +60,14 @@ serve(async (req) => {
         });
       }
 
-      // Build message content - embed reply_markup as JSON in content if present
-      let content = text;
-      let messageType = "text";
-
-      // Store reply_markup in a special format if present
       const msgInsert: Record<string, unknown> = {
         conversation_id: chat_id,
         sender_id: botProfileId,
-        content,
-        message_type: messageType,
+        content: text,
+        message_type: "text",
         reply_to: reply_to || null,
       };
 
-      // If there's reply_markup, store it as JSON metadata in file_name field (reusing existing column)
       if (reply_markup) {
         msgInsert.file_name = JSON.stringify(reply_markup);
         msgInsert.message_type = "bot_message";
@@ -92,6 +83,7 @@ serve(async (req) => {
       });
     }
 
+    // ==================== sendFile ====================
     if (action === "sendFile") {
       const { chat_id, file_url, file_name, file_type, caption } = body;
       if (!chat_id || !file_url) {
@@ -101,11 +93,8 @@ serve(async (req) => {
       }
 
       const { data: membership } = await supabase
-        .from("conversation_members")
-        .select("id")
-        .eq("conversation_id", chat_id)
-        .eq("user_id", botProfileId)
-        .maybeSingle();
+        .from("conversation_members").select("id")
+        .eq("conversation_id", chat_id).eq("user_id", botProfileId).maybeSingle();
 
       if (!membership) {
         return new Response(JSON.stringify({ error: "Bot is not a member of this conversation" }), {
@@ -131,6 +120,7 @@ serve(async (req) => {
       });
     }
 
+    // ==================== editMessage ====================
     if (action === "editMessage") {
       const { message_id, text } = body;
       if (!message_id || !text) {
@@ -145,6 +135,7 @@ serve(async (req) => {
       });
     }
 
+    // ==================== deleteMessage ====================
     if (action === "deleteMessage") {
       const { message_id } = body;
       const { error } = await supabase.from("messages").update({ deleted: true, content: null }).eq("id", message_id).eq("sender_id", botProfileId);
@@ -154,22 +145,127 @@ serve(async (req) => {
       });
     }
 
+    // ==================== getUpdates ====================
     if (action === "getUpdates") {
-      // Long polling: get unprocessed events for this bot
       const { data: events } = await supabase
-        .from("bot_events")
-        .select("*")
-        .eq("bot_id", bot.id)
-        .eq("processed", false)
-        .order("created_at", { ascending: true })
-        .limit(100);
+        .from("bot_events").select("*")
+        .eq("bot_id", bot.id).eq("processed", false)
+        .order("created_at", { ascending: true }).limit(100);
 
-      // Mark as processed
       if (events && events.length > 0) {
         await supabase.from("bot_events").update({ processed: true }).in("id", events.map(e => e.id));
       }
 
       return new Response(JSON.stringify({ updates: events || [] }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // ==================== answerInlineQuery ====================
+    if (action === "answerInlineQuery") {
+      const { query_id, results, cache_time } = body;
+      if (!results || !Array.isArray(results)) {
+        return new Response(JSON.stringify({ error: "results array is required" }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Delete old results for this bot (cleanup)
+      await supabase.from("inline_results").delete()
+        .eq("bot_id", bot.id)
+        .lt("expires_at", new Date().toISOString());
+
+      // Store results
+      const ttl = cache_time || 3600; // default 1 hour
+      const expiresAt = new Date(Date.now() + ttl * 1000).toISOString();
+      
+      const rows = results.map((r: any) => ({
+        bot_id: bot.id,
+        result_id: r.id || crypto.randomUUID(),
+        result_type: r.type || "article",
+        title: r.title || "",
+        description: r.description || null,
+        content: r.message_text || r.content || null,
+        thumbnail_url: r.thumbnail_url || r.thumb_url || null,
+        reply_markup: r.reply_markup || null,
+        expires_at: expiresAt,
+      }));
+
+      const { error: insertErr } = await supabase.from("inline_results").insert(rows);
+      if (insertErr) throw insertErr;
+
+      return new Response(JSON.stringify({ success: true, results_count: rows.length }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // ==================== processInlineQuery ====================
+    // Called by the client when user types @botname query
+    if (action === "processInlineQuery") {
+      const { query, user_id, chat_id } = body;
+
+      // Log the inline query
+      await supabase.from("inline_queries").insert({
+        bot_id: bot.id,
+        user_id: user_id || "anonymous",
+        query_text: query || "",
+        chat_id: chat_id || null,
+      });
+
+      // If bot has a webhook, forward the inline query
+      if (bot.webhook_url) {
+        try {
+          const webhookResp = await fetch(bot.webhook_url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              event_type: "inline_query",
+              bot_id: bot.id,
+              query,
+              user_id,
+              chat_id,
+            }),
+          });
+          if (webhookResp.ok) {
+            const webhookData = await webhookResp.json();
+            // If webhook returned results directly, store them
+            if (webhookData.results && Array.isArray(webhookData.results)) {
+              await supabase.from("inline_results").delete().eq("bot_id", bot.id);
+              const rows = webhookData.results.map((r: any) => ({
+                bot_id: bot.id,
+                result_id: r.id || crypto.randomUUID(),
+                result_type: r.type || "article",
+                title: r.title || "",
+                description: r.description || null,
+                content: r.message_text || r.content || null,
+                thumbnail_url: r.thumbnail_url || r.thumb_url || null,
+                reply_markup: r.reply_markup || null,
+                expires_at: new Date(Date.now() + 3600000).toISOString(),
+              }));
+              await supabase.from("inline_results").insert(rows);
+            }
+          }
+        } catch (e) {
+          // Webhook call failed, continue with cached results
+        }
+      }
+
+      // Also create a bot_event for polling-based bots
+      await supabase.from("bot_events").insert({
+        bot_id: bot.id,
+        event_type: "inline_query",
+        payload: { query, user_id, chat_id },
+      });
+
+      // Return cached results for this bot
+      const { data: results } = await supabase
+        .from("inline_results").select("*")
+        .eq("bot_id", bot.id)
+        .gt("expires_at", new Date().toISOString())
+        .order("created_at", { ascending: false })
+        .limit(50);
+
+      return new Response(JSON.stringify({ results: results || [] }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
