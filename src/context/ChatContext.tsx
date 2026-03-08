@@ -208,6 +208,10 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
               [newMsg.conversation_id]: (prev[newMsg.conversation_id] || 0) + 1,
             }));
             playNotificationSound();
+            // Show browser notification
+            const senderProfile = profilesRef.current[newMsg.sender_id];
+            const senderName = senderProfile?.display_name || 'Tin nhắn mới';
+            showBrowserNotification(senderName, newMsg.content || '📎 File');
             // Update conversations to reflect new unread
             setConversations(prev => prev.map(c =>
               c.id === newMsg.conversation_id
