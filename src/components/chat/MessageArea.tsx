@@ -103,9 +103,36 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
   const [headerMenu, setHeaderMenu] = useState(false);
   const [viewProfileId, setViewProfileId] = useState<string | null>(null);
   const [showMediaGallery, setShowMediaGallery] = useState(false);
+  const [showCommandSuggestions, setShowCommandSuggestions] = useState(false);
+  const [botCommands, setBotCommands] = useState<{ command: string; description: string }[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const prevMessagesLenRef = useRef(0);
+
+  // Fetch bot commands for the active conversation
+  useEffect(() => {
+    if (!activeConversation) { setBotCommands([]); return; }
+    const fetchBotCommands = async () => {
+      // Find bot members in this conversation
+      const botMembers = activeConversation.members.filter(m => profiles[m.user_id]?.is_bot);
+      if (botMembers.length === 0) { setBotCommands([]); return; }
+      // Get bot ids from profile ids
+      const { data: bots } = await supabase.from('bots').select('id, profile_id').in('profile_id', botMembers.map(m => m.user_id));
+      if (!bots || bots.length === 0) { setBotCommands([]); return; }
+      const { data: cmds } = await supabase.from('bot_commands').select('command, description').in('bot_id', bots.map(b => b.id));
+      setBotCommands((cmds || []).map(c => ({ command: c.command, description: c.description || '' })));
+    };
+    fetchBotCommands();
+  }, [activeConversation, profiles]);
+
+  // Show command suggestions when typing "/"
+  useEffect(() => {
+    if (input.startsWith('/') && botCommands.length > 0) {
+      setShowCommandSuggestions(true);
+    } else {
+      setShowCommandSuggestions(false);
+    }
+  }, [input, botCommands]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -309,10 +336,24 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
           <ArrowLeft className="h-5 w-5 text-muted-foreground" />
         </button>
         <div className="cursor-pointer flex-shrink-0" onClick={handleAvatarClick}>
-          <ChatAvatar name={getConvName()} online={getOtherOnline()} size="sm" />
+          <ChatAvatar name={getConvName()} online={getOtherOnline()} size="sm" isBot={(() => {
+            if (activeConversation.type === 'private' && user) {
+              const other = activeConversation.members.find(m => m.user_id !== user.id);
+              return other ? !!profiles[other.user_id]?.is_bot : false;
+            }
+            return false;
+          })()}/>
         </div>
         <div className="flex-1 min-w-0 cursor-pointer" onClick={toggleInfoPanel}>
-          <h3 className="font-semibold text-sm truncate">{getConvName()}</h3>
+          <h3 className="font-semibold text-sm truncate flex items-center gap-1.5">
+            {getConvName()}
+            {activeConversation.type === 'private' && user && (() => {
+              const other = activeConversation.members.find(m => m.user_id !== user.id);
+              return other && profiles[other.user_id]?.is_bot ? (
+                <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary font-bold uppercase tracking-wider">BOT</span>
+              ) : null;
+            })()}
+          </h3>
           <p className={cn('text-xs', getOtherOnline() ? 'text-tg-online' : 'text-muted-foreground')}>{getStatusText()}</p>
         </div>
         <span className="text-[10px] font-display font-semibold text-muted-foreground/60 tracking-wider uppercase mr-1 hidden sm:inline">Chim Cu Gáy</span>
@@ -417,7 +458,13 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
                     onContextMenu={(e) => handleMessageContextMenu(e, msg)}
                   >
                     {!isOwn && activeConversation.type !== 'private' && showAvatar && (
-                      <p className="text-xs font-medium text-primary mb-0.5 cursor-pointer" onClick={() => setViewProfileId(msg.sender_id)}>{sender?.display_name}</p>
+                      <p className="text-xs font-medium text-primary mb-0.5 cursor-pointer" onClick={() => setViewProfileId(msg.sender_id)}>
+                        {sender?.display_name}
+                        {sender?.is_bot && <span className="ml-1 text-[9px] px-1 py-0.5 rounded bg-primary/10 text-primary font-bold uppercase">BOT</span>}
+                      </p>
+                    )}
+                    {!isOwn && activeConversation.type === 'private' && sender?.is_bot && (
+                      <p className="text-[9px] font-bold text-primary/60 mb-0.5 uppercase tracking-wider">BOT</p>
                     )}
                     {/* Reply preview */}
                     {repliedMsg && (
@@ -428,6 +475,48 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
                     )}
                     {msg.message_type === 'text' ? (
                       <p className="whitespace-pre-wrap break-words">{renderContent(msg.content)}</p>
+                    ) : msg.message_type === 'bot_message' ? (
+                      <div>
+                        <p className="whitespace-pre-wrap break-words">{renderContent(msg.content)}</p>
+                        {msg.file_name && (() => {
+                          try {
+                            const markup = JSON.parse(msg.file_name);
+                            if (markup?.inline_keyboard) {
+                              return (
+                                <div className="mt-2 space-y-1">
+                                  {markup.inline_keyboard.map((row: any[], ri: number) => (
+                                    <div key={ri} className="flex gap-1">
+                                      {row.map((btn: any, bi: number) => (
+                                        btn.url ? (
+                                          <a key={bi} href={btn.url} target="_blank" rel="noopener noreferrer"
+                                            className="flex-1 text-center px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-xs font-medium hover:bg-primary/20 transition-colors">
+                                            {btn.text}
+                                          </a>
+                                        ) : (
+                                          <button key={bi} onClick={() => {
+                                            // Send callback_data as a message
+                                            if (btn.callback_data) {
+                                              supabase.from('messages').insert({
+                                                conversation_id: activeConversation!.id,
+                                                sender_id: user!.id,
+                                                content: btn.callback_data,
+                                                message_type: 'text',
+                                              });
+                                            }
+                                          }} className="flex-1 text-center px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-xs font-medium hover:bg-primary/20 transition-colors">
+                                            {btn.text}
+                                          </button>
+                                        )
+                                      ))}
+                                    </div>
+                                  ))}
+                                </div>
+                              );
+                            }
+                          } catch {}
+                          return null;
+                        })()}
+                      </div>
                     ) : (
                       <MessageBubbleFile msg={msg} isOwn={isOwn} />
                     )}
@@ -519,6 +608,33 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
       )}
 
       <input ref={fileInputRef} type="file" accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar" className="hidden" onChange={handleFileSelect} />
+
+      {/* Command suggestions */}
+      <AnimatePresence>
+        {showCommandSuggestions && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 10 }}
+            className="px-4 py-2 border-t border-border bg-tg-sidebar"
+          >
+            <div className="bg-card rounded-xl border border-border shadow-lg overflow-hidden max-h-40 overflow-y-auto">
+              {botCommands
+                .filter(c => c.command.startsWith(input) || input === '/')
+                .map((cmd, i) => (
+                  <button
+                    key={i}
+                    onClick={() => { setInput(cmd.command + ' '); setShowCommandSuggestions(false); }}
+                    className="flex items-center gap-3 w-full px-4 py-2.5 text-sm hover:bg-tg-hover transition-colors text-left"
+                  >
+                    <code className="text-primary font-mono font-semibold text-xs">{cmd.command}</code>
+                    <span className="text-muted-foreground text-xs truncate">{cmd.description}</span>
+                  </button>
+                ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Input */}
       <div className="px-4 py-3 border-t border-border bg-tg-sidebar">

@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { Search, Menu, Moon, Sun, Plus, Shield, Mail, User, Bookmark, Bell } from 'lucide-react';
+import { Search, Menu, Moon, Sun, Plus, Shield, Mail, User, Bookmark, Bell, Bot } from 'lucide-react';
 import { useChatContext } from '@/context/ChatContext';
 import { useAuth } from '@/context/AuthContext';
 import ChatAvatar from './ChatAvatar';
@@ -153,6 +153,10 @@ const ChatSidebar: React.FC = () => {
                   <Bookmark className="h-4 w-4 text-primary" />
                   <span>Saved Messages</span>
                 </button>
+                <a href="/bots" onClick={() => setShowMenu(false)} className="flex items-center gap-3 w-full px-4 py-2.5 text-sm hover:bg-tg-hover transition-colors text-left">
+                  <Bot className="h-4 w-4 text-primary" />
+                  <span>Bot Management</span>
+                </a>
                 {isAdmin && (
                   <>
                     <div className="border-t border-border" />
@@ -228,7 +232,7 @@ const ChatSidebar: React.FC = () => {
                   c.id === activeConversationId ? 'bg-primary/10' : 'hover:bg-tg-hover'
                 )}
               >
-                <ChatAvatar name={c.name === 'Saved Messages' ? 'Saved' : getConversationName(c).replace('📌 ', '').replace('👥 ', '').replace('📢 ', '')} online={getOtherMemberOnline(c)} size="md" />
+                <ChatAvatar name={c.name === 'Saved Messages' ? 'Saved' : getConversationName(c).replace('📌 ', '').replace('👥 ', '').replace('📢 ', '')} online={getOtherMemberOnline(c)} size="md" isBot={c.type === 'private' && c.name !== 'Saved Messages' && !!c.members.find(m => m.user_id !== user?.id && profiles[m.user_id]?.is_bot)} />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between">
                     <span className="font-medium text-sm truncate">
