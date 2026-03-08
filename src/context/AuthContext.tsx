@@ -134,11 +134,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await supabase.auth.signOut();
   };
 
-  const isSuperAdmin = roles.some(r => r.role === 'super_admin');
-  const isAdmin = roles.some(r => r.role === 'admin' || r.role === 'super_admin');
+  const isAdmin = roles.some(r => r.role === 'admin');
 
   return (
-    <AuthContext.Provider value={{ user, session, profile, roles, loading, isSuperAdmin, isAdmin, signUp, signIn, signOut }}>
+    <AuthContext.Provider value={{ user, session, profile, roles, loading, isAdmin, signUp, signIn, signOut }}>
       {children}
     </AuthContext.Provider>
   );
