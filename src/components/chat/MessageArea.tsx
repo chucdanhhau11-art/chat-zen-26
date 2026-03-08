@@ -87,7 +87,7 @@ const renderContent = (content: string | null) => {
 };
 
 const MessageArea: React.FC = () => {
-  const { activeConversation, messages, sendMessage, toggleInfoPanel, profiles, loadingMessages, deleteConversation, leaveGroup } = useChatContext();
+  const { activeConversation, messages, sendMessage, toggleInfoPanel, profiles, loadingMessages, deleteConversation, leaveGroup, setMobileShowingChat } = useChatContext();
   const { user } = useAuth();
   const [input, setInput] = useState('');
   const [uploading, setUploading] = useState(false);
