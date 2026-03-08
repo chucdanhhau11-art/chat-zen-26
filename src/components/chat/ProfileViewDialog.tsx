@@ -16,12 +16,11 @@ const ProfileViewDialog: React.FC<Props> = ({ userId, onClose }) => {
   const { user } = useAuth();
   const profile = profiles[userId];
   const friendship = getFriendshipWith(userId);
-
-  if (!profile) return null;
-
   const isMe = user?.id === userId;
   const blocked = isBlocked(userId);
   const [showConfirm, setShowConfirm] = useState<'unfriend' | 'block' | null>(null);
+
+  if (!profile) return null;
 
   const getFriendStatus = () => {
     if (!friendship) return 'none';
