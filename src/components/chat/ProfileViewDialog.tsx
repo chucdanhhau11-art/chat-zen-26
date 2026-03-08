@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, UserPlus, Check, Clock, UserMinus, MessageCircle } from 'lucide-react';
+import { X, UserPlus, Check, Clock, UserMinus, MessageCircle, Ban, XCircle } from 'lucide-react';
 import { useChatContext } from '@/context/ChatContext';
 import { useAuth } from '@/context/AuthContext';
 import ChatAvatar from './ChatAvatar';
@@ -12,7 +12,7 @@ interface Props {
 }
 
 const ProfileViewDialog: React.FC<Props> = ({ userId, onClose }) => {
-  const { profiles, getFriendshipWith, sendFriendRequest, acceptFriendRequest, removeFriend, createPrivateChat, setActiveConversation } = useChatContext();
+  const { profiles, getFriendshipWith, sendFriendRequest, acceptFriendRequest, removeFriend, cancelFriendRequest, declineFriendRequest, createPrivateChat, setActiveConversation, blockUser, isBlocked } = useChatContext();
   const { user } = useAuth();
   const profile = profiles[userId];
   const friendship = getFriendshipWith(userId);
@@ -20,6 +20,7 @@ const ProfileViewDialog: React.FC<Props> = ({ userId, onClose }) => {
   if (!profile) return null;
 
   const isMe = user?.id === userId;
+  const blocked = isBlocked(userId);
 
   const getFriendStatus = () => {
     if (!friendship) return 'none';
@@ -64,31 +65,43 @@ const ProfileViewDialog: React.FC<Props> = ({ userId, onClose }) => {
           )}
 
           {/* Friend actions */}
-          {!isMe && !profile.is_bot && (
-            <div className="flex items-center gap-2 mt-4">
+          {!isMe && !profile.is_bot && !blocked && (
+            <div className="flex items-center gap-2 mt-4 flex-wrap justify-center">
               {status === 'none' && (
                 <button
                   onClick={() => sendFriendRequest(userId)}
                   className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
                 >
                   <UserPlus className="h-4 w-4" />
-                  Kết bạn / Add Friend
+                  Kết bạn
                 </button>
               )}
               {status === 'sent' && (
-                <span className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-muted text-muted-foreground text-sm">
-                  <Clock className="h-4 w-4" />
-                  Đã gửi lời mời / Request Sent
-                </span>
+                <button
+                  onClick={() => friendship && cancelFriendRequest(friendship.id)}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-muted text-muted-foreground text-sm hover:bg-destructive/10 hover:text-destructive transition-colors"
+                >
+                  <XCircle className="h-4 w-4" />
+                  Huỷ lời mời
+                </button>
               )}
               {status === 'received' && (
-                <button
-                  onClick={() => friendship && acceptFriendRequest(friendship.id)}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
-                >
-                  <Check className="h-4 w-4" />
-                  Chấp nhận / Accept
-                </button>
+                <>
+                  <button
+                    onClick={() => friendship && acceptFriendRequest(friendship.id)}
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
+                  >
+                    <Check className="h-4 w-4" />
+                    Chấp nhận
+                  </button>
+                  <button
+                    onClick={() => friendship && declineFriendRequest(friendship.id)}
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-destructive/10 text-destructive text-sm font-medium hover:bg-destructive/20 transition-colors"
+                  >
+                    <XCircle className="h-4 w-4" />
+                    Từ chối
+                  </button>
+                </>
               )}
               {status === 'friend' && (
                 <button
@@ -96,7 +109,7 @@ const ProfileViewDialog: React.FC<Props> = ({ userId, onClose }) => {
                   className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-destructive/10 text-destructive text-sm font-medium hover:bg-destructive/20 transition-colors"
                 >
                   <UserMinus className="h-4 w-4" />
-                  Huỷ kết bạn / Unfriend
+                  Huỷ kết bạn
                 </button>
               )}
               <button
@@ -104,9 +117,20 @@ const ProfileViewDialog: React.FC<Props> = ({ userId, onClose }) => {
                 className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-secondary text-foreground text-sm font-medium hover:bg-secondary/80 transition-colors"
               >
                 <MessageCircle className="h-4 w-4" />
-                Nhắn tin / Message
+                Nhắn tin
               </button>
             </div>
+          )}
+
+          {/* Block button */}
+          {!isMe && !profile.is_bot && (
+            <button
+              onClick={() => { blockUser(userId); onClose(); }}
+              className="flex items-center gap-1.5 mt-3 px-4 py-2 rounded-xl bg-destructive/10 text-destructive text-sm font-medium hover:bg-destructive/20 transition-colors"
+            >
+              <Ban className="h-4 w-4" />
+              {blocked ? 'Đã chặn' : 'Chặn người dùng'}
+            </button>
           )}
 
           <div className="mt-4 w-full space-y-2 text-sm">

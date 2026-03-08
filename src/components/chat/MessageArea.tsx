@@ -186,7 +186,7 @@ interface MessageAreaProps {
 }
 
 const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
-  const { activeConversation, messages, sendMessage, toggleInfoPanel, profiles, loadingMessages, deleteConversation, leaveGroup, setMobileShowingChat, isBotFatherConversation, activeConversationId } = useChatContext();
+  const { activeConversation, messages, sendMessage, toggleInfoPanel, profiles, loadingMessages, deleteConversation, leaveGroup, setMobileShowingChat, isBotFatherConversation, activeConversationId, isBlocked: isBlockedFn, isBlockedBy: isBlockedByFn } = useChatContext();
   const { user } = useAuth();
   const [input, setInput] = useState('');
   const [uploading, setUploading] = useState(false);
@@ -669,10 +669,12 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
     setContextMenu({ msg, x: Math.max(8, x), y: Math.max(8, y) });
   };
 
-  // Filter visible messages (not deleted_for me, not recalled)
+  // Filter visible messages (not deleted_for me, not recalled, not from blocked users)
   const visibleMessages = messages.filter(m => {
     if (m.deleted && m.sender_id !== user?.id) return true;
     if (m.deleted_for && user && (m.deleted_for as string[]).includes(user.id)) return false;
+    // Hide messages from blocked users (mutual) in group conversations
+    if (user && m.sender_id !== user.id && (isBlockedFn(m.sender_id) || isBlockedByFn(m.sender_id))) return false;
     return true;
   });
 

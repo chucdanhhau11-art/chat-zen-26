@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { Search, Menu, Moon, Sun, Plus, Shield, Mail, User, Bookmark, Bell, Bot, UserPlus, Check, Clock, MessageCircle } from 'lucide-react';
+import { Search, Menu, Moon, Sun, Plus, Shield, Mail, User, Bookmark, Bell, Bot, UserPlus, Check, Clock, MessageCircle, UserMinus, XCircle, Ban, Eye, X } from 'lucide-react';
 import { useChatContext } from '@/context/ChatContext';
 import { useAuth } from '@/context/AuthContext';
 import ChatAvatar from './ChatAvatar';
@@ -10,6 +10,7 @@ import type { Tables } from '@/integrations/supabase/types';
 import NewChatDialog from './NewChatDialog';
 import AdminEmailApproval from './AdminEmailApproval';
 import EditProfileDialog from './EditProfileDialog';
+import ProfileViewDialog from './ProfileViewDialog';
 import NotificationPanel, { type NotificationItem } from './NotificationPanel';
 
 type ConversationMember = Tables<'conversation_members'>;
@@ -32,6 +33,7 @@ const ChatSidebar: React.FC = () => {
     searchQuery, setSearchQuery, darkMode, toggleDarkMode,
     loadingConversations, profiles, ensureSavedMessages, openBotFatherChat,
     allProfiles, createPrivateChat, friends, getFriendshipWith, sendFriendRequest, pendingRequests, acceptFriendRequest, declineFriendRequest,
+    cancelFriendRequest, removeFriend, blockUser, unblockUser, isBlocked, isBlockedBy, blockedUsers,
   } = useChatContext();
   const { user, signOut, isAdmin } = useAuth();
   const [showNewChat, setShowNewChat] = React.useState(false);
@@ -39,6 +41,8 @@ const ChatSidebar: React.FC = () => {
   const [showEmailApproval, setShowEmailApproval] = React.useState(false);
   const [showEditProfile, setShowEditProfile] = React.useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showBlockedList, setShowBlockedList] = useState(false);
+  const [viewProfileUserId, setViewProfileUserId] = useState<string | null>(null);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [userSearchQuery, setUserSearchQuery] = useState('');
   const [localSearch, setLocalSearch] = useState('');
@@ -173,6 +177,7 @@ const ChatSidebar: React.FC = () => {
   const searchedUsers = userSearchQuery.trim().length >= 2
     ? allProfiles.filter(p =>
         p.id !== user?.id && !p.is_bot &&
+        !isBlocked(p.id) && !isBlockedBy(p.id) &&
         (p.display_name.toLowerCase().includes(userSearchQuery.toLowerCase()) ||
          p.username.toLowerCase().includes(userSearchQuery.toLowerCase()))
       )
@@ -258,6 +263,11 @@ const ChatSidebar: React.FC = () => {
                   </>
                 )}
                 <div className="border-t border-border" />
+                <button onClick={() => { setShowMenu(false); setShowBlockedList(true); }} className="flex items-center gap-3 w-full px-4 py-2.5 text-sm hover:bg-tg-hover transition-colors text-left">
+                  <Ban className="h-4 w-4 text-destructive" />
+                  <span>Người dùng đã chặn</span>
+                  {blockedUsers.length > 0 && <span className="text-[10px] text-muted-foreground ml-auto">{blockedUsers.length}</span>}
+                </button>
                 <button onClick={() => { toggleDarkMode(); setShowMenu(false); }} className="flex items-center gap-3 w-full px-4 py-2.5 text-sm hover:bg-tg-hover transition-colors text-left">
                   {darkMode ? <Sun className="h-4 w-4 text-muted-foreground" /> : <Moon className="h-4 w-4 text-muted-foreground" />}
                   <span>{darkMode ? 'Chế độ sáng' : 'Chế độ tối'}</span>
@@ -378,9 +388,13 @@ const ChatSidebar: React.FC = () => {
                       </button>
                     )}
                     {status === 'sent' && (
-                      <span className="flex items-center gap-1 px-2 py-1 rounded-lg bg-muted text-muted-foreground text-[11px]">
-                        <Clock className="h-3 w-3" /> Đã gửi
-                      </span>
+                      <button
+                        onClick={() => { const fs = getFriendshipWith(p.id); if (fs) cancelFriendRequest(fs.id); }}
+                        className="flex items-center gap-1 px-2 py-1 rounded-lg bg-muted text-muted-foreground text-[11px] hover:bg-destructive/10 hover:text-destructive transition-colors"
+                        title="Huỷ lời mời / Cancel"
+                      >
+                        <XCircle className="h-3 w-3" /> Đã gửi
+                      </button>
                     )}
                     {status === 'received' && (
                       <button
@@ -394,16 +408,34 @@ const ChatSidebar: React.FC = () => {
                       </button>
                     )}
                     {status === 'friend' && (
-                      <span className="flex items-center gap-1 px-2 py-1 rounded-lg bg-primary/10 text-primary text-[11px]">
-                        <Check className="h-3 w-3" /> Bạn bè
-                      </span>
+                      <button
+                        onClick={() => { const fs = getFriendshipWith(p.id); if (fs) removeFriend(fs.id); }}
+                        className="flex items-center gap-1 px-2 py-1 rounded-lg bg-primary/10 text-primary text-[11px] hover:bg-destructive/10 hover:text-destructive transition-colors"
+                        title="Huỷ kết bạn / Unfriend"
+                      >
+                        <UserMinus className="h-3 w-3" /> Bạn bè
+                      </button>
                     )}
+                    <button
+                      onClick={() => setViewProfileUserId(p.id)}
+                      className="p-1.5 rounded-lg hover:bg-tg-hover transition-colors"
+                      title="Xem profile / View profile"
+                    >
+                      <Eye className="h-3.5 w-3.5 text-muted-foreground" />
+                    </button>
                     <button
                       onClick={() => handleUserChat(p.id)}
                       className="p-1.5 rounded-lg hover:bg-tg-hover transition-colors"
                       title="Nhắn tin / Message"
                     >
                       <MessageCircle className="h-3.5 w-3.5 text-muted-foreground" />
+                    </button>
+                    <button
+                      onClick={() => blockUser(p.id)}
+                      className="p-1.5 rounded-lg hover:bg-destructive/10 transition-colors"
+                      title="Chặn / Block"
+                    >
+                      <Ban className="h-3.5 w-3.5 text-muted-foreground hover:text-destructive" />
                     </button>
                   </div>
                 </div>
@@ -426,6 +458,7 @@ const ChatSidebar: React.FC = () => {
       {showNewChat && <NewChatDialog onClose={() => setShowNewChat(false)} />}
       {showEmailApproval && <AdminEmailApproval onClose={() => setShowEmailApproval(false)} />}
       {showEditProfile && <EditProfileDialog onClose={() => setShowEditProfile(false)} />}
+      {viewProfileUserId && <ProfileViewDialog userId={viewProfileUserId} onClose={() => setViewProfileUserId(null)} />}
       <AnimatePresence>
         {showNotifications && (
           <NotificationPanel
@@ -437,6 +470,56 @@ const ChatSidebar: React.FC = () => {
             onAcceptFriend={handleAcceptFriend}
             onRejectFriend={handleRejectFriend}
           />
+        )}
+      </AnimatePresence>
+
+      {/* Blocked users dialog */}
+      <AnimatePresence>
+        {showBlockedList && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/60 backdrop-blur-sm" onClick={() => setShowBlockedList(false)}>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              onClick={e => e.stopPropagation()}
+              className="bg-card rounded-2xl border border-border shadow-xl w-full max-w-sm p-5"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-display font-semibold text-sm flex items-center gap-2">
+                  <Ban className="h-4 w-4 text-destructive" />
+                  Người dùng đã chặn / Blocked Users
+                </h3>
+                <button onClick={() => setShowBlockedList(false)} className="p-1.5 rounded-lg hover:bg-tg-hover transition-colors">
+                  <X className="h-4 w-4 text-muted-foreground" />
+                </button>
+              </div>
+              {blockedUsers.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-6">Chưa chặn ai / No blocked users</p>
+              ) : (
+                <div className="space-y-2 max-h-[50vh] overflow-y-auto">
+                  {blockedUsers.map(uid => {
+                    const p = profiles[uid];
+                    if (!p) return null;
+                    return (
+                      <div key={uid} className="flex items-center gap-3 px-3 py-2 rounded-xl bg-secondary/50">
+                        <ChatAvatar name={p.display_name} size="sm" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{p.display_name}</p>
+                          <p className="text-xs text-muted-foreground">@{p.username}</p>
+                        </div>
+                        <button
+                          onClick={() => unblockUser(uid)}
+                          className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-primary text-primary-foreground text-[11px] font-medium hover:bg-primary/90 transition-colors"
+                        >
+                          Bỏ chặn
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
     </div>
