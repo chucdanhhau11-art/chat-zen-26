@@ -188,7 +188,6 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
         // Use clientInlineQuery - no bot_token needed
         const { data } = await supabase.functions.invoke('bot-api', {
           body: {
-            bot_token: 'client-query', // dummy - clientInlineQuery doesn't validate token
             action: 'clientInlineQuery',
             bot_profile_id: botProfile.id,
             query,
