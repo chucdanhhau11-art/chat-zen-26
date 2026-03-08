@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Users, MessageCircle, Search, UserPlus, Check, Clock } from 'lucide-react';
+import { X, Users, MessageCircle, UserPlus, Check, Clock } from 'lucide-react';
 import { useChatContext } from '@/context/ChatContext';
 import { useAuth } from '@/context/AuthContext';
 import ChatAvatar from './ChatAvatar';
