@@ -211,6 +211,8 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
   const [searchActiveIdx, setSearchActiveIdx] = useState(0);
   const [reactions, setReactions] = useState<Record<string, { emoji: string; user_id: string; id: string }[]>>({});
   const [emojiPickerMsgId, setEmojiPickerMsgId] = useState<string | null>(null);
+  const [showInputEmoji, setShowInputEmoji] = useState(false);
+  const inputEmojiRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const inlineDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -772,6 +774,18 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
     window.addEventListener('click', handler);
     return () => window.removeEventListener('click', handler);
   }, [emojiPickerMsgId]);
+
+  // Close input emoji picker on outside click
+  useEffect(() => {
+    if (!showInputEmoji) return;
+    const handler = (e: MouseEvent) => {
+      if (inputEmojiRef.current && !inputEmojiRef.current.contains(e.target as Node)) {
+        setShowInputEmoji(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [showInputEmoji]);
 
   if (!activeConversation) {
     return (
@@ -1415,7 +1429,34 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
                   style={{ minHeight: '40px' }}
                 />
               </div>
-              <button className="p-2 rounded-lg hover:bg-tg-hover transition-colors flex-shrink-0"><Smile className="h-5 w-5 text-muted-foreground" /></button>
+              <div className="relative flex-shrink-0" ref={inputEmojiRef}>
+                <button onClick={() => setShowInputEmoji(prev => !prev)} className="p-2 rounded-lg hover:bg-tg-hover transition-colors">
+                  <Smile className="h-5 w-5 text-muted-foreground" />
+                </button>
+                <AnimatePresence>
+                  {showInputEmoji && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.85, y: 10 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.85, y: 10 }}
+                      transition={{ duration: 0.15 }}
+                      className="absolute bottom-12 right-0 z-50 bg-popover border border-border rounded-xl shadow-lg p-3 min-w-[220px]"
+                    >
+                      <div className="grid grid-cols-8 gap-1">
+                        {['😀','😂','🤣','😊','😍','🥰','😘','😎','🤩','🥳','😢','😭','😤','😡','🤔','🤗','👍','👎','👏','🙏','❤️','🔥','💯','🎉','✨','💀','🤡','👀','🫡','🫶','💪','🤝'].map(em => (
+                          <button
+                            key={em}
+                            onClick={() => { setInput(prev => prev + em); setShowInputEmoji(false); }}
+                            className="text-xl hover:bg-secondary rounded-md p-1 transition-colors"
+                          >
+                            {em}
+                          </button>
+                        ))}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
               {input.trim() || previewFile ? (
                 <motion.button
                   initial={{ scale: 0 }}
