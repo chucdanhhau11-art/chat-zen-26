@@ -114,7 +114,12 @@ const AdminDashboard: React.FC = () => {
     setMassUpdating(false);
   };
 
-  if (loading || !isAdmin) return null;
+  if (loading) return (
+    <div className="h-screen flex items-center justify-center bg-background">
+      <div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full" />
+    </div>
+  );
+  if (!isAdmin) return null;
 
   return (
     <div className="h-screen flex flex-col bg-background overflow-hidden">

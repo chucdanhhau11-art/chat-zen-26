@@ -32,6 +32,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [profile, setProfile] = useState<Profile | null>(null);
   const [roles, setRoles] = useState<UserRole[]>([]);
   const [loading, setLoading] = useState(true);
+  const [rolesLoaded, setRolesLoaded] = useState(false);
 
   const fetchProfile = useCallback(async (userId: string) => {
     const { data } = await supabase.from('profiles').select('*').eq('id', userId).single();
@@ -42,12 +43,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const { data, error } = await supabase.from('user_roles').select('*').eq('user_id', userId);
     console.log('fetchRoles result:', { userId, data, error });
     setRoles(data || []);
+    setRolesLoaded(true);
   }, []);
 
   useEffect(() => {
+    let initialSessionHandled = false;
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, newSession) => {
-        // Avoid unnecessary re-renders if user hasn't changed
         setSession(prev => {
           if (prev?.access_token === newSession?.access_token) return prev;
           return newSession;
@@ -57,21 +60,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (prev?.id === newUser?.id) return prev;
           return newUser;
         });
-        if (newSession?.user) {
-          // Fetch roles BEFORE setting loading to false
-          await Promise.all([
-            fetchProfile(newSession.user.id),
-            fetchRoles(newSession.user.id),
-          ]);
-        } else {
-          setProfile(null);
-          setRoles([]);
+        // Only handle subsequent auth changes (not the initial one)
+        if (initialSessionHandled) {
+          if (newSession?.user) {
+            await Promise.all([
+              fetchProfile(newSession.user.id),
+              fetchRoles(newSession.user.id),
+            ]);
+          } else {
+            setProfile(null);
+            setRoles([]);
+            setRolesLoaded(false);
+          }
         }
-        setLoading(false);
       }
     );
 
+    // Handle initial session
     supabase.auth.getSession().then(async ({ data: { session: initSession } }) => {
+      initialSessionHandled = true;
       setSession(initSession);
       setUser(initSession?.user ?? null);
       if (initSession?.user) {
