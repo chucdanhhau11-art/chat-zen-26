@@ -100,14 +100,15 @@ const AdminDashboard: React.FC = () => {
   if (loading || !isAdmin) return null;
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="border-b border-border bg-tg-sidebar">
+    <div className="h-screen flex flex-col bg-background overflow-hidden">
+      <div className="border-b border-border bg-tg-sidebar flex-shrink-0">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center gap-3">
           <button onClick={() => navigate('/')} className="p-2 rounded-lg hover:bg-tg-hover transition-colors"><ArrowLeft className="h-5 w-5" /></button>
           <Shield className="h-5 w-5 text-primary" />
           <h1 className="font-display font-bold text-lg">Admin Dashboard - Chim Cu Gáy</h1>
         </div>
       </div>
+      <div className="flex-1 overflow-y-auto">
       <div className="max-w-6xl mx-auto px-4 py-6">
         <div className="flex gap-2 mb-6 flex-wrap">
           {(['stats', 'users', 'create'] as const).map(t => (
