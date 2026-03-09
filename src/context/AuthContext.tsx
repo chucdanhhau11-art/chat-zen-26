@@ -39,7 +39,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const fetchRoles = useCallback(async (userId: string) => {
-    const { data } = await supabase.from('user_roles').select('*').eq('user_id', userId);
+    const { data, error } = await supabase.from('user_roles').select('*').eq('user_id', userId);
+    console.log('fetchRoles result:', { userId, data, error });
     setRoles(data || []);
   }, []);
 
@@ -57,10 +58,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           return newUser;
         });
         if (newSession?.user) {
-          setTimeout(() => {
-            fetchProfile(newSession.user.id);
-            fetchRoles(newSession.user.id);
-          }, 0);
+          // Fetch roles BEFORE setting loading to false
+          await Promise.all([
+            fetchProfile(newSession.user.id),
+            fetchRoles(newSession.user.id),
+          ]);
         } else {
           setProfile(null);
           setRoles([]);
@@ -69,12 +71,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     );
 
-    supabase.auth.getSession().then(({ data: { session: initSession } }) => {
+    supabase.auth.getSession().then(async ({ data: { session: initSession } }) => {
       setSession(initSession);
       setUser(initSession?.user ?? null);
       if (initSession?.user) {
-        fetchProfile(initSession.user.id);
-        fetchRoles(initSession.user.id);
+        await Promise.all([
+          fetchProfile(initSession.user.id),
+          fetchRoles(initSession.user.id),
+        ]);
       }
       setLoading(false);
     });
