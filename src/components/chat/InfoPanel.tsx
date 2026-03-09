@@ -230,7 +230,8 @@ const InfoPanel: React.FC = () => {
               onTransferAndLeave={handleTransferAndLeave}
             />
           )}
-        </motion.div>
+          </motion.div>
+        </>
       )}
     </AnimatePresence>
   );
