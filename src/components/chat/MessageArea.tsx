@@ -1130,10 +1130,12 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
                         if (!grouped[r.emoji]) grouped[r.emoji] = [];
                         grouped[r.emoji].push(r.user_id);
                       });
-                      return (
+                        return (
                         <motion.div layout className="flex flex-wrap gap-1 mt-1.5">
                           {Object.entries(grouped).map(([emoji, userIds]) => {
                             const isMine = userIds.includes(user?.id || '');
+                            const names = userIds.map(uid => profiles[uid]?.display_name || 'Unknown').join(', ');
+                            const tooltipText = `${names}${isMine ? '\n(Nhấn để thu hồi)' : '\n(Nhấn để thả cùng)'}`;
                             return (
                               <motion.button
                                 key={emoji}
@@ -1148,7 +1150,7 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
                                   'inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs border transition-colors duration-200',
                                   isMine ? 'bg-primary/15 border-primary/40 shadow-sm' : 'bg-secondary/80 border-transparent hover:bg-muted'
                                 )}
-                                title={isMine ? 'Nhấn để thu hồi' : 'Nhấn để thả'}
+                                title={tooltipText}
                               >
                                 <motion.span
                                   key={`${emoji}-${userIds.length}`}
