@@ -27,13 +27,14 @@ const AdminDashboard: React.FC = () => {
   const [stats, setStats] = useState<Stats>({ users: 0, messages: 0, conversations: 0, groups: 0 });
   const [users, setUsers] = useState<UserWithRole[]>([]);
   const [loadingData, setLoadingData] = useState(true);
-  const [tab, setTab] = useState<'stats' | 'users' | 'create'>('stats');
+  const [tab, setTab] = useState<'stats' | 'users' | 'create' | 'permissions'>('stats');
   const [newEmail, setNewEmail] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [newUsername, setNewUsername] = useState('');
   const [newDisplayName, setNewDisplayName] = useState('');
   const [newRole, setNewRole] = useState<'user' | 'admin'>('user');
   const [creating, setCreating] = useState(false);
+  const [massUpdating, setMassUpdating] = useState(false);
 
   useEffect(() => {
     if (!loading && !isAdmin) { navigate('/'); toast.error('Bạn không có quyền truy cập'); }
@@ -97,6 +98,22 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
+  const handleMassUpdateToUser = async () => {
+    if (!window.confirm('Đổi tất cả admin (trừ bạn) thành user?')) return;
+    setMassUpdating(true);
+    try {
+      const { error } = await supabase.functions.invoke('manage-user', {
+        body: { action: 'mass-update-to-user', currentUserId: user?.id },
+      });
+      if (error) throw error;
+      toast.success('Đã cập nhật tất cả thành user');
+      fetchData();
+    } catch (err: any) {
+      toast.error('Lỗi: ' + (err.message || 'Unknown'));
+    }
+    setMassUpdating(false);
+  };
+
   if (loading || !isAdmin) return null;
 
   return (
@@ -111,9 +128,9 @@ const AdminDashboard: React.FC = () => {
       <div className="flex-1 overflow-y-auto">
       <div className="max-w-6xl mx-auto px-4 py-6">
         <div className="flex gap-2 mb-6 flex-wrap">
-          {(['stats', 'users', 'create'] as const).map(t => (
+          {(['stats', 'users', 'permissions', 'create'] as const).map(t => (
             <button key={t} onClick={() => setTab(t)} className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${tab === t ? 'bg-primary text-primary-foreground' : 'bg-secondary hover:bg-tg-hover'}`}>
-              {t === 'stats' ? 'Thống kê' : t === 'users' ? 'Quản lý Users' : 'Tạo tài khoản'}
+              {t === 'stats' ? 'Thống kê' : t === 'users' ? 'Quản lý Users' : t === 'permissions' ? 'Phân quyền' : 'Tạo tài khoản'}
             </button>
           ))}
         </div>
@@ -151,6 +168,33 @@ const AdminDashboard: React.FC = () => {
                   </select>
                 </div>
               ))}
+            </div>
+          </div>
+        ) : tab === 'permissions' ? (
+          <div className="bg-card rounded-2xl border border-border p-6 max-w-md">
+            <h3 className="font-display font-semibold mb-4 text-lg">Quản lý phân quyền</h3>
+            <div className="space-y-4">
+              <div className="p-4 bg-amber-50/10 border border-amber-200/20 rounded-xl">
+                <h4 className="font-semibold text-amber-600 mb-2">⚠️ Thao tác nguy hiểm</h4>
+                <p className="text-sm text-muted-foreground mb-3">
+                  Chuyển tất cả admin (trừ bạn) thành user. Chỉ bạn sẽ là admin duy nhất.
+                </p>
+                <button 
+                  onClick={handleMassUpdateToUser}
+                  disabled={massUpdating}
+                  className="w-full bg-amber-500 hover:bg-amber-600 text-white rounded-xl py-2.5 text-sm font-medium transition-colors disabled:opacity-50"
+                >
+                  {massUpdating ? 'Đang xử lý...' : 'Thu hồi quyền admin tất cả'}
+                </button>
+              </div>
+              <div className="text-xs text-muted-foreground p-3 bg-secondary/50 rounded-xl">
+                <p className="font-medium mb-1">Lưu ý:</p>
+                <ul className="space-y-1 ml-3">
+                  <li>• Các user thường chỉ thấy admin hiển thị như user bình thường</li>
+                  <li>• Chỉ admin mới thấy được role thật của nhau</li>
+                  <li>• Thao tác này không thể hoàn tác</li>
+                </ul>
+              </div>
             </div>
           </div>
         ) : (
