@@ -418,6 +418,7 @@ const BotDashboard: React.FC = () => {
           </motion.div>
         )}
       </div>
+      </div>
     </div>
   );
 };
