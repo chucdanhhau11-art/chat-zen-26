@@ -81,14 +81,7 @@ const InfoPanel: React.FC = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-30 md:hidden"
-            onClick={toggleInfoPanel}
-          />
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="hidden md:block fixed inset-0 z-30"
+            className="fixed inset-0 z-30"
             onClick={toggleInfoPanel}
           />
           <motion.div
