@@ -67,6 +67,10 @@ const EditProfileDialog: React.FC<{ onClose: () => void }> = ({ onClose }) => {
             <label className="text-sm font-medium mb-1 block">Bio</label>
             <textarea value={bio} onChange={e => setBio(e.target.value)} rows={3} className="w-full bg-secondary rounded-xl px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/30 resize-none" placeholder="Giới thiệu về bạn..." />
           </div>
+          <div>
+            <label className="text-sm font-medium mb-1 block">Số điện thoại</label>
+            <input value={phoneNumber} onChange={e => setPhoneNumber(e.target.value.replace(/[^0-9+\-\s]/g, ''))} placeholder="+84 xxx xxx xxx" className="w-full bg-secondary rounded-xl px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/30" />
+          </div>
           <button onClick={handleSave} disabled={saving} className="w-full bg-primary text-primary-foreground rounded-xl py-2.5 text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50">
             {saving ? 'Đang lưu...' : 'Lưu thay đổi'}
           </button>
