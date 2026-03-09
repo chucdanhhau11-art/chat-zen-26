@@ -212,6 +212,7 @@ const BotDashboard: React.FC = () => {
         </div>
       </div>
 
+      <div className="flex-1 overflow-y-auto">
       <div className="max-w-4xl mx-auto px-4 py-6">
         {/* Tabs */}
         <div className="flex gap-2 mb-6 flex-wrap">
