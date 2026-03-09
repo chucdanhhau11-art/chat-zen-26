@@ -98,6 +98,22 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
+  const handleMassUpdateToUser = async () => {
+    if (!window.confirm('Đổi tất cả admin (trừ bạn) thành user?')) return;
+    setMassUpdating(true);
+    try {
+      const { error } = await supabase.functions.invoke('manage-user', {
+        body: { action: 'mass-update-to-user', currentUserId: user?.id },
+      });
+      if (error) throw error;
+      toast.success('Đã cập nhật tất cả thành user');
+      fetchData();
+    } catch (err: any) {
+      toast.error('Lỗi: ' + (err.message || 'Unknown'));
+    }
+    setMassUpdating(false);
+  };
+
   if (loading || !isAdmin) return null;
 
   return (
