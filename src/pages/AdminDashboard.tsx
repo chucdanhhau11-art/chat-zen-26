@@ -170,6 +170,33 @@ const AdminDashboard: React.FC = () => {
               ))}
             </div>
           </div>
+        ) : tab === 'permissions' ? (
+          <div className="bg-card rounded-2xl border border-border p-6 max-w-md">
+            <h3 className="font-display font-semibold mb-4 text-lg">Quản lý phân quyền</h3>
+            <div className="space-y-4">
+              <div className="p-4 bg-amber-50/10 border border-amber-200/20 rounded-xl">
+                <h4 className="font-semibold text-amber-600 mb-2">⚠️ Thao tác nguy hiểm</h4>
+                <p className="text-sm text-muted-foreground mb-3">
+                  Chuyển tất cả admin (trừ bạn) thành user. Chỉ bạn sẽ là admin duy nhất.
+                </p>
+                <button 
+                  onClick={handleMassUpdateToUser}
+                  disabled={massUpdating}
+                  className="w-full bg-amber-500 hover:bg-amber-600 text-white rounded-xl py-2.5 text-sm font-medium transition-colors disabled:opacity-50"
+                >
+                  {massUpdating ? 'Đang xử lý...' : 'Thu hồi quyền admin tất cả'}
+                </button>
+              </div>
+              <div className="text-xs text-muted-foreground p-3 bg-secondary/50 rounded-xl">
+                <p className="font-medium mb-1">Lưu ý:</p>
+                <ul className="space-y-1 ml-3">
+                  <li>• Các user thường chỉ thấy admin hiển thị như user bình thường</li>
+                  <li>• Chỉ admin mới thấy được role thật của nhau</li>
+                  <li>• Thao tác này không thể hoàn tác</li>
+                </ul>
+              </div>
+            </div>
+          </div>
         ) : (
           <div className="bg-card rounded-2xl border border-border p-6 max-w-md">
             <div className="flex items-center gap-2 mb-4">
