@@ -11,6 +11,7 @@ const EditProfileDialog: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const [displayName, setDisplayName] = useState(profile?.display_name || '');
   const [username, setUsername] = useState(profile?.username || '');
   const [bio, setBio] = useState(profile?.bio || '');
+  const [phoneNumber, setPhoneNumber] = useState((profile as any)?.phone_number || '');
   const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
@@ -23,7 +24,8 @@ const EditProfileDialog: React.FC<{ onClose: () => void }> = ({ onClose }) => {
       display_name: displayName.trim(),
       username: username.trim(),
       bio: bio.trim() || null,
-    }).eq('id', user.id);
+      phone_number: phoneNumber.trim() || null,
+    } as any).eq('id', user.id);
     if (error) {
       toast.error('Lỗi: ' + error.message);
     } else {
