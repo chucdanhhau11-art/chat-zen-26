@@ -58,10 +58,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           return newUser;
         });
         if (newSession?.user) {
-          setTimeout(() => {
-            fetchProfile(newSession.user.id);
-            fetchRoles(newSession.user.id);
-          }, 0);
+          // Fetch roles BEFORE setting loading to false
+          await Promise.all([
+            fetchProfile(newSession.user.id),
+            fetchRoles(newSession.user.id),
+          ]);
         } else {
           setProfile(null);
           setRoles([]);
