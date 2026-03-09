@@ -200,9 +200,9 @@ const BotDashboard: React.FC = () => {
   if (!user) { navigate('/auth'); return null; }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="h-screen flex flex-col bg-background overflow-hidden">
       {/* Header */}
-      <div className="border-b border-border bg-tg-sidebar">
+      <div className="border-b border-border bg-tg-sidebar flex-shrink-0">
         <div className="max-w-4xl mx-auto px-4 py-3 flex items-center gap-3">
           <button onClick={() => navigate('/')} className="p-2 rounded-lg hover:bg-tg-hover transition-colors">
             <ArrowLeft className="h-5 w-5" />
