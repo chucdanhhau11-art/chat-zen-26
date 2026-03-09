@@ -126,6 +126,20 @@ serve(async (req) => {
       });
     }
 
+    if (action === "mass-update-to-user") {
+      const { currentUserId } = body;
+      const { error } = await supabase
+        .from("user_roles")
+        .update({ role: "user" })
+        .neq("user_id", currentUserId)
+        .eq("role", "admin");
+      
+      if (error) throw error;
+      return new Response(JSON.stringify({ success: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     return new Response(JSON.stringify({ error: "Invalid action" }), {
       status: 400,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
