@@ -446,6 +446,7 @@ export type Database = {
           is_bot: boolean
           last_seen: string | null
           online: boolean | null
+          phone_number: string | null
           updated_at: string
           username: string
         }
@@ -459,6 +460,7 @@ export type Database = {
           is_bot?: boolean
           last_seen?: string | null
           online?: boolean | null
+          phone_number?: string | null
           updated_at?: string
           username: string
         }
@@ -472,6 +474,7 @@ export type Database = {
           is_bot?: boolean
           last_seen?: string | null
           online?: boolean | null
+          phone_number?: string | null
           updated_at?: string
           username?: string
         }

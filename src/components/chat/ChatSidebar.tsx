@@ -181,14 +181,17 @@ const ChatSidebar: React.FC = () => {
     return undefined;
   };
 
-  // User search results (only when user presses Enter)
+  // User search results (only when user presses Enter) - search by username, display_name, or phone_number
   const searchedUsers = userSearchQuery.trim().length >= 2
-    ? allProfiles.filter(p =>
-        p.id !== user?.id && !p.is_bot &&
-        !isBlocked(p.id) && !isBlockedBy(p.id) &&
-        (p.display_name.toLowerCase().includes(userSearchQuery.toLowerCase()) ||
-         p.username.toLowerCase().includes(userSearchQuery.toLowerCase()))
-      )
+    ? allProfiles.filter(p => {
+        if (p.id === user?.id || p.is_bot) return false;
+        if (isBlocked(p.id) || isBlockedBy(p.id)) return false;
+        const q = userSearchQuery.toLowerCase();
+        const phone = (p as any).phone_number || '';
+        return p.display_name.toLowerCase().includes(q) ||
+               p.username.toLowerCase().includes(q) ||
+               phone.replace(/[\s\-+]/g, '').includes(q.replace(/[\s\-+]/g, ''));
+      })
     : [];
 
   const getFriendStatus = (userId: string) => {

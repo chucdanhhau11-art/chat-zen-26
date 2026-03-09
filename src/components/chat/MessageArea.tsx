@@ -1034,9 +1034,21 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
                     {!isOwn && activeConversation.type === 'private' && sender?.is_bot && (
                       <p className="text-[9px] font-bold text-primary/60 mb-0.5 uppercase tracking-wider">BOT</p>
                     )}
-                    {/* Reply preview */}
+                    {/* Reply preview - click to scroll to original */}
                     {repliedMsg && (
-                      <div className="mb-1 px-2 py-1 rounded-lg bg-background/30 border-l-2 border-primary text-xs">
+                      <div 
+                        className="mb-1 px-2 py-1 rounded-lg bg-background/30 border-l-2 border-primary text-xs cursor-pointer hover:bg-background/50 transition-colors"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const el = document.getElementById(`msg-${repliedMsg.id}`);
+                          if (el) {
+                            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            // Highlight effect
+                            el.classList.add('ring-2', 'ring-primary', 'ring-offset-2');
+                            setTimeout(() => el.classList.remove('ring-2', 'ring-primary', 'ring-offset-2'), 1500);
+                          }
+                        }}
+                      >
                         <p className="font-medium text-primary truncate">{profiles[repliedMsg.sender_id]?.display_name || 'Unknown'}</p>
                         <p className="truncate text-muted-foreground">{repliedMsg.content || '📎 File'}</p>
                       </div>
