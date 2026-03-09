@@ -27,13 +27,14 @@ const AdminDashboard: React.FC = () => {
   const [stats, setStats] = useState<Stats>({ users: 0, messages: 0, conversations: 0, groups: 0 });
   const [users, setUsers] = useState<UserWithRole[]>([]);
   const [loadingData, setLoadingData] = useState(true);
-  const [tab, setTab] = useState<'stats' | 'users' | 'create'>('stats');
+  const [tab, setTab] = useState<'stats' | 'users' | 'create' | 'permissions'>('stats');
   const [newEmail, setNewEmail] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [newUsername, setNewUsername] = useState('');
   const [newDisplayName, setNewDisplayName] = useState('');
   const [newRole, setNewRole] = useState<'user' | 'admin'>('user');
   const [creating, setCreating] = useState(false);
+  const [massUpdating, setMassUpdating] = useState(false);
 
   useEffect(() => {
     if (!loading && !isAdmin) { navigate('/'); toast.error('Bạn không có quyền truy cập'); }
