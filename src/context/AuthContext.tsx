@@ -39,7 +39,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const fetchRoles = useCallback(async (userId: string) => {
-    const { data } = await supabase.from('user_roles').select('*').eq('user_id', userId);
+    const { data, error } = await supabase.from('user_roles').select('*').eq('user_id', userId);
+    console.log('fetchRoles result:', { userId, data, error });
     setRoles(data || []);
   }, []);
 
