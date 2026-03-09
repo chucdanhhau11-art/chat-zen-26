@@ -75,13 +75,29 @@ const InfoPanel: React.FC = () => {
   return (
     <AnimatePresence>
       {showInfoPanel && (
-        <motion.div
-          initial={{ width: 0, opacity: 0 }}
-          animate={{ width: 320, opacity: 1 }}
-          exit={{ width: 0, opacity: 0 }}
-          transition={{ duration: 0.2 }}
-          className="border-l border-border bg-tg-sidebar h-full overflow-hidden flex-shrink-0"
-        >
+        <>
+          {/* Overlay to close on outside click */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-30 md:hidden"
+            onClick={toggleInfoPanel}
+          />
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="hidden md:block fixed inset-0 z-30"
+            onClick={toggleInfoPanel}
+          />
+          <motion.div
+            initial={{ width: 0, opacity: 0 }}
+            animate={{ width: 320, opacity: 1 }}
+            exit={{ width: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="border-l border-border bg-tg-sidebar h-full overflow-hidden flex-shrink-0 z-40 relative"
+          >
           <div className="w-80 h-full flex flex-col overflow-y-auto scrollbar-thin">
             <div className="flex items-center justify-between px-4 py-3 border-b border-border">
               <h3 className="font-semibold text-sm">Thông tin / Info</h3>
