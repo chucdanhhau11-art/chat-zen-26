@@ -271,40 +271,44 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Listen for conversation changes (new conversations, updates)
   useEffect(() => {
     if (!user) return;
-    const channel = supabase.channel('conversations-changes')
+    let channel = supabase.channel('conversations-changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'conversations' }, () => {
         fetchConversations(false);
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'conversation_members' }, () => {
         fetchConversations(false);
       })
-      .subscribe();
+      .subscribe((status) => {
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          console.warn('conversations-changes channel error, reconnecting...');
+          setTimeout(() => {
+            supabase.removeChannel(channel);
+            channel = supabase.channel('conversations-changes-retry-' + Date.now())
+              .on('postgres_changes', { event: '*', schema: 'public', table: 'conversations' }, () => fetchConversations(false))
+              .on('postgres_changes', { event: '*', schema: 'public', table: 'conversation_members' }, () => fetchConversations(false))
+              .subscribe();
+          }, 2000);
+        }
+      });
     return () => { supabase.removeChannel(channel); };
   }, [user, fetchConversations]);
 
   // Global listener for new messages → unread counts + notification sound
   useEffect(() => {
     if (!user) return;
-    const channel = supabase.channel('global-messages-notify')
+    const createChannel = (name: string) => supabase.channel(name)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' },
         (payload: RealtimePostgresChangesPayload<Message>) => {
           const newMsg = payload.new as Message;
           if (!newMsg || newMsg.sender_id === user.id) return;
-          // Only count if not currently viewing that conversation
           if (activeConversationIdRef.current !== newMsg.conversation_id) {
             const newCount = (unreadCountsRef.current[newMsg.conversation_id] || 0) + 1;
-            // Update ref immediately so fetchConversations won't race-reset it
             unreadCountsRef.current = { ...unreadCountsRef.current, [newMsg.conversation_id]: newCount };
-            setUnreadCounts(prev => ({
-              ...prev,
-              [newMsg.conversation_id]: newCount,
-            }));
+            setUnreadCounts(prev => ({ ...prev, [newMsg.conversation_id]: newCount }));
             playNotificationSound();
-            // Show browser notification
             const senderProfile = profilesRef.current[newMsg.sender_id];
             const senderName = senderProfile?.display_name || 'Tin nhắn mới';
             showBrowserNotification(senderName, newMsg.content || '📎 File');
-            // Update conversations to reflect new unread
             setConversations(prev => prev.map(c =>
               c.id === newMsg.conversation_id
                 ? { ...c, unreadCount: (c.unreadCount || 0) + 1, lastMessage: { ...newMsg, sender: profilesRef.current[newMsg.sender_id] } }
@@ -312,9 +316,47 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
             ));
           }
         }
-      ).subscribe();
+      );
+
+    let channel = createChannel('global-messages-notify');
+    channel.subscribe((status) => {
+      if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+        console.warn('global-messages-notify channel error, reconnecting...');
+        setTimeout(() => {
+          supabase.removeChannel(channel);
+          channel = createChannel('global-messages-retry-' + Date.now());
+          channel.subscribe();
+        }, 2000);
+      }
+    });
+
     return () => { supabase.removeChannel(channel); };
   }, [user]);
+
+  // Reconnect realtime + refetch data when tab becomes visible again
+  useEffect(() => {
+    if (!user) return;
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        // Refetch conversations to catch any missed updates
+        fetchConversations(false);
+        fetchFriendships();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    
+    // Also reconnect on network online event
+    const handleOnline = () => {
+      fetchConversations(false);
+      fetchFriendships();
+    };
+    window.addEventListener('online', handleOnline);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('online', handleOnline);
+    };
+  }, [user, fetchConversations, fetchFriendships]);
 
 
   const userIdRef = useRef<string | null>(null);
@@ -334,19 +376,30 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Realtime messages
   useEffect(() => {
     if (!activeConversationId) return;
-    const channel = supabase.channel(`messages:${activeConversationId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'messages', filter: `conversation_id=eq.${activeConversationId}` },
-        (payload: RealtimePostgresChangesPayload<Message>) => {
-          if (payload.eventType === 'INSERT') {
-            setMessages(prev => [...prev, payload.new as Message]);
-          } else if (payload.eventType === 'UPDATE') {
-            const updated = payload.new as Message;
-            setMessages(prev => prev.map(m => m.id === updated.id ? updated : m));
-          } else if (payload.eventType === 'DELETE') {
-            const old = payload.old as any;
-            if (old?.id) setMessages(prev => prev.filter(m => m.id !== old.id));
-          }
-        }).subscribe();
+    const handler = (payload: RealtimePostgresChangesPayload<Message>) => {
+      if (payload.eventType === 'INSERT') {
+        setMessages(prev => [...prev, payload.new as Message]);
+      } else if (payload.eventType === 'UPDATE') {
+        const updated = payload.new as Message;
+        setMessages(prev => prev.map(m => m.id === updated.id ? updated : m));
+      } else if (payload.eventType === 'DELETE') {
+        const old = payload.old as any;
+        if (old?.id) setMessages(prev => prev.filter(m => m.id !== old.id));
+      }
+    };
+    let channel = supabase.channel(`messages:${activeConversationId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'messages', filter: `conversation_id=eq.${activeConversationId}` }, handler)
+      .subscribe((status) => {
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          console.warn(`messages:${activeConversationId} channel error, reconnecting...`);
+          setTimeout(() => {
+            supabase.removeChannel(channel);
+            channel = supabase.channel(`messages-retry:${activeConversationId}:${Date.now()}`)
+              .on('postgres_changes', { event: '*', schema: 'public', table: 'messages', filter: `conversation_id=eq.${activeConversationId}` }, handler)
+              .subscribe();
+          }, 2000);
+        }
+      });
     return () => { supabase.removeChannel(channel); };
   }, [activeConversationId]);
 
