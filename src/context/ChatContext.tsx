@@ -271,14 +271,25 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Listen for conversation changes (new conversations, updates)
   useEffect(() => {
     if (!user) return;
-    const channel = supabase.channel('conversations-changes')
+    let channel = supabase.channel('conversations-changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'conversations' }, () => {
         fetchConversations(false);
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'conversation_members' }, () => {
         fetchConversations(false);
       })
-      .subscribe();
+      .subscribe((status) => {
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          console.warn('conversations-changes channel error, reconnecting...');
+          setTimeout(() => {
+            supabase.removeChannel(channel);
+            channel = supabase.channel('conversations-changes-retry-' + Date.now())
+              .on('postgres_changes', { event: '*', schema: 'public', table: 'conversations' }, () => fetchConversations(false))
+              .on('postgres_changes', { event: '*', schema: 'public', table: 'conversation_members' }, () => fetchConversations(false))
+              .subscribe();
+          }, 2000);
+        }
+      });
     return () => { supabase.removeChannel(channel); };
   }, [user, fetchConversations]);
 
