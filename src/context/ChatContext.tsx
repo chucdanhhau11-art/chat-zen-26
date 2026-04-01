@@ -296,26 +296,19 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Global listener for new messages → unread counts + notification sound
   useEffect(() => {
     if (!user) return;
-    const channel = supabase.channel('global-messages-notify')
+    const createChannel = (name: string) => supabase.channel(name)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' },
         (payload: RealtimePostgresChangesPayload<Message>) => {
           const newMsg = payload.new as Message;
           if (!newMsg || newMsg.sender_id === user.id) return;
-          // Only count if not currently viewing that conversation
           if (activeConversationIdRef.current !== newMsg.conversation_id) {
             const newCount = (unreadCountsRef.current[newMsg.conversation_id] || 0) + 1;
-            // Update ref immediately so fetchConversations won't race-reset it
             unreadCountsRef.current = { ...unreadCountsRef.current, [newMsg.conversation_id]: newCount };
-            setUnreadCounts(prev => ({
-              ...prev,
-              [newMsg.conversation_id]: newCount,
-            }));
+            setUnreadCounts(prev => ({ ...prev, [newMsg.conversation_id]: newCount }));
             playNotificationSound();
-            // Show browser notification
             const senderProfile = profilesRef.current[newMsg.sender_id];
             const senderName = senderProfile?.display_name || 'Tin nhắn mới';
             showBrowserNotification(senderName, newMsg.content || '📎 File');
-            // Update conversations to reflect new unread
             setConversations(prev => prev.map(c =>
               c.id === newMsg.conversation_id
                 ? { ...c, unreadCount: (c.unreadCount || 0) + 1, lastMessage: { ...newMsg, sender: profilesRef.current[newMsg.sender_id] } }
@@ -323,9 +316,47 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
             ));
           }
         }
-      ).subscribe();
+      );
+
+    let channel = createChannel('global-messages-notify');
+    channel.subscribe((status) => {
+      if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+        console.warn('global-messages-notify channel error, reconnecting...');
+        setTimeout(() => {
+          supabase.removeChannel(channel);
+          channel = createChannel('global-messages-retry-' + Date.now());
+          channel.subscribe();
+        }, 2000);
+      }
+    });
+
     return () => { supabase.removeChannel(channel); };
   }, [user]);
+
+  // Reconnect realtime + refetch data when tab becomes visible again
+  useEffect(() => {
+    if (!user) return;
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        // Refetch conversations to catch any missed updates
+        fetchConversations(false);
+        fetchFriendships();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    
+    // Also reconnect on network online event
+    const handleOnline = () => {
+      fetchConversations(false);
+      fetchFriendships();
+    };
+    window.addEventListener('online', handleOnline);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('online', handleOnline);
+    };
+  }, [user, fetchConversations, fetchFriendships]);
 
 
   const userIdRef = useRef<string | null>(null);
