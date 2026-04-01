@@ -376,19 +376,30 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Realtime messages
   useEffect(() => {
     if (!activeConversationId) return;
-    const channel = supabase.channel(`messages:${activeConversationId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'messages', filter: `conversation_id=eq.${activeConversationId}` },
-        (payload: RealtimePostgresChangesPayload<Message>) => {
-          if (payload.eventType === 'INSERT') {
-            setMessages(prev => [...prev, payload.new as Message]);
-          } else if (payload.eventType === 'UPDATE') {
-            const updated = payload.new as Message;
-            setMessages(prev => prev.map(m => m.id === updated.id ? updated : m));
-          } else if (payload.eventType === 'DELETE') {
-            const old = payload.old as any;
-            if (old?.id) setMessages(prev => prev.filter(m => m.id !== old.id));
-          }
-        }).subscribe();
+    const handler = (payload: RealtimePostgresChangesPayload<Message>) => {
+      if (payload.eventType === 'INSERT') {
+        setMessages(prev => [...prev, payload.new as Message]);
+      } else if (payload.eventType === 'UPDATE') {
+        const updated = payload.new as Message;
+        setMessages(prev => prev.map(m => m.id === updated.id ? updated : m));
+      } else if (payload.eventType === 'DELETE') {
+        const old = payload.old as any;
+        if (old?.id) setMessages(prev => prev.filter(m => m.id !== old.id));
+      }
+    };
+    let channel = supabase.channel(`messages:${activeConversationId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'messages', filter: `conversation_id=eq.${activeConversationId}` }, handler)
+      .subscribe((status) => {
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          console.warn(`messages:${activeConversationId} channel error, reconnecting...`);
+          setTimeout(() => {
+            supabase.removeChannel(channel);
+            channel = supabase.channel(`messages-retry:${activeConversationId}:${Date.now()}`)
+              .on('postgres_changes', { event: '*', schema: 'public', table: 'messages', filter: `conversation_id=eq.${activeConversationId}` }, handler)
+              .subscribe();
+          }, 2000);
+        }
+      });
     return () => { supabase.removeChannel(channel); };
   }, [activeConversationId]);
 
