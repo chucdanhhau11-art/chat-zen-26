@@ -1355,27 +1355,45 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
         </div>
       )}
 
-      {/* File Preview */}
-      {previewFile && (
+      {/* File Preview - Multiple files */}
+      {previewFiles.length > 0 && (
         <div className="px-4 py-2 border-t border-border bg-tg-sidebar">
-          <div className="flex items-center gap-3 p-2 rounded-lg bg-secondary">
-            {isImageType(previewFile.file.type) ? (
-              <img src={previewFile.url} alt="preview" className="h-16 w-16 object-cover rounded-lg" />
-            ) : isVideoType(previewFile.file.type) ? (
-              <div className="h-16 w-16 rounded-lg bg-background/50 flex items-center justify-center"><Film className="h-6 w-6 text-primary" /></div>
-            ) : (
-              <div className="h-16 w-16 rounded-lg bg-background/50 flex items-center justify-center"><FileText className="h-6 w-6 text-primary" /></div>
-            )}
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">{previewFile.file.name}</p>
-              <p className="text-xs text-muted-foreground">{(previewFile.file.size / 1024).toFixed(1)} KB</p>
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs text-muted-foreground font-medium">{previewFiles.length} file đã chọn</span>
+            <div className="flex items-center gap-2">
+              <button onClick={() => fileInputRef.current?.click()} className="text-xs text-primary hover:underline">+ Thêm file</button>
+              <button onClick={cancelPreview} className="text-xs text-destructive hover:underline">Xoá tất cả</button>
             </div>
-            <button onClick={cancelPreview} className="p-1.5 rounded-full hover:bg-background/50 transition-colors"><X className="h-4 w-4 text-muted-foreground" /></button>
+          </div>
+          <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-thin">
+            {previewFiles.map((pf, idx) => (
+              <div key={idx} className="relative flex-shrink-0 group">
+                {isImageType(pf.file.type) ? (
+                  <img src={pf.url} alt="preview" className="h-20 w-20 object-cover rounded-lg border border-border" />
+                ) : isVideoType(pf.file.type) ? (
+                  <div className="h-20 w-20 rounded-lg bg-secondary flex flex-col items-center justify-center border border-border">
+                    <Film className="h-5 w-5 text-primary" />
+                    <span className="text-[9px] text-muted-foreground mt-1 truncate max-w-[72px] px-1">{pf.file.name}</span>
+                  </div>
+                ) : (
+                  <div className="h-20 w-20 rounded-lg bg-secondary flex flex-col items-center justify-center border border-border">
+                    <FileText className="h-5 w-5 text-primary" />
+                    <span className="text-[9px] text-muted-foreground mt-1 truncate max-w-[72px] px-1">{pf.file.name}</span>
+                  </div>
+                )}
+                <button
+                  onClick={() => removePreviewFile(idx)}
+                  className="absolute -top-1.5 -right-1.5 p-0.5 rounded-full bg-destructive text-destructive-foreground opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+            ))}
           </div>
         </div>
       )}
 
-      <input ref={fileInputRef} type="file" accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar" className="hidden" onChange={handleFileSelect} />
+      <input ref={fileInputRef} type="file" multiple accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar" className="hidden" onChange={handleFileSelect} />
 
       {/* Inline results dropdown */}
       {showInlineResults && (
