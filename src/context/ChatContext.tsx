@@ -324,7 +324,23 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
             playNotificationSound();
             const senderProfile = profilesRef.current[newMsg.sender_id];
             const senderName = senderProfile?.display_name || 'Tin nhắn mới';
-            showBrowserNotification(senderName, newMsg.content || '📎 File');
+            const msgContent = newMsg.content || '📎 File';
+            showBrowserNotification(senderName, msgContent);
+            
+            // Show interactive sonner toast - click to open conversation
+            const convId = newMsg.conversation_id;
+            toast(senderName, {
+              description: msgContent.length > 60 ? msgContent.slice(0, 60) + '…' : msgContent,
+              duration: 5000,
+              action: {
+                label: 'Xem',
+                onClick: () => {
+                  setActiveConversationId(convId);
+                  setMobileShowingChat(true);
+                },
+              },
+            });
+
             setConversations(prev => prev.map(c =>
               c.id === newMsg.conversation_id
                 ? { ...c, unreadCount: (c.unreadCount || 0) + 1, lastMessage: { ...newMsg, sender: profilesRef.current[newMsg.sender_id] } }
