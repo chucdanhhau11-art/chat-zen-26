@@ -1505,7 +1505,7 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
                   onChange={e => setInput(e.target.value)}
                   onKeyDown={handleKeyDown}
                   onPaste={handlePaste}
-                  placeholder={previewFile ? "Thêm chú thích..." : "Nhập tin nhắn hoặc @botname query..."}
+                  placeholder={previewFiles.length > 0 ? "Thêm chú thích..." : "Nhập tin nhắn hoặc @botname query..."}
                   rows={1}
                   className="w-full bg-secondary rounded-xl px-4 py-2.5 text-sm outline-none placeholder:text-muted-foreground resize-none focus:ring-2 focus:ring-primary/30 transition-all max-h-32"
                   style={{ minHeight: '40px' }}
