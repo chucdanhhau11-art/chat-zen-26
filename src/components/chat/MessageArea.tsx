@@ -190,7 +190,8 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
   const { user } = useAuth();
   const [input, setInput] = useState('');
   const [uploading, setUploading] = useState(false);
-  const [previewFile, setPreviewFile] = useState<{ file: File; url: string } | null>(null);
+  const [previewFiles, setPreviewFiles] = useState<{ file: File; url: string }[]>([]);
+  const [isDragging, setIsDragging] = useState(false);
   const [replyTo, setReplyTo] = useState<any>(null);
   const [contextMenu, setContextMenu] = useState<{ msg: any; x: number; y: number } | null>(null);
   const [headerMenu, setHeaderMenu] = useState(false);
