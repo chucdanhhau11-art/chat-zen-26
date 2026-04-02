@@ -891,7 +891,30 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
   };
 
   return (
-    <div className="flex-1 flex flex-col bg-tg-chat h-full">
+    <div
+      className="flex-1 flex flex-col bg-tg-chat h-full relative"
+      onDragEnter={handleDragEnter}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
+      {/* Drag overlay */}
+      <AnimatePresence>
+        {isDragging && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center border-2 border-dashed border-primary rounded-xl pointer-events-none"
+          >
+            <div className="text-center">
+              <Paperclip className="h-12 w-12 text-primary mx-auto mb-3" />
+              <p className="text-lg font-semibold text-foreground">Thả file vào đây</p>
+              <p className="text-sm text-muted-foreground">Hỗ trợ nhiều file cùng lúc</p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
       {/* Header */}
       <div className="flex items-center gap-2 px-3 py-3 border-b border-border bg-tg-sidebar">
         <button onClick={() => setMobileShowingChat(false)} className="p-2 rounded-lg hover:bg-tg-hover transition-colors md:hidden flex-shrink-0">
