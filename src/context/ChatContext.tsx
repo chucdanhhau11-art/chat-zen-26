@@ -623,8 +623,19 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       delete next[convId];
       return next;
     });
+    unreadCountsRef.current = { ...unreadCountsRef.current, [convId]: 0 };
     setConversations(prev => prev.map(c => c.id === convId ? { ...c, unreadCount: 0 } : c));
-  }, []);
+    
+    // Mark messages as read in DB
+    if (user) {
+      supabase.from('messages')
+        .update({ status: 'read' })
+        .eq('conversation_id', convId)
+        .neq('sender_id', user.id)
+        .neq('status', 'read')
+        .then(() => {});
+    }
+  }, [user]);
 
   const setActiveConversation = useCallback((id: string | null) => {
     setActiveConversationId(id);
