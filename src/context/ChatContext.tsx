@@ -741,6 +741,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     toast.success('Đã chấp nhận kết bạn / Friend request accepted!');
     fetchFriendships();
   }, [fetchFriendships]);
+  acceptFriendRequestRef.current = acceptFriendRequest;
 
   const declineFriendRequest = useCallback(async (friendshipId: string) => {
     await supabase.from('friendships').delete().eq('id', friendshipId);
