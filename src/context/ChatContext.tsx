@@ -233,7 +233,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [user, fetchFriendships, acceptFriendRequest]);
+  }, [user, fetchFriendships]);
 
   // Fetch profiles once
   useEffect(() => {
