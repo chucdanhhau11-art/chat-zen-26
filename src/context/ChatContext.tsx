@@ -193,11 +193,46 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     if (!user) return;
     const channel = supabase.channel('friendships-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'friendships' }, () => {
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'friendships' }, 
+        (payload: any) => {
+          const newFs = payload.new;
+          // Show interactive toast for incoming friend request
+          if (newFs && newFs.addressee_id === user.id && newFs.status === 'pending') {
+            const requesterProfile = profilesRef.current[newFs.requester_id];
+            const requesterName = requesterProfile?.display_name || 'Người dùng';
+            playNotificationSound();
+            toast(requesterName + ' muốn kết bạn', {
+              description: 'Bạn có lời mời kết bạn mới',
+              duration: 8000,
+              action: {
+                label: 'Chấp nhận',
+                onClick: () => {
+                  acceptFriendRequest(newFs.id);
+                },
+              },
+            });
+          }
+          fetchFriendships();
+        }
+      )
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'friendships' },
+        (payload: any) => {
+          const updated = payload.new;
+          // Notify when friend request is accepted
+          if (updated && updated.requester_id === user.id && updated.status === 'accepted') {
+            const friendProfile = profilesRef.current[updated.addressee_id];
+            const friendName = friendProfile?.display_name || 'Người dùng';
+            toast.success(friendName + ' đã chấp nhận kết bạn!');
+          }
+          fetchFriendships();
+        }
+      )
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'friendships' }, () => {
         fetchFriendships();
-      }).subscribe();
+      })
+      .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [user, fetchFriendships]);
+  }, [user, fetchFriendships, acceptFriendRequest]);
 
   // Fetch profiles once
   useEffect(() => {
