@@ -1539,7 +1539,7 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
                   )}
                 </AnimatePresence>
               </div>
-              {input.trim() || previewFile ? (
+              {input.trim() || previewFiles.length > 0 ? (
                 <motion.button
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
