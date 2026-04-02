@@ -190,7 +190,8 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
   const { user } = useAuth();
   const [input, setInput] = useState('');
   const [uploading, setUploading] = useState(false);
-  const [previewFile, setPreviewFile] = useState<{ file: File; url: string } | null>(null);
+  const [previewFiles, setPreviewFiles] = useState<{ file: File; url: string }[]>([]);
+  const [isDragging, setIsDragging] = useState(false);
   const [replyTo, setReplyTo] = useState<any>(null);
   const [contextMenu, setContextMenu] = useState<{ msg: any; x: number; y: number } | null>(null);
   const [headerMenu, setHeaderMenu] = useState(false);
@@ -400,13 +401,21 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
     return () => window.removeEventListener('click', handler);
   }, [contextMenu]);
 
-  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (file.size > 20 * 1024 * 1024) { toast.error('File quá lớn. Tối đa 20MB.'); return; }
-    setPreviewFile({ file, url: URL.createObjectURL(file) });
-    if (fileInputRef.current) fileInputRef.current.value = '';
+  const addFilesToPreview = useCallback((files: FileList | File[]) => {
+    const newFiles: { file: File; url: string }[] = [];
+    for (const file of Array.from(files)) {
+      if (file.size > 20 * 1024 * 1024) { toast.error(`"${file.name}" quá lớn. Tối đa 20MB.`); continue; }
+      newFiles.push({ file, url: URL.createObjectURL(file) });
+    }
+    if (newFiles.length > 0) setPreviewFiles(prev => [...prev, ...newFiles]);
   }, []);
+
+  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    addFilesToPreview(files);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  }, [addFilesToPreview]);
 
   const handlePaste = useCallback((e: React.ClipboardEvent) => {
     const items = e.clipboardData?.items;
@@ -416,40 +425,73 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
         e.preventDefault();
         const file = item.getAsFile();
         if (!file) return;
-        if (file.size > 20 * 1024 * 1024) { toast.error('File quá lớn. Tối đa 20MB.'); return; }
-        setPreviewFile({ file, url: URL.createObjectURL(file) });
+        addFilesToPreview([file]);
         return;
       }
     }
+  }, [addFilesToPreview]);
+
+  const removePreviewFile = useCallback((index: number) => {
+    setPreviewFiles(prev => {
+      const removed = prev[index];
+      if (removed) URL.revokeObjectURL(removed.url);
+      return prev.filter((_, i) => i !== index);
+    });
   }, []);
 
   const cancelPreview = useCallback(() => {
-    if (previewFile) { URL.revokeObjectURL(previewFile.url); setPreviewFile(null); }
-  }, [previewFile]);
+    previewFiles.forEach(pf => URL.revokeObjectURL(pf.url));
+    setPreviewFiles([]);
+  }, [previewFiles]);
+
+  // Drag and drop handlers
+  const handleDragEnter = useCallback((e: React.DragEvent) => {
+    e.preventDefault(); e.stopPropagation();
+    if (e.dataTransfer.types.includes('Files')) setIsDragging(true);
+  }, []);
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault(); e.stopPropagation();
+  }, []);
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault(); e.stopPropagation();
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const { clientX: x, clientY: y } = e;
+    if (x <= rect.left || x >= rect.right || y <= rect.top || y >= rect.bottom) {
+      setIsDragging(false);
+    }
+  }, []);
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault(); e.stopPropagation();
+    setIsDragging(false);
+    const files = e.dataTransfer.files;
+    if (files.length > 0) addFilesToPreview(files);
+  }, [addFilesToPreview]);
 
   const uploadAndSend = useCallback(async () => {
-    if (!previewFile || !user || !activeConversation) return;
+    if (previewFiles.length === 0 || !user || !activeConversation) return;
     setUploading(true);
     try {
-      const file = previewFile.file;
-      const ext = file.name.split('.').pop();
-      const path = `${user.id}/${Date.now()}.${ext}`;
-      const { error: uploadError } = await supabase.storage.from('chat-files').upload(path, file);
-      if (uploadError) throw uploadError;
-      const { data: urlData } = supabase.storage.from('chat-files').getPublicUrl(path);
-      let messageType = 'file';
-      if (isImageType(file.type)) messageType = 'image';
-      else if (isVideoType(file.type)) messageType = 'video';
-      await supabase.from('messages').insert({
-        conversation_id: activeConversation.id,
-        sender_id: user.id,
-        content: input.trim() || null,
-        message_type: messageType,
-        file_url: urlData.publicUrl,
-        file_name: file.name,
-        file_size: file.size,
-        reply_to: replyTo?.id || null,
-      });
+      for (const pf of previewFiles) {
+        const file = pf.file;
+        const ext = file.name.split('.').pop();
+        const path = `${user.id}/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+        const { error: uploadError } = await supabase.storage.from('chat-files').upload(path, file);
+        if (uploadError) throw uploadError;
+        const { data: urlData } = supabase.storage.from('chat-files').getPublicUrl(path);
+        let messageType = 'file';
+        if (isImageType(file.type)) messageType = 'image';
+        else if (isVideoType(file.type)) messageType = 'video';
+        await supabase.from('messages').insert({
+          conversation_id: activeConversation.id,
+          sender_id: user.id,
+          content: previewFiles.indexOf(pf) === 0 ? (input.trim() || null) : null,
+          message_type: messageType,
+          file_url: urlData.publicUrl,
+          file_name: file.name,
+          file_size: file.size,
+          reply_to: previewFiles.indexOf(pf) === 0 ? (replyTo?.id || null) : null,
+        });
+      }
       await supabase.from('conversations').update({ updated_at: new Date().toISOString() }).eq('id', activeConversation.id);
       setInput('');
       setReplyTo(null);
@@ -459,7 +501,7 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
     } finally {
       setUploading(false);
     }
-  }, [previewFile, user, activeConversation, input, cancelPreview, replyTo]);
+  }, [previewFiles, user, activeConversation, input, cancelPreview, replyTo]);
 
   // Voice recording functions
   const startRecording = useCallback(async () => {
@@ -570,7 +612,7 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
   };
 
   const handleSend = async () => {
-    if (previewFile) { await uploadAndSend(); return; }
+    if (previewFiles.length > 0) { await uploadAndSend(); return; }
     if (!input.trim() || !activeConversation || !user) return;
     const text = input;
     setInput('');
@@ -849,7 +891,30 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
   };
 
   return (
-    <div className="flex-1 flex flex-col bg-tg-chat h-full">
+    <div
+      className="flex-1 flex flex-col bg-tg-chat h-full relative"
+      onDragEnter={handleDragEnter}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
+      {/* Drag overlay */}
+      <AnimatePresence>
+        {isDragging && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center border-2 border-dashed border-primary rounded-xl pointer-events-none"
+          >
+            <div className="text-center">
+              <Paperclip className="h-12 w-12 text-primary mx-auto mb-3" />
+              <p className="text-lg font-semibold text-foreground">Thả file vào đây</p>
+              <p className="text-sm text-muted-foreground">Hỗ trợ nhiều file cùng lúc</p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
       {/* Header */}
       <div className="flex items-center gap-2 px-3 py-3 border-b border-border bg-tg-sidebar">
         <button onClick={() => setMobileShowingChat(false)} className="p-2 rounded-lg hover:bg-tg-hover transition-colors md:hidden flex-shrink-0">
@@ -1313,27 +1378,45 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
         </div>
       )}
 
-      {/* File Preview */}
-      {previewFile && (
+      {/* File Preview - Multiple files */}
+      {previewFiles.length > 0 && (
         <div className="px-4 py-2 border-t border-border bg-tg-sidebar">
-          <div className="flex items-center gap-3 p-2 rounded-lg bg-secondary">
-            {isImageType(previewFile.file.type) ? (
-              <img src={previewFile.url} alt="preview" className="h-16 w-16 object-cover rounded-lg" />
-            ) : isVideoType(previewFile.file.type) ? (
-              <div className="h-16 w-16 rounded-lg bg-background/50 flex items-center justify-center"><Film className="h-6 w-6 text-primary" /></div>
-            ) : (
-              <div className="h-16 w-16 rounded-lg bg-background/50 flex items-center justify-center"><FileText className="h-6 w-6 text-primary" /></div>
-            )}
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">{previewFile.file.name}</p>
-              <p className="text-xs text-muted-foreground">{(previewFile.file.size / 1024).toFixed(1)} KB</p>
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs text-muted-foreground font-medium">{previewFiles.length} file đã chọn</span>
+            <div className="flex items-center gap-2">
+              <button onClick={() => fileInputRef.current?.click()} className="text-xs text-primary hover:underline">+ Thêm file</button>
+              <button onClick={cancelPreview} className="text-xs text-destructive hover:underline">Xoá tất cả</button>
             </div>
-            <button onClick={cancelPreview} className="p-1.5 rounded-full hover:bg-background/50 transition-colors"><X className="h-4 w-4 text-muted-foreground" /></button>
+          </div>
+          <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-thin">
+            {previewFiles.map((pf, idx) => (
+              <div key={idx} className="relative flex-shrink-0 group">
+                {isImageType(pf.file.type) ? (
+                  <img src={pf.url} alt="preview" className="h-20 w-20 object-cover rounded-lg border border-border" />
+                ) : isVideoType(pf.file.type) ? (
+                  <div className="h-20 w-20 rounded-lg bg-secondary flex flex-col items-center justify-center border border-border">
+                    <Film className="h-5 w-5 text-primary" />
+                    <span className="text-[9px] text-muted-foreground mt-1 truncate max-w-[72px] px-1">{pf.file.name}</span>
+                  </div>
+                ) : (
+                  <div className="h-20 w-20 rounded-lg bg-secondary flex flex-col items-center justify-center border border-border">
+                    <FileText className="h-5 w-5 text-primary" />
+                    <span className="text-[9px] text-muted-foreground mt-1 truncate max-w-[72px] px-1">{pf.file.name}</span>
+                  </div>
+                )}
+                <button
+                  onClick={() => removePreviewFile(idx)}
+                  className="absolute -top-1.5 -right-1.5 p-0.5 rounded-full bg-destructive text-destructive-foreground opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+            ))}
           </div>
         </div>
       )}
 
-      <input ref={fileInputRef} type="file" accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar" className="hidden" onChange={handleFileSelect} />
+      <input ref={fileInputRef} type="file" multiple accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar" className="hidden" onChange={handleFileSelect} />
 
       {/* Inline results dropdown */}
       {showInlineResults && (
@@ -1445,7 +1528,7 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
                   onChange={e => setInput(e.target.value)}
                   onKeyDown={handleKeyDown}
                   onPaste={handlePaste}
-                  placeholder={previewFile ? "Thêm chú thích..." : "Nhập tin nhắn hoặc @botname query..."}
+                  placeholder={previewFiles.length > 0 ? "Thêm chú thích..." : "Nhập tin nhắn hoặc @botname query..."}
                   rows={1}
                   className="w-full bg-secondary rounded-xl px-4 py-2.5 text-sm outline-none placeholder:text-muted-foreground resize-none focus:ring-2 focus:ring-primary/30 transition-all max-h-32"
                   style={{ minHeight: '40px' }}
@@ -1479,7 +1562,7 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
                   )}
                 </AnimatePresence>
               </div>
-              {input.trim() || previewFile ? (
+              {input.trim() || previewFiles.length > 0 ? (
                 <motion.button
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
