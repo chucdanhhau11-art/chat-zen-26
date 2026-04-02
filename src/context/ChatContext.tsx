@@ -164,6 +164,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const initialLoadDone = useRef(false);
 
   const [friendships, setFriendships] = useState<Friendship[]>([]);
+  const acceptFriendRequestRef = useRef<(id: string) => Promise<void>>();
 
   useEffect(() => { profilesRef.current = profiles; }, [profiles]);
   useEffect(() => { activeConversationIdRef.current = activeConversationId; }, [activeConversationId]);
@@ -193,9 +194,44 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     if (!user) return;
     const channel = supabase.channel('friendships-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'friendships' }, () => {
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'friendships' }, 
+        (payload: any) => {
+          const newFs = payload.new;
+          // Show interactive toast for incoming friend request
+          if (newFs && newFs.addressee_id === user.id && newFs.status === 'pending') {
+            const requesterProfile = profilesRef.current[newFs.requester_id];
+            const requesterName = requesterProfile?.display_name || 'Người dùng';
+            playNotificationSound();
+            toast(requesterName + ' muốn kết bạn', {
+              description: 'Bạn có lời mời kết bạn mới',
+              duration: 8000,
+              action: {
+                label: 'Chấp nhận',
+                onClick: () => {
+                  acceptFriendRequestRef.current?.(newFs.id);
+                },
+              },
+            });
+          }
+          fetchFriendships();
+        }
+      )
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'friendships' },
+        (payload: any) => {
+          const updated = payload.new;
+          // Notify when friend request is accepted
+          if (updated && updated.requester_id === user.id && updated.status === 'accepted') {
+            const friendProfile = profilesRef.current[updated.addressee_id];
+            const friendName = friendProfile?.display_name || 'Người dùng';
+            toast.success(friendName + ' đã chấp nhận kết bạn!');
+          }
+          fetchFriendships();
+        }
+      )
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'friendships' }, () => {
         fetchFriendships();
-      }).subscribe();
+      })
+      .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [user, fetchFriendships]);
 
@@ -324,7 +360,23 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
             playNotificationSound();
             const senderProfile = profilesRef.current[newMsg.sender_id];
             const senderName = senderProfile?.display_name || 'Tin nhắn mới';
-            showBrowserNotification(senderName, newMsg.content || '📎 File');
+            const msgContent = newMsg.content || '📎 File';
+            showBrowserNotification(senderName, msgContent);
+            
+            // Show interactive sonner toast - click to open conversation
+            const convId = newMsg.conversation_id;
+            toast(senderName, {
+              description: msgContent.length > 60 ? msgContent.slice(0, 60) + '…' : msgContent,
+              duration: 5000,
+              action: {
+                label: 'Xem',
+                onClick: () => {
+                  setActiveConversationId(convId);
+                  setMobileShowingChat(true);
+                },
+              },
+            });
+
             setConversations(prev => prev.map(c =>
               c.id === newMsg.conversation_id
                 ? { ...c, unreadCount: (c.unreadCount || 0) + 1, lastMessage: { ...newMsg, sender: profilesRef.current[newMsg.sender_id] } }
@@ -689,6 +741,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     toast.success('Đã chấp nhận kết bạn / Friend request accepted!');
     fetchFriendships();
   }, [fetchFriendships]);
+  acceptFriendRequestRef.current = acceptFriendRequest;
 
   const declineFriendRequest = useCallback(async (friendshipId: string) => {
     await supabase.from('friendships').delete().eq('id', friendshipId);
