@@ -612,7 +612,7 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
   };
 
   const handleSend = async () => {
-    if (previewFile) { await uploadAndSend(); return; }
+    if (previewFiles.length > 0) { await uploadAndSend(); return; }
     if (!input.trim() || !activeConversation || !user) return;
     const text = input;
     setInput('');
