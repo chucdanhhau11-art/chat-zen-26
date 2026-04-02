@@ -164,6 +164,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const initialLoadDone = useRef(false);
 
   const [friendships, setFriendships] = useState<Friendship[]>([]);
+  const acceptFriendRequestRef = useRef<(id: string) => Promise<void>>();
 
   useEffect(() => { profilesRef.current = profiles; }, [profiles]);
   useEffect(() => { activeConversationIdRef.current = activeConversationId; }, [activeConversationId]);
