@@ -208,7 +208,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
               action: {
                 label: 'Chấp nhận',
                 onClick: () => {
-                  acceptFriendRequest(newFs.id);
+                  acceptFriendRequestRef.current?.(newFs.id);
                 },
               },
             });
