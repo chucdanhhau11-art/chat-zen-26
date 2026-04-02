@@ -236,7 +236,23 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const members = (allMembers || []).filter(m => m.conversation_id === conv.id).map(m => ({ ...m, profile: currentProfiles[m.user_id] }));
         const { data: lastMsgData } = await supabase.from('messages').select('*').eq('conversation_id', conv.id).order('created_at', { ascending: false }).limit(1);
         const lastMessage = lastMsgData?.[0] ? { ...lastMsgData[0], sender: currentProfiles[lastMsgData[0].sender_id] } : undefined;
-        return { ...conv, members, lastMessage, unreadCount: unreadCountsRef.current[conv.id] || 0 };
+        
+        // Calculate unread from DB: messages not sent by me that are not 'read'
+        let unread = unreadCountsRef.current[conv.id] || 0;
+        if (user) {
+          const { count } = await supabase.from('messages')
+            .select('*', { count: 'exact', head: true })
+            .eq('conversation_id', conv.id)
+            .neq('sender_id', user.id)
+            .neq('status', 'read');
+          if (count !== null && count > unread) {
+            unread = count;
+            unreadCountsRef.current = { ...unreadCountsRef.current, [conv.id]: unread };
+            setUnreadCounts(prev => ({ ...prev, [conv.id]: unread }));
+          }
+        }
+        
+        return { ...conv, members, lastMessage, unreadCount: unread };
       })
     );
     setConversations(conversationsWithDetails);
@@ -607,8 +623,19 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       delete next[convId];
       return next;
     });
+    unreadCountsRef.current = { ...unreadCountsRef.current, [convId]: 0 };
     setConversations(prev => prev.map(c => c.id === convId ? { ...c, unreadCount: 0 } : c));
-  }, []);
+    
+    // Mark messages as read in DB
+    if (user) {
+      supabase.from('messages')
+        .update({ status: 'read' })
+        .eq('conversation_id', convId)
+        .neq('sender_id', user.id)
+        .neq('status', 'read')
+        .then(() => {});
+    }
+  }, [user]);
 
   const setActiveConversation = useCallback((id: string | null) => {
     setActiveConversationId(id);
