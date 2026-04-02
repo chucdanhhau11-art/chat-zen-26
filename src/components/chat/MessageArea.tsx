@@ -401,13 +401,21 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
     return () => window.removeEventListener('click', handler);
   }, [contextMenu]);
 
-  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (file.size > 20 * 1024 * 1024) { toast.error('File quá lớn. Tối đa 20MB.'); return; }
-    setPreviewFile({ file, url: URL.createObjectURL(file) });
-    if (fileInputRef.current) fileInputRef.current.value = '';
+  const addFilesToPreview = useCallback((files: FileList | File[]) => {
+    const newFiles: { file: File; url: string }[] = [];
+    for (const file of Array.from(files)) {
+      if (file.size > 20 * 1024 * 1024) { toast.error(`"${file.name}" quá lớn. Tối đa 20MB.`); continue; }
+      newFiles.push({ file, url: URL.createObjectURL(file) });
+    }
+    if (newFiles.length > 0) setPreviewFiles(prev => [...prev, ...newFiles]);
   }, []);
+
+  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    addFilesToPreview(files);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  }, [addFilesToPreview]);
 
   const handlePaste = useCallback((e: React.ClipboardEvent) => {
     const items = e.clipboardData?.items;
@@ -417,40 +425,73 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
         e.preventDefault();
         const file = item.getAsFile();
         if (!file) return;
-        if (file.size > 20 * 1024 * 1024) { toast.error('File quá lớn. Tối đa 20MB.'); return; }
-        setPreviewFile({ file, url: URL.createObjectURL(file) });
+        addFilesToPreview([file]);
         return;
       }
     }
+  }, [addFilesToPreview]);
+
+  const removePreviewFile = useCallback((index: number) => {
+    setPreviewFiles(prev => {
+      const removed = prev[index];
+      if (removed) URL.revokeObjectURL(removed.url);
+      return prev.filter((_, i) => i !== index);
+    });
   }, []);
 
   const cancelPreview = useCallback(() => {
-    if (previewFile) { URL.revokeObjectURL(previewFile.url); setPreviewFile(null); }
-  }, [previewFile]);
+    previewFiles.forEach(pf => URL.revokeObjectURL(pf.url));
+    setPreviewFiles([]);
+  }, [previewFiles]);
+
+  // Drag and drop handlers
+  const handleDragEnter = useCallback((e: React.DragEvent) => {
+    e.preventDefault(); e.stopPropagation();
+    if (e.dataTransfer.types.includes('Files')) setIsDragging(true);
+  }, []);
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault(); e.stopPropagation();
+  }, []);
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault(); e.stopPropagation();
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const { clientX: x, clientY: y } = e;
+    if (x <= rect.left || x >= rect.right || y <= rect.top || y >= rect.bottom) {
+      setIsDragging(false);
+    }
+  }, []);
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault(); e.stopPropagation();
+    setIsDragging(false);
+    const files = e.dataTransfer.files;
+    if (files.length > 0) addFilesToPreview(files);
+  }, [addFilesToPreview]);
 
   const uploadAndSend = useCallback(async () => {
-    if (!previewFile || !user || !activeConversation) return;
+    if (previewFiles.length === 0 || !user || !activeConversation) return;
     setUploading(true);
     try {
-      const file = previewFile.file;
-      const ext = file.name.split('.').pop();
-      const path = `${user.id}/${Date.now()}.${ext}`;
-      const { error: uploadError } = await supabase.storage.from('chat-files').upload(path, file);
-      if (uploadError) throw uploadError;
-      const { data: urlData } = supabase.storage.from('chat-files').getPublicUrl(path);
-      let messageType = 'file';
-      if (isImageType(file.type)) messageType = 'image';
-      else if (isVideoType(file.type)) messageType = 'video';
-      await supabase.from('messages').insert({
-        conversation_id: activeConversation.id,
-        sender_id: user.id,
-        content: input.trim() || null,
-        message_type: messageType,
-        file_url: urlData.publicUrl,
-        file_name: file.name,
-        file_size: file.size,
-        reply_to: replyTo?.id || null,
-      });
+      for (const pf of previewFiles) {
+        const file = pf.file;
+        const ext = file.name.split('.').pop();
+        const path = `${user.id}/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+        const { error: uploadError } = await supabase.storage.from('chat-files').upload(path, file);
+        if (uploadError) throw uploadError;
+        const { data: urlData } = supabase.storage.from('chat-files').getPublicUrl(path);
+        let messageType = 'file';
+        if (isImageType(file.type)) messageType = 'image';
+        else if (isVideoType(file.type)) messageType = 'video';
+        await supabase.from('messages').insert({
+          conversation_id: activeConversation.id,
+          sender_id: user.id,
+          content: previewFiles.indexOf(pf) === 0 ? (input.trim() || null) : null,
+          message_type: messageType,
+          file_url: urlData.publicUrl,
+          file_name: file.name,
+          file_size: file.size,
+          reply_to: previewFiles.indexOf(pf) === 0 ? (replyTo?.id || null) : null,
+        });
+      }
       await supabase.from('conversations').update({ updated_at: new Date().toISOString() }).eq('id', activeConversation.id);
       setInput('');
       setReplyTo(null);
@@ -460,7 +501,7 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
     } finally {
       setUploading(false);
     }
-  }, [previewFile, user, activeConversation, input, cancelPreview, replyTo]);
+  }, [previewFiles, user, activeConversation, input, cancelPreview, replyTo]);
 
   // Voice recording functions
   const startRecording = useCallback(async () => {
