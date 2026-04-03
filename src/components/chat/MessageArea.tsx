@@ -364,6 +364,12 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
     });
   }, []);
 
+  // Count unread messages not visible (above viewport)
+  const unreadCount = useMemo(() => {
+    if (!user) return 0;
+    return messages.filter(m => m.sender_id !== user.id && m.status !== 'read').length;
+  }, [messages, user]);
+
   const handleMessagesScroll = useCallback(() => {
     const el = messagesContainerRef.current;
     if (!el) return;
@@ -371,9 +377,25 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
     setShowScrollBtn(distFromBottom > 200);
   }, []);
 
+  // Scroll to bottom instantly when switching conversations
   useEffect(() => {
-    if (messages.length > 0) scrollToBottom('smooth');
-  }, [messages.length, scrollToBottom]);
+    if (activeConversationId && messages.length > 0) {
+      scrollToBottom('instant');
+    }
+  }, [activeConversationId]);
+
+  // Scroll to bottom smoothly when new messages arrive
+  useEffect(() => {
+    if (messages.length > 0 && messages.length !== prevMessagesLenRef.current) {
+      const el = messagesContainerRef.current;
+      const isNearBottom = el ? (el.scrollHeight - el.scrollTop - el.clientHeight < 300) : true;
+      const lastMsg = messages[messages.length - 1];
+      const isOwnMessage = lastMsg?.sender_id === user?.id;
+      if (isOwnMessage || isNearBottom) {
+        scrollToBottom('smooth');
+      }
+    }
+  }, [messages.length, scrollToBottom, user?.id]);
 
   useEffect(() => {
     if (messages.length > prevMessagesLenRef.current && prevMessagesLenRef.current > 0) {
@@ -1306,9 +1328,14 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.8 }}
               onClick={() => scrollToBottom('smooth')}
-              className="sticky bottom-4 left-1/2 -translate-x-1/2 ml-auto mr-auto w-10 h-10 flex items-center justify-center bg-primary text-primary-foreground rounded-full shadow-lg hover:bg-primary/90 transition-colors z-10"
+              className="sticky bottom-4 left-1/2 -translate-x-1/2 ml-auto mr-auto flex items-center gap-1.5 bg-primary text-primary-foreground rounded-full shadow-lg hover:bg-primary/90 transition-colors z-10 px-3 py-2"
               title="Về tin nhắn mới nhất"
             >
+              {unreadCount > 0 && (
+                <span className="bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </span>
+              )}
               <ChevronDown className="h-5 w-5" />
             </motion.button>
           )}
