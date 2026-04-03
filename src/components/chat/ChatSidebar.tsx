@@ -128,6 +128,16 @@ const ChatSidebar: React.FC = () => {
     prevUnreadRef.current = map;
   }, [conversations, user, profiles]);
 
+  // Auto-mark notifications as read when user opens the corresponding conversation
+  useEffect(() => {
+    if (!activeConversationId) return;
+    setNotifications(prev => {
+      const hasUnread = prev.some(n => n.conversationId === activeConversationId && !n.read);
+      if (!hasUnread) return prev;
+      return prev.map(n => n.conversationId === activeConversationId ? { ...n, read: true } : n);
+    });
+  }, [activeConversationId]);
+
   const totalUnreadNotifs = notifications.filter(n => !n.read).length;
 
   const handleClickNotification = useCallback((notif: NotificationItem) => {
