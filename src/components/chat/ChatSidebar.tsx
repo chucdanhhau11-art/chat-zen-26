@@ -79,8 +79,6 @@ const ChatSidebar: React.FC = () => {
           requesterId: req.requester_id,
         };
         setNotifications(prev => [newNotif, ...prev].slice(0, 50));
-        // Toast popup
-        toast(`👥 ${senderName}`, { description: 'đã gửi lời mời kết bạn', duration: 4000 });
         // Sound
         try {
           const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
