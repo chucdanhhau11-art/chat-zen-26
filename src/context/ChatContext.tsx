@@ -365,16 +365,32 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
             
             // Show interactive sonner toast - click anywhere to open conversation
             const convId = newMsg.conversation_id;
-            toast(senderName, {
+            const toastId = toast(senderName, {
               description: msgContent.length > 60 ? msgContent.slice(0, 60) + '…' : msgContent,
               duration: 5000,
-              onClick: () => {
-                setActiveConversationId(convId);
-                setMobileShowingChat(true);
-                toast.dismiss();
+              action: {
+                label: 'Xem',
+                onClick: () => {
+                  setActiveConversationId(convId);
+                  setMobileShowingChat(true);
+                },
               },
-              style: { cursor: 'pointer' },
             });
+
+            // Make entire toast clickable by adding click listener after render
+            setTimeout(() => {
+              const toastEl = document.querySelector(`[data-sonner-toast][data-toast-id="${toastId}"]`) as HTMLElement;
+              if (toastEl) {
+                toastEl.style.cursor = 'pointer';
+                toastEl.addEventListener('click', (e) => {
+                  const target = e.target as HTMLElement;
+                  if (target.closest('button')) return; // let button handle itself
+                  setActiveConversationId(convId);
+                  setMobileShowingChat(true);
+                  toast.dismiss(toastId);
+                });
+              }
+            }, 100);
 
             setConversations(prev => prev.map(c =>
               c.id === newMsg.conversation_id
