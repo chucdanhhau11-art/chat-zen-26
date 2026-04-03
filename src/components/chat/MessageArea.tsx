@@ -364,6 +364,12 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
     });
   }, []);
 
+  // Count unread messages not visible (above viewport)
+  const unreadCount = useMemo(() => {
+    if (!user) return 0;
+    return messages.filter(m => m.sender_id !== user.id && m.status !== 'read').length;
+  }, [messages, user]);
+
   const handleMessagesScroll = useCallback(() => {
     const el = messagesContainerRef.current;
     if (!el) return;
@@ -371,9 +377,25 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
     setShowScrollBtn(distFromBottom > 200);
   }, []);
 
+  // Scroll to bottom instantly when switching conversations
   useEffect(() => {
-    if (messages.length > 0) scrollToBottom('smooth');
-  }, [messages.length, scrollToBottom]);
+    if (activeConversationId && messages.length > 0) {
+      scrollToBottom('instant');
+    }
+  }, [activeConversationId]);
+
+  // Scroll to bottom smoothly when new messages arrive
+  useEffect(() => {
+    if (messages.length > 0 && messages.length !== prevMessagesLenRef.current) {
+      const el = messagesContainerRef.current;
+      const isNearBottom = el ? (el.scrollHeight - el.scrollTop - el.clientHeight < 300) : true;
+      const lastMsg = messages[messages.length - 1];
+      const isOwnMessage = lastMsg?.sender_id === user?.id;
+      if (isOwnMessage || isNearBottom) {
+        scrollToBottom('smooth');
+      }
+    }
+  }, [messages.length, scrollToBottom, user?.id]);
 
   useEffect(() => {
     if (messages.length > prevMessagesLenRef.current && prevMessagesLenRef.current > 0) {
