@@ -5,7 +5,7 @@ import { useAuth } from '@/context/AuthContext';
 import ChatAvatar from './ChatAvatar';
 import { formatTime } from '@/lib/chatUtils';
 import { cn } from '@/lib/utils';
-import { toast } from 'sonner';
+
 import { motion, AnimatePresence } from 'framer-motion';
 import type { Tables } from '@/integrations/supabase/types';
 import NewChatDialog from './NewChatDialog';
