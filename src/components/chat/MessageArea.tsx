@@ -1328,9 +1328,14 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.8 }}
               onClick={() => scrollToBottom('smooth')}
-              className="sticky bottom-4 left-1/2 -translate-x-1/2 ml-auto mr-auto w-10 h-10 flex items-center justify-center bg-primary text-primary-foreground rounded-full shadow-lg hover:bg-primary/90 transition-colors z-10"
+              className="sticky bottom-4 left-1/2 -translate-x-1/2 ml-auto mr-auto flex items-center gap-1.5 bg-primary text-primary-foreground rounded-full shadow-lg hover:bg-primary/90 transition-colors z-10 px-3 py-2"
               title="Về tin nhắn mới nhất"
             >
+              {unreadCount > 0 && (
+                <span className="bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </span>
+              )}
               <ChevronDown className="h-5 w-5" />
             </motion.button>
           )}
