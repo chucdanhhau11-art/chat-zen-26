@@ -363,18 +363,17 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const msgContent = newMsg.content || '📎 File';
             showBrowserNotification(senderName, msgContent);
             
-            // Show interactive sonner toast - click to open conversation
+            // Show interactive sonner toast - click anywhere to open conversation
             const convId = newMsg.conversation_id;
             toast(senderName, {
               description: msgContent.length > 60 ? msgContent.slice(0, 60) + '…' : msgContent,
               duration: 5000,
-              action: {
-                label: 'Xem',
-                onClick: () => {
-                  setActiveConversationId(convId);
-                  setMobileShowingChat(true);
-                },
+              onClick: () => {
+                setActiveConversationId(convId);
+                setMobileShowingChat(true);
+                toast.dismiss();
               },
+              style: { cursor: 'pointer' },
             });
 
             setConversations(prev => prev.map(c =>
