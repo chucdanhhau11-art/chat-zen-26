@@ -1411,7 +1411,7 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs text-muted-foreground font-medium">{previewFiles.length} file đã chọn</span>
             <div className="flex items-center gap-2">
-              <button onClick={() => fileInputRef.current?.click()} className="text-xs text-primary hover:underline">+ Thêm file</button>
+              <label htmlFor="mobile-file-input" className="text-xs text-primary hover:underline cursor-pointer">+ Thêm file</label>
               <button onClick={cancelPreview} className="text-xs text-destructive hover:underline">Xoá tất cả</button>
             </div>
           </div>
