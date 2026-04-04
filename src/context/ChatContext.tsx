@@ -341,15 +341,22 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => clearTimeout(timer);
   }, [user, fetchConversations]);
 
+  // Debounced fetch to prevent rapid-fire refetches from realtime events
+  const debouncedFetchRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const debouncedFetchConversations = useCallback(() => {
+    if (debouncedFetchRef.current) clearTimeout(debouncedFetchRef.current);
+    debouncedFetchRef.current = setTimeout(() => fetchConversations(false), 500);
+  }, [fetchConversations]);
+
   // Listen for conversation changes (new conversations, updates)
   useEffect(() => {
     if (!user) return;
     let channel = supabase.channel('conversations-changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'conversations' }, () => {
-        fetchConversations(false);
+        debouncedFetchConversations();
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'conversation_members' }, () => {
-        fetchConversations(false);
+        debouncedFetchConversations();
       })
       .subscribe((status) => {
         if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
@@ -357,14 +364,14 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setTimeout(() => {
             supabase.removeChannel(channel);
             channel = supabase.channel('conversations-changes-retry-' + Date.now())
-              .on('postgres_changes', { event: '*', schema: 'public', table: 'conversations' }, () => fetchConversations(false))
-              .on('postgres_changes', { event: '*', schema: 'public', table: 'conversation_members' }, () => fetchConversations(false))
+              .on('postgres_changes', { event: '*', schema: 'public', table: 'conversations' }, () => debouncedFetchConversations())
+              .on('postgres_changes', { event: '*', schema: 'public', table: 'conversation_members' }, () => debouncedFetchConversations())
               .subscribe();
           }, 2000);
         }
       });
     return () => { supabase.removeChannel(channel); };
-  }, [user, fetchConversations]);
+  }, [user, debouncedFetchConversations]);
 
   // Global listener for new messages → unread counts + notification sound
   useEffect(() => {
