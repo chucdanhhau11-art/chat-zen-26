@@ -1546,9 +1546,9 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
               exit={{ opacity: 0 }}
               className="flex items-end gap-2"
             >
-              <button onClick={() => fileInputRef.current?.click()} className="p-2 rounded-lg hover:bg-tg-hover transition-colors flex-shrink-0">
+              <label htmlFor="mobile-file-input" className="p-2 rounded-lg hover:bg-tg-hover transition-colors flex-shrink-0 cursor-pointer">
                 <Paperclip className="h-5 w-5 text-muted-foreground" />
-              </button>
+              </label>
               <div className="flex-1">
                 <textarea
                   value={input}
