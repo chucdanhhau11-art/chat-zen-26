@@ -1443,7 +1443,7 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
         </div>
       )}
 
-      <input ref={fileInputRef} type="file" multiple accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar" className="hidden" onChange={handleFileSelect} />
+      <input ref={fileInputRef} type="file" multiple accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar" className="hidden" onChange={handleFileSelect} tabIndex={-1} />
 
       {/* Inline results dropdown */}
       {showInlineResults && (
