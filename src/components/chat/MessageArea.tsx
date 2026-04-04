@@ -1411,7 +1411,7 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs text-muted-foreground font-medium">{previewFiles.length} file đã chọn</span>
             <div className="flex items-center gap-2">
-              <button onClick={() => fileInputRef.current?.click()} className="text-xs text-primary hover:underline">+ Thêm file</button>
+              <label htmlFor="mobile-file-input" className="text-xs text-primary hover:underline cursor-pointer">+ Thêm file</label>
               <button onClick={cancelPreview} className="text-xs text-destructive hover:underline">Xoá tất cả</button>
             </div>
           </div>
@@ -1443,7 +1443,7 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
         </div>
       )}
 
-      <input ref={fileInputRef} type="file" multiple accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar" className="hidden" onChange={handleFileSelect} />
+      <input id="mobile-file-input" ref={fileInputRef} type="file" multiple accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar" className="hidden" onChange={handleFileSelect} tabIndex={-1} />
 
       {/* Inline results dropdown */}
       {showInlineResults && (
@@ -1546,9 +1546,9 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
               exit={{ opacity: 0 }}
               className="flex items-end gap-2"
             >
-              <button onClick={() => fileInputRef.current?.click()} className="p-2 rounded-lg hover:bg-tg-hover transition-colors flex-shrink-0">
+              <label htmlFor="mobile-file-input" className="p-2 rounded-lg hover:bg-tg-hover transition-colors flex-shrink-0 cursor-pointer">
                 <Paperclip className="h-5 w-5 text-muted-foreground" />
-              </button>
+              </label>
               <div className="flex-1">
                 <textarea
                   value={input}
