@@ -250,50 +250,71 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     fetchProfiles();
   }, [user]);
 
+  const fetchConversationsLock = useRef(false);
   const fetchConversations = useCallback(async (showLoading = false) => {
     if (!user) return;
+    if (fetchConversationsLock.current) return;
+    fetchConversationsLock.current = true;
     if (showLoading) setLoadingConversations(true);
 
-    const { data: memberships } = await supabase.from('conversation_members').select('conversation_id').eq('user_id', user.id);
-    if (!memberships || memberships.length === 0) {
-      setConversations([]);
+    try {
+      const { data: memberships } = await supabase.from('conversation_members').select('conversation_id').eq('user_id', user.id);
+      if (!memberships || memberships.length === 0) {
+        setConversations([]);
+        setLoadingConversations(false);
+        initialLoadDone.current = true;
+        return;
+      }
+      const convIds = memberships.map(m => m.conversation_id);
+
+      // Batch fetch: conversations, all members, last messages, unread counts
+      const [convsRes, allMembersRes, lastMessagesRes] = await Promise.all([
+        supabase.from('conversations').select('*').in('id', convIds).order('updated_at', { ascending: false }),
+        supabase.from('conversation_members').select('*').in('conversation_id', convIds),
+        // Get recent messages for all conversations at once (last 1 per conv via ordering)
+        supabase.from('messages').select('*').in('conversation_id', convIds).order('created_at', { ascending: false }),
+      ]);
+
+      const convs = convsRes.data;
+      if (!convs) { setLoadingConversations(false); initialLoadDone.current = true; return; }
+      const allMembers = allMembersRes.data || [];
+      const allRecentMessages = lastMessagesRes.data || [];
+
+      // Build last message map (first occurrence per conversation_id is the latest)
+      const lastMsgMap: Record<string, Message> = {};
+      for (const msg of allRecentMessages) {
+        if (!lastMsgMap[msg.conversation_id]) {
+          lastMsgMap[msg.conversation_id] = msg;
+        }
+      }
+
+      // Build unread count map from recent messages
+      const unreadMap: Record<string, number> = {};
+      for (const msg of allRecentMessages) {
+        if (msg.sender_id !== user.id && msg.status !== 'read') {
+          unreadMap[msg.conversation_id] = (unreadMap[msg.conversation_id] || 0) + 1;
+        }
+      }
+
+      const currentProfiles = profilesRef.current;
+      const conversationsWithDetails: ConversationWithDetails[] = convs.map(conv => {
+        const members = allMembers.filter(m => m.conversation_id === conv.id).map(m => ({ ...m, profile: currentProfiles[m.user_id] }));
+        const lastMsg = lastMsgMap[conv.id];
+        const lastMessage = lastMsg ? { ...lastMsg, sender: currentProfiles[lastMsg.sender_id] } : undefined;
+        const unread = unreadMap[conv.id] || unreadCountsRef.current[conv.id] || 0;
+        unreadCountsRef.current[conv.id] = unread;
+        return { ...conv, members, lastMessage, unreadCount: unread };
+      });
+
+      setConversations(conversationsWithDetails);
+      setUnreadCounts({ ...unreadCountsRef.current });
+    } catch (err) {
+      console.error('fetchConversations error:', err);
+    } finally {
       setLoadingConversations(false);
       initialLoadDone.current = true;
-      return;
+      fetchConversationsLock.current = false;
     }
-    const convIds = memberships.map(m => m.conversation_id);
-    const { data: convs } = await supabase.from('conversations').select('*').in('id', convIds).order('updated_at', { ascending: false });
-    if (!convs) { setLoadingConversations(false); initialLoadDone.current = true; return; }
-    const { data: allMembers } = await supabase.from('conversation_members').select('*').in('conversation_id', convIds);
-
-    const currentProfiles = profilesRef.current;
-    const conversationsWithDetails: ConversationWithDetails[] = await Promise.all(
-      convs.map(async (conv) => {
-        const members = (allMembers || []).filter(m => m.conversation_id === conv.id).map(m => ({ ...m, profile: currentProfiles[m.user_id] }));
-        const { data: lastMsgData } = await supabase.from('messages').select('*').eq('conversation_id', conv.id).order('created_at', { ascending: false }).limit(1);
-        const lastMessage = lastMsgData?.[0] ? { ...lastMsgData[0], sender: currentProfiles[lastMsgData[0].sender_id] } : undefined;
-        
-        // Calculate unread from DB: messages not sent by me that are not 'read'
-        let unread = unreadCountsRef.current[conv.id] || 0;
-        if (user) {
-          const { count } = await supabase.from('messages')
-            .select('*', { count: 'exact', head: true })
-            .eq('conversation_id', conv.id)
-            .neq('sender_id', user.id)
-            .neq('status', 'read');
-          if (count !== null && count > unread) {
-            unread = count;
-            unreadCountsRef.current = { ...unreadCountsRef.current, [conv.id]: unread };
-            setUnreadCounts(prev => ({ ...prev, [conv.id]: unread }));
-          }
-        }
-        
-        return { ...conv, members, lastMessage, unreadCount: unread };
-      })
-    );
-    setConversations(conversationsWithDetails);
-    setLoadingConversations(false);
-    initialLoadDone.current = true;
   }, [user]);
 
   // Initial load + auto-create Saved Messages
