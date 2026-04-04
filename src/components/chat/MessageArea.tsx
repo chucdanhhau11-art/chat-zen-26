@@ -218,7 +218,6 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
   const inlineDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const [recordingCancelled, setRecordingCancelled] = useState(false);
@@ -436,7 +435,7 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
     addFilesToPreview(files);
-    if (fileInputRef.current) fileInputRef.current.value = '';
+    e.target.value = '';
   }, [addFilesToPreview]);
 
   const handlePaste = useCallback((e: React.ClipboardEvent) => {
@@ -1411,7 +1410,17 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs text-muted-foreground font-medium">{previewFiles.length} file đã chọn</span>
             <div className="flex items-center gap-2">
-              <label htmlFor="mobile-file-input" className="text-xs text-primary hover:underline cursor-pointer">+ Thêm file</label>
+              <label className="relative inline-flex text-xs text-primary hover:underline cursor-pointer">
+                <span>+ Thêm file</span>
+                <input
+                  type="file"
+                  multiple
+                  accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar"
+                  className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                  onChange={handleFileSelect}
+                  aria-label="Thêm file"
+                />
+              </label>
               <button onClick={cancelPreview} className="text-xs text-destructive hover:underline">Xoá tất cả</button>
             </div>
           </div>
@@ -1442,8 +1451,6 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
           </div>
         </div>
       )}
-
-      <input id="mobile-file-input" ref={fileInputRef} type="file" multiple accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar" className="hidden" onChange={handleFileSelect} tabIndex={-1} />
 
       {/* Inline results dropdown */}
       {showInlineResults && (
@@ -1546,8 +1553,16 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
               exit={{ opacity: 0 }}
               className="flex items-end gap-2"
             >
-              <label htmlFor="mobile-file-input" className="p-2 rounded-lg hover:bg-tg-hover transition-colors flex-shrink-0 cursor-pointer">
+              <label className="relative p-2 rounded-lg hover:bg-tg-hover transition-colors flex-shrink-0 cursor-pointer">
                 <Paperclip className="h-5 w-5 text-muted-foreground" />
+                <input
+                  type="file"
+                  multiple
+                  accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar"
+                  className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                  onChange={handleFileSelect}
+                  aria-label="Chọn ảnh hoặc file"
+                />
               </label>
               <div className="flex-1">
                 <textarea
@@ -1594,7 +1609,6 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
                   onMouseDown={(e) => e.preventDefault()}
-                  onTouchStart={(e) => e.preventDefault()}
                   onClick={handleSend}
                   disabled={uploading}
                   className="p-2.5 rounded-full bg-primary hover:bg-primary/90 transition-colors flex-shrink-0 disabled:opacity-50"
