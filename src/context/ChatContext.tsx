@@ -160,15 +160,50 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
   const unreadCountsRef = useRef<Record<string, number>>({});
   const profilesRef = useRef<Record<string, Profile>>({});
+  const conversationsRef = useRef<ConversationWithDetails[]>([]);
+  const conversationIdsRef = useRef<string[]>([]);
   const activeConversationIdRef = useRef<string | null>(null);
   const initialLoadDone = useRef(false);
+  const activeMessagesFetchIdRef = useRef(0);
 
   const [friendships, setFriendships] = useState<Friendship[]>([]);
   const acceptFriendRequestRef = useRef<(id: string) => Promise<void>>();
 
   useEffect(() => { profilesRef.current = profiles; }, [profiles]);
+  useEffect(() => {
+    conversationsRef.current = conversations;
+    conversationIdsRef.current = conversations.map(conv => conv.id);
+  }, [conversations]);
   useEffect(() => { activeConversationIdRef.current = activeConversationId; }, [activeConversationId]);
   useEffect(() => { unreadCountsRef.current = unreadCounts; }, [unreadCounts]);
+
+  const sortConversationsByRecent = useCallback((items: ConversationWithDetails[]) => {
+    return [...items].sort((a, b) => {
+      const aTime = new Date(a.updated_at || a.lastMessage?.created_at || 0).getTime();
+      const bTime = new Date(b.updated_at || b.lastMessage?.created_at || 0).getTime();
+      return bTime - aTime;
+    });
+  }, []);
+
+  const mergeConversationMessage = useCallback((message: Message) => {
+    setConversations(prev => {
+      let changed = false;
+      const next = prev.map(conv => {
+        if (conv.id !== message.conversation_id) return conv;
+        changed = true;
+        return {
+          ...conv,
+          updated_at: message.created_at,
+          lastMessage: {
+            ...message,
+            sender: profilesRef.current[message.sender_id],
+          },
+        };
+      });
+
+      return changed ? sortConversationsByRecent(next) : prev;
+    });
+  }, [sortConversationsByRecent]);
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', darkMode);
@@ -261,6 +296,8 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const { data: memberships } = await supabase.from('conversation_members').select('conversation_id').eq('user_id', user.id);
       if (!memberships || memberships.length === 0) {
         setConversations([]);
+        unreadCountsRef.current = {};
+        setUnreadCounts({});
         setLoadingConversations(false);
         initialLoadDone.current = true;
         return;
@@ -306,7 +343,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return { ...conv, members, lastMessage, unreadCount: unread };
       });
 
-      setConversations(conversationsWithDetails);
+      setConversations(sortConversationsByRecent(conversationsWithDetails));
       setUnreadCounts({ ...unreadCountsRef.current });
     } catch (err) {
       console.error('fetchConversations error:', err);
@@ -315,7 +352,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       initialLoadDone.current = true;
       fetchConversationsLock.current = false;
     }
-  }, [user]);
+  }, [user, sortConversationsByRecent]);
 
   // Initial load + auto-create Saved Messages
   useEffect(() => {
@@ -348,101 +385,150 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     debouncedFetchRef.current = setTimeout(() => fetchConversations(false), 500);
   }, [fetchConversations]);
 
-  // Listen for conversation changes (new conversations, updates)
+  useEffect(() => {
+    return () => {
+      if (debouncedFetchRef.current) clearTimeout(debouncedFetchRef.current);
+    };
+  }, []);
+
+  // Listen only for membership changes related to current user to avoid global refetch loops
   useEffect(() => {
     if (!user) return;
-    let channel = supabase.channel('conversations-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'conversations' }, () => {
-        debouncedFetchConversations();
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'conversation_members' }, () => {
-        debouncedFetchConversations();
-      })
-      .subscribe((status) => {
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const connectChannel = (channelName: string) => {
+      const nextChannel = supabase.channel(channelName)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'conversation_members',
+            filter: `user_id=eq.${user.id}`,
+          },
+          () => {
+            debouncedFetchConversations();
+          }
+        );
+
+      nextChannel.subscribe((status) => {
         if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-          console.warn('conversations-changes channel error, reconnecting...');
-          setTimeout(() => {
-            supabase.removeChannel(channel);
-            channel = supabase.channel('conversations-changes-retry-' + Date.now())
-              .on('postgres_changes', { event: '*', schema: 'public', table: 'conversations' }, () => debouncedFetchConversations())
-              .on('postgres_changes', { event: '*', schema: 'public', table: 'conversation_members' }, () => debouncedFetchConversations())
-              .subscribe();
+          console.warn('conversation-members channel error, reconnecting...');
+          if (reconnectTimer) clearTimeout(reconnectTimer);
+          reconnectTimer = setTimeout(() => {
+            supabase.removeChannel(nextChannel);
+            channel = connectChannel(`conversation-members:${user.id}:${Date.now()}`);
           }, 2000);
         }
       });
-    return () => { supabase.removeChannel(channel); };
+
+      return nextChannel;
+    };
+
+    let channel = connectChannel(`conversation-members:${user.id}`);
+
+    return () => {
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      supabase.removeChannel(channel);
+    };
   }, [user, debouncedFetchConversations]);
+
+  const realtimeConversationIds = React.useMemo(
+    () => [...new Set(conversations.map(conv => conv.id))].sort(),
+    [conversations]
+  );
+  const realtimeConversationIdsKey = realtimeConversationIds.join(',');
 
   // Global listener for new messages → unread counts + notification sound
   useEffect(() => {
-    if (!user) return;
-    const createChannel = (name: string) => supabase.channel(name)
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' },
-        (payload: RealtimePostgresChangesPayload<Message>) => {
-          const newMsg = payload.new as Message;
-          if (!newMsg || newMsg.sender_id === user.id) return;
-          if (activeConversationIdRef.current !== newMsg.conversation_id) {
-            const newCount = (unreadCountsRef.current[newMsg.conversation_id] || 0) + 1;
-            unreadCountsRef.current = { ...unreadCountsRef.current, [newMsg.conversation_id]: newCount };
-            setUnreadCounts(prev => ({ ...prev, [newMsg.conversation_id]: newCount }));
-            playNotificationSound();
-            const senderProfile = profilesRef.current[newMsg.sender_id];
-            const senderName = senderProfile?.display_name || 'Tin nhắn mới';
-            const msgContent = newMsg.content || '📎 File';
-            showBrowserNotification(senderName, msgContent);
-            
-            // Show interactive sonner toast - click anywhere to open conversation
-            const convId = newMsg.conversation_id;
-            const toastId = toast(senderName, {
-              description: msgContent.length > 60 ? msgContent.slice(0, 60) + '…' : msgContent,
-              duration: 5000,
-              action: {
-                label: 'Xem',
-                onClick: () => {
-                  setActiveConversationId(convId);
-                  setMobileShowingChat(true);
-                },
-              },
-            });
+    if (!user || realtimeConversationIds.length === 0) return;
 
-            // Make entire toast clickable by adding click listener after render
-            setTimeout(() => {
-              const toastEl = document.querySelector(`[data-sonner-toast][data-toast-id="${toastId}"]`) as HTMLElement;
-              if (toastEl) {
-                toastEl.style.cursor = 'pointer';
-                toastEl.addEventListener('click', (e) => {
-                  const target = e.target as HTMLElement;
-                  if (target.closest('button')) return; // let button handle itself
-                  setActiveConversationId(convId);
-                  setMobileShowingChat(true);
-                  toast.dismiss(toastId);
-                });
-              }
-            }, 100);
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 
-            setConversations(prev => prev.map(c =>
-              c.id === newMsg.conversation_id
-                ? { ...c, unreadCount: (c.unreadCount || 0) + 1, lastMessage: { ...newMsg, sender: profilesRef.current[newMsg.sender_id] } }
-                : c
-            ));
-          }
+    const handleInsert = (payload: RealtimePostgresChangesPayload<Message>) => {
+      const newMsg = payload.new as Message;
+      if (!newMsg) return;
+
+      mergeConversationMessage(newMsg);
+
+      if (newMsg.sender_id === user.id) return;
+      if (activeConversationIdRef.current === newMsg.conversation_id) return;
+
+      const newCount = (unreadCountsRef.current[newMsg.conversation_id] || 0) + 1;
+      unreadCountsRef.current = { ...unreadCountsRef.current, [newMsg.conversation_id]: newCount };
+      setUnreadCounts(prev => ({ ...prev, [newMsg.conversation_id]: newCount }));
+      playNotificationSound();
+
+      const senderProfile = profilesRef.current[newMsg.sender_id];
+      const senderName = senderProfile?.display_name || 'Tin nhắn mới';
+      const msgContent = newMsg.content || '📎 File';
+      showBrowserNotification(senderName, msgContent);
+
+      const convId = newMsg.conversation_id;
+      const toastId = toast(senderName, {
+        description: msgContent.length > 60 ? msgContent.slice(0, 60) + '…' : msgContent,
+        duration: 5000,
+        action: {
+          label: 'Xem',
+          onClick: () => {
+            setActiveConversationId(convId);
+            setMobileShowingChat(true);
+          },
+        },
+      });
+
+      setTimeout(() => {
+        const toastEl = document.querySelector(`[data-sonner-toast][data-toast-id="${toastId}"]`) as HTMLElement;
+        if (toastEl) {
+          toastEl.style.cursor = 'pointer';
+          toastEl.addEventListener('click', (e) => {
+            const target = e.target as HTMLElement;
+            if (target.closest('button')) return;
+            setActiveConversationId(convId);
+            setMobileShowingChat(true);
+            toast.dismiss(toastId);
+          }, { once: true });
         }
-      );
+      }, 100);
+    };
 
-    let channel = createChannel('global-messages-notify');
-    channel.subscribe((status) => {
-      if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-        console.warn('global-messages-notify channel error, reconnecting...');
-        setTimeout(() => {
-          supabase.removeChannel(channel);
-          channel = createChannel('global-messages-retry-' + Date.now());
-          channel.subscribe();
-        }, 2000);
-      }
-    });
+    const connectChannel = (channelName: string) => {
+      let nextChannel = supabase.channel(channelName);
 
-    return () => { supabase.removeChannel(channel); };
-  }, [user]);
+      realtimeConversationIds.forEach((conversationId) => {
+        nextChannel = nextChannel.on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'messages',
+            filter: `conversation_id=eq.${conversationId}`,
+          },
+          handleInsert
+        );
+      });
+
+      nextChannel.subscribe((status) => {
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          console.warn('global-messages channel error, reconnecting...');
+          if (reconnectTimer) clearTimeout(reconnectTimer);
+          reconnectTimer = setTimeout(() => {
+            supabase.removeChannel(nextChannel);
+            channel = connectChannel(`global-messages:${user.id}:${Date.now()}`);
+          }, 2000);
+        }
+      });
+
+      return nextChannel;
+    };
+
+    let channel = connectChannel(`global-messages:${user.id}:${realtimeConversationIds.length}`);
+
+    return () => {
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      supabase.removeChannel(channel);
+    };
+  }, [user, realtimeConversationIds, realtimeConversationIdsKey, mergeConversationMessage]);
 
   // Reconnect realtime + refetch data when tab becomes visible again
   useEffect(() => {
@@ -474,45 +560,99 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => { userIdRef.current = user?.id ?? null; }, [user]);
 
   useEffect(() => {
-    if (!activeConversationId || !userIdRef.current) { setMessages([]); return; }
+    if (!activeConversationId || !userIdRef.current) {
+      activeMessagesFetchIdRef.current += 1;
+      setMessages([]);
+      setLoadingMessages(false);
+      return;
+    }
+
+    let cancelled = false;
+    const fetchId = ++activeMessagesFetchIdRef.current;
+
     const fetchMessages = async () => {
       setLoadingMessages(true);
-      const { data } = await supabase.from('messages').select('*').eq('conversation_id', activeConversationId).order('created_at', { ascending: true }).limit(100);
-      setMessages(data || []);
-      setLoadingMessages(false);
+
+      try {
+        const { data, error } = await supabase
+          .from('messages')
+          .select('*')
+          .eq('conversation_id', activeConversationId)
+          .order('created_at', { ascending: true })
+          .limit(100);
+
+        if (cancelled || fetchId !== activeMessagesFetchIdRef.current) return;
+
+        if (error) {
+          console.error('fetchMessages error:', error);
+          setMessages([]);
+          return;
+        }
+
+        setMessages(data || []);
+      } finally {
+        if (!cancelled && fetchId === activeMessagesFetchIdRef.current) {
+          setLoadingMessages(false);
+        }
+      }
     };
+
     fetchMessages();
+
+    return () => {
+      cancelled = true;
+    };
   }, [activeConversationId]);
 
   // Realtime messages
   useEffect(() => {
     if (!activeConversationId) return;
+
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+
     const handler = (payload: RealtimePostgresChangesPayload<Message>) => {
       if (payload.eventType === 'INSERT') {
-        setMessages(prev => [...prev, payload.new as Message]);
+        const inserted = payload.new as Message;
+        setMessages(prev => prev.some(message => message.id === inserted.id) ? prev : [...prev, inserted]);
+        mergeConversationMessage(inserted);
       } else if (payload.eventType === 'UPDATE') {
         const updated = payload.new as Message;
         setMessages(prev => prev.map(m => m.id === updated.id ? updated : m));
+        mergeConversationMessage(updated);
       } else if (payload.eventType === 'DELETE') {
         const old = payload.old as any;
-        if (old?.id) setMessages(prev => prev.filter(m => m.id !== old.id));
+        if (old?.id) {
+          setMessages(prev => prev.filter(m => m.id !== old.id));
+          debouncedFetchConversations();
+        }
       }
     };
-    let channel = supabase.channel(`messages:${activeConversationId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'messages', filter: `conversation_id=eq.${activeConversationId}` }, handler)
-      .subscribe((status) => {
+
+    const connectChannel = (channelName: string) => {
+      const nextChannel = supabase.channel(channelName)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'messages', filter: `conversation_id=eq.${activeConversationId}` }, handler);
+
+      nextChannel.subscribe((status) => {
         if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
           console.warn(`messages:${activeConversationId} channel error, reconnecting...`);
-          setTimeout(() => {
-            supabase.removeChannel(channel);
-            channel = supabase.channel(`messages-retry:${activeConversationId}:${Date.now()}`)
-              .on('postgres_changes', { event: '*', schema: 'public', table: 'messages', filter: `conversation_id=eq.${activeConversationId}` }, handler)
-              .subscribe();
+          if (reconnectTimer) clearTimeout(reconnectTimer);
+          reconnectTimer = setTimeout(() => {
+            supabase.removeChannel(nextChannel);
+            channel = connectChannel(`messages:${activeConversationId}:${Date.now()}`);
           }, 2000);
         }
       });
-    return () => { supabase.removeChannel(channel); };
-  }, [activeConversationId]);
+
+      return nextChannel;
+    };
+
+    let channel = connectChannel(`messages:${activeConversationId}`);
+
+    return () => {
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      supabase.removeChannel(channel);
+    };
+  }, [activeConversationId, debouncedFetchConversations, mergeConversationMessage]);
 
   // Realtime profile updates
   useEffect(() => {
