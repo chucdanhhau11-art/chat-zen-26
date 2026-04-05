@@ -1608,7 +1608,6 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
                 <motion.button
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
-                  onMouseDown={(e) => e.preventDefault()}
                   onClick={handleSend}
                   disabled={uploading}
                   className="p-2.5 rounded-full bg-primary hover:bg-primary/90 transition-colors flex-shrink-0 disabled:opacity-50"
