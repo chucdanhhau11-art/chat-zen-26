@@ -20,7 +20,7 @@ import logoImg from '@/assets/logo.png';
 const isImageType = (type: string) => type.startsWith('image/');
 const isVideoType = (type: string) => type.startsWith('video/');
 
-const withTimeout = async <T,>(promise: Promise<T>, timeoutMs: number, timeoutMessage: string): Promise<T> => {
+const withTimeout = async <T,>(promise: PromiseLike<T>, timeoutMs: number, timeoutMessage: string): Promise<T> => {
   let timeoutId: ReturnType<typeof setTimeout> | undefined;
 
   const timeoutPromise = new Promise<never>((_, reject) => {
@@ -51,17 +51,25 @@ const touchConversationInBackground = (conversationId: string) => {
 const uploadChatFile = async (path: string, file: File) => {
   const contentType = file.type || 'application/octet-stream';
 
-  const directUpload = await withTimeout(
-    supabase.storage.from('chat-files').upload(path, file, {
-      contentType,
-      upsert: true,
-    }),
-    15000,
-    'UPLOAD_TIMEOUT_DIRECT'
-  ).catch((error) => ({ error }));
+  try {
+    const directUpload = await withTimeout(
+      supabase.storage.from('chat-files').upload(path, file, {
+        contentType,
+        upsert: true,
+      }),
+      15000,
+      'UPLOAD_TIMEOUT_DIRECT'
+    );
 
-  if (!directUpload.error) {
+    if (directUpload.error) {
+      throw directUpload.error;
+    }
+
     return;
+  } catch (error: any) {
+    if (!String(error?.message || error).includes('UPLOAD_TIMEOUT_DIRECT')) {
+      throw error;
+    }
   }
 
   const arrayBuffer = await withTimeout(file.arrayBuffer(), 10000, 'READ_FILE_TIMEOUT');
@@ -570,7 +578,7 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
         if (isImageType(file.type)) messageType = 'image';
         else if (isVideoType(file.type)) messageType = 'video';
 
-        const { error: msgError } = await withTimeout(supabase.from('messages').insert({
+        const { error: msgError } = await withTimeout(Promise.resolve(supabase.from('messages').insert({
           conversation_id: conversationId,
           sender_id: user.id,
           content: i === 0 ? caption : null,
@@ -579,7 +587,7 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
           file_name: file.name,
           file_size: file.size,
           reply_to: i === 0 ? replyId : null,
-        }), 15000, 'MESSAGE_INSERT_TIMEOUT');
+        })), 15000, 'MESSAGE_INSERT_TIMEOUT');
         if (msgError) throw msgError;
       }
 
