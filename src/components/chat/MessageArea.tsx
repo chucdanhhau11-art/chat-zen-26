@@ -20,6 +20,67 @@ import logoImg from '@/assets/logo.png';
 const isImageType = (type: string) => type.startsWith('image/');
 const isVideoType = (type: string) => type.startsWith('video/');
 
+const withTimeout = async <T,>(promise: Promise<T>, timeoutMs: number, timeoutMessage: string): Promise<T> => {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(() => {
+      reject(new Error(timeoutMessage));
+    }, timeoutMs);
+  });
+
+  try {
+    return await Promise.race([promise, timeoutPromise]);
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
+  }
+};
+
+const touchConversationInBackground = (conversationId: string) => {
+  void supabase
+    .from('conversations')
+    .update({ updated_at: new Date().toISOString() })
+    .eq('id', conversationId)
+    .then(({ error }) => {
+      if (error) {
+        console.warn('Failed to update conversation timestamp:', error);
+      }
+    });
+};
+
+const uploadChatFile = async (path: string, file: File) => {
+  const contentType = file.type || 'application/octet-stream';
+
+  const directUpload = await withTimeout(
+    supabase.storage.from('chat-files').upload(path, file, {
+      contentType,
+      upsert: true,
+    }),
+    15000,
+    'UPLOAD_TIMEOUT_DIRECT'
+  ).catch((error) => ({ error }));
+
+  if (!directUpload.error) {
+    return;
+  }
+
+  const arrayBuffer = await withTimeout(file.arrayBuffer(), 10000, 'READ_FILE_TIMEOUT');
+  const blob = new Blob([arrayBuffer], { type: contentType });
+
+  const fallbackUpload = await withTimeout(
+    supabase.storage.from('chat-files').upload(path, blob, {
+      contentType,
+      upsert: true,
+    }),
+    20000,
+    'UPLOAD_TIMEOUT_FALLBACK'
+  );
+
+  if (fallbackUpload.error) {
+    throw fallbackUpload.error;
+  }
+};
+
 const playNotificationSound = () => {
   try {
     const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -489,59 +550,55 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
   }, [addFilesToPreview]);
 
   const uploadAndSend = useCallback(async () => {
-    if (previewFiles.length === 0 || !user || !activeConversation) return;
+    if (uploading || previewFiles.length === 0 || !user || !activeConversation) return;
     setUploading(true);
 
-    // Safety timeout: force-clear uploading state after 60s
-    const safetyTimer = setTimeout(() => {
-      setUploading(false);
-      toast.error('Upload quá lâu, vui lòng thử lại.');
-    }, 60000);
-
     try {
+      const conversationId = activeConversation.id;
+      const caption = input.trim() || null;
+      const replyId = replyTo?.id || null;
+
       for (let i = 0; i < previewFiles.length; i++) {
         const file = previewFiles[i].file;
         const ext = file.name.split('.').pop() || 'bin';
         const path = `${user.id}/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
 
-        // Read file as ArrayBuffer for reliable mobile upload
-        const arrayBuffer = await file.arrayBuffer();
-        const blob = new Blob([arrayBuffer], { type: file.type || 'application/octet-stream' });
-
-        const { error: uploadError } = await supabase.storage
-          .from('chat-files')
-          .upload(path, blob, { contentType: file.type || 'application/octet-stream' });
-        if (uploadError) throw uploadError;
+        await uploadChatFile(path, file);
 
         const { data: urlData } = supabase.storage.from('chat-files').getPublicUrl(path);
         let messageType = 'file';
         if (isImageType(file.type)) messageType = 'image';
         else if (isVideoType(file.type)) messageType = 'video';
 
-        const { error: msgError } = await supabase.from('messages').insert({
-          conversation_id: activeConversation.id,
+        const { error: msgError } = await withTimeout(supabase.from('messages').insert({
+          conversation_id: conversationId,
           sender_id: user.id,
-          content: i === 0 ? (input.trim() || null) : null,
+          content: i === 0 ? caption : null,
           message_type: messageType,
           file_url: urlData.publicUrl,
           file_name: file.name,
           file_size: file.size,
-          reply_to: i === 0 ? (replyTo?.id || null) : null,
-        });
+          reply_to: i === 0 ? replyId : null,
+        }), 15000, 'MESSAGE_INSERT_TIMEOUT');
         if (msgError) throw msgError;
       }
-      await supabase.from('conversations').update({ updated_at: new Date().toISOString() }).eq('id', activeConversation.id);
+
       setInput('');
       setReplyTo(null);
       cancelPreview();
+      touchConversationInBackground(conversationId);
     } catch (err: any) {
       console.error('Upload error:', err);
-      toast.error('Lỗi upload: ' + (err?.message || err?.statusText || 'Unknown'));
+      const errorMessage = err?.message || err?.statusText || 'Unknown';
+      if (errorMessage.includes('TIMEOUT')) {
+        toast.error('Gửi file bị treo quá lâu trên điện thoại, đã dừng để tránh kẹt.');
+      } else {
+        toast.error('Lỗi upload: ' + errorMessage);
+      }
     } finally {
-      clearTimeout(safetyTimer);
       setUploading(false);
     }
-  }, [previewFiles, user, activeConversation, input, cancelPreview, replyTo]);
+  }, [previewFiles, user, activeConversation, input, cancelPreview, replyTo, uploading]);
 
   // Voice recording functions
   const startRecording = useCallback(async () => {
@@ -580,8 +637,7 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
         try {
           const ext = mimeType.includes('webm') ? 'webm' : 'ogg';
           const path = `${user.id}/voice_${Date.now()}.${ext}`;
-          const { error: upErr } = await supabase.storage.from('chat-files').upload(path, blob, { contentType: mimeType });
-          if (upErr) throw upErr;
+          await uploadChatFile(path, new File([blob], `voice_${Date.now()}.${ext}`, { type: mimeType }));
           const { data: urlData } = supabase.storage.from('chat-files').getPublicUrl(path);
           await supabase.from('messages').insert({
             conversation_id: activeConversation.id,
@@ -593,7 +649,7 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
             file_size: blob.size,
             reply_to: replyTo?.id || null,
           });
-          await supabase.from('conversations').update({ updated_at: new Date().toISOString() }).eq('id', activeConversation.id);
+          touchConversationInBackground(activeConversation.id);
           setReplyTo(null);
         } catch (err: any) {
           toast.error('Lỗi gửi ghi âm: ' + (err.message || 'Unknown'));
@@ -652,6 +708,7 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
   };
 
   const handleSend = async () => {
+    if (uploading) return;
     if (previewFiles.length > 0) { await uploadAndSend(); return; }
     if (!input.trim() || !activeConversation || !user) return;
     const text = input;
@@ -665,7 +722,7 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
       message_type: 'text',
       reply_to: reply,
     });
-    await supabase.from('conversations').update({ updated_at: new Date().toISOString() }).eq('id', activeConversation.id);
+    touchConversationInBackground(activeConversation.id);
 
     // If this is a BotFather conversation, process the message
     if (isBotFatherConversation(activeConversation.id)) {
