@@ -491,35 +491,54 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
   const uploadAndSend = useCallback(async () => {
     if (previewFiles.length === 0 || !user || !activeConversation) return;
     setUploading(true);
+
+    // Safety timeout: force-clear uploading state after 60s
+    const safetyTimer = setTimeout(() => {
+      setUploading(false);
+      toast.error('Upload quá lâu, vui lòng thử lại.');
+    }, 60000);
+
     try {
-      for (const pf of previewFiles) {
-        const file = pf.file;
-        const ext = file.name.split('.').pop();
+      for (let i = 0; i < previewFiles.length; i++) {
+        const file = previewFiles[i].file;
+        const ext = file.name.split('.').pop() || 'bin';
         const path = `${user.id}/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
-        const { error: uploadError } = await supabase.storage.from('chat-files').upload(path, file);
+
+        // Read file as ArrayBuffer for reliable mobile upload
+        const arrayBuffer = await file.arrayBuffer();
+        const blob = new Blob([arrayBuffer], { type: file.type || 'application/octet-stream' });
+
+        const { error: uploadError } = await supabase.storage
+          .from('chat-files')
+          .upload(path, blob, { contentType: file.type || 'application/octet-stream' });
         if (uploadError) throw uploadError;
+
         const { data: urlData } = supabase.storage.from('chat-files').getPublicUrl(path);
         let messageType = 'file';
         if (isImageType(file.type)) messageType = 'image';
         else if (isVideoType(file.type)) messageType = 'video';
-        await supabase.from('messages').insert({
+
+        const { error: msgError } = await supabase.from('messages').insert({
           conversation_id: activeConversation.id,
           sender_id: user.id,
-          content: previewFiles.indexOf(pf) === 0 ? (input.trim() || null) : null,
+          content: i === 0 ? (input.trim() || null) : null,
           message_type: messageType,
           file_url: urlData.publicUrl,
           file_name: file.name,
           file_size: file.size,
-          reply_to: previewFiles.indexOf(pf) === 0 ? (replyTo?.id || null) : null,
+          reply_to: i === 0 ? (replyTo?.id || null) : null,
         });
+        if (msgError) throw msgError;
       }
       await supabase.from('conversations').update({ updated_at: new Date().toISOString() }).eq('id', activeConversation.id);
       setInput('');
       setReplyTo(null);
       cancelPreview();
     } catch (err: any) {
-      toast.error('Lỗi upload: ' + (err.message || 'Unknown'));
+      console.error('Upload error:', err);
+      toast.error('Lỗi upload: ' + (err?.message || err?.statusText || 'Unknown'));
     } finally {
+      clearTimeout(safetyTimer);
       setUploading(false);
     }
   }, [previewFiles, user, activeConversation, input, cancelPreview, replyTo]);
