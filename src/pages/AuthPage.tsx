@@ -57,46 +57,60 @@ const AuthPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-md">
+    <div className="relative min-h-screen flex items-center justify-center p-4 overflow-hidden">
+      <div className="absolute inset-0 grid-bg opacity-40 pointer-events-none" />
+      <div className="absolute -top-40 -left-40 w-[500px] h-[500px] rounded-full bg-primary/20 blur-3xl pointer-events-none" />
+      <div className="absolute -bottom-40 -right-40 w-[500px] h-[500px] rounded-full bg-accent/20 blur-3xl pointer-events-none" />
+
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="relative w-full max-w-md">
         <div className="text-center mb-8">
-          <img src={logoImg} alt="Chim Cu Gáy" className="w-14 h-14 mx-auto mb-4 drop-shadow-lg rounded-full" />
-          <h1 className="text-2xl font-display font-bold">Chim Cu Gáy</h1>
-          <p className="text-muted-foreground text-sm mt-1">{isLogin ? 'Đăng nhập để tiếp tục' : 'Tạo tài khoản mới'}</p>
+          <div className="relative w-16 h-16 mx-auto mb-4">
+            <div className="absolute inset-0 gradient-primary rounded-2xl blur-lg opacity-60 animate-pulse-glow" />
+            <div className="relative w-16 h-16 gradient-primary rounded-2xl flex items-center justify-center shadow-elevated">
+              <img src={logoImg} alt="Chim Cu Gáy" className="w-10 h-10 rounded-full" />
+            </div>
+          </div>
+          <h1 className="text-3xl font-display font-bold tracking-tight">
+            <span className="text-gradient">Chim Cu Gáy</span>
+          </h1>
+          <p className="text-muted-foreground text-sm mt-2 font-mono">
+            {isLogin ? '// secure realtime messaging' : '// create your account'}
+          </p>
         </div>
-        <div className="bg-card rounded-2xl p-6 shadow-lg border border-border">
+
+        <div className="glass rounded-2xl p-6 shadow-elevated">
           <form onSubmit={handleSubmit} className="space-y-4">
             {!isLogin && (
               <>
                 <div>
-                  <label className="text-sm font-medium text-foreground mb-1.5 block">Username</label>
-                  <input type="text" value={username} onChange={e => setUsername(e.target.value)} placeholder="username" className="w-full bg-secondary rounded-xl px-4 py-2.5 text-sm outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-primary/30 transition-all" required />
+                  <label className="text-xs font-mono uppercase tracking-wider text-muted-foreground mb-1.5 block">Username</label>
+                  <input type="text" value={username} onChange={e => setUsername(e.target.value)} placeholder="username" className="w-full bg-secondary/60 border border-border/60 rounded-xl px-4 py-2.5 text-sm outline-none placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all" required />
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-foreground mb-1.5 block">Tên hiển thị</label>
-                  <input type="text" value={displayName} onChange={e => setDisplayName(e.target.value)} placeholder="Nguyễn Văn A" className="w-full bg-secondary rounded-xl px-4 py-2.5 text-sm outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-primary/30 transition-all" required />
+                  <label className="text-xs font-mono uppercase tracking-wider text-muted-foreground mb-1.5 block">Tên hiển thị</label>
+                  <input type="text" value={displayName} onChange={e => setDisplayName(e.target.value)} placeholder="Nguyễn Văn A" className="w-full bg-secondary/60 border border-border/60 rounded-xl px-4 py-2.5 text-sm outline-none placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all" required />
                 </div>
               </>
             )}
             <div>
-              <label className="text-sm font-medium text-foreground mb-1.5 block">Email</label>
-              <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="email@example.com" className="w-full bg-secondary rounded-xl px-4 py-2.5 text-sm outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-primary/30 transition-all" required />
+              <label className="text-xs font-mono uppercase tracking-wider text-muted-foreground mb-1.5 block">Email</label>
+              <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" className="w-full bg-secondary/60 border border-border/60 rounded-xl px-4 py-2.5 text-sm outline-none placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all" required />
             </div>
             <div>
-              <label className="text-sm font-medium text-foreground mb-1.5 block">Mật khẩu</label>
+              <label className="text-xs font-mono uppercase tracking-wider text-muted-foreground mb-1.5 block">Mật khẩu</label>
               <div className="relative">
-                <input type={showPassword ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" className="w-full bg-secondary rounded-xl px-4 py-2.5 pr-10 text-sm outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-primary/30 transition-all" required minLength={6} />
-                <button type="button" onClick={() => setShowPassword(p => !p)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
+                <input type={showPassword ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" className="w-full bg-secondary/60 border border-border/60 rounded-xl px-4 py-2.5 pr-10 text-sm outline-none placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all" required minLength={6} />
+                <button type="button" onClick={() => setShowPassword(p => !p)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors">
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
             </div>
-            <button type="submit" disabled={submitting} className="w-full bg-primary text-primary-foreground rounded-xl py-2.5 text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50">
-              {submitting ? 'Đang xử lý...' : isLogin ? 'Đăng nhập' : 'Đăng ký'}
+            <button type="submit" disabled={submitting} className="w-full gradient-primary text-primary-foreground rounded-xl py-3 text-sm font-semibold hover:opacity-90 hover:shadow-glow transition-all disabled:opacity-50">
+              {submitting ? 'Đang xử lý...' : isLogin ? 'Đăng nhập →' : 'Tạo tài khoản →'}
             </button>
           </form>
-          <div className="mt-4 text-center">
-            <button onClick={() => setIsLogin(p => !p)} className="text-sm text-primary hover:underline">
+          <div className="mt-5 text-center">
+            <button onClick={() => setIsLogin(p => !p)} className="text-sm text-primary hover:text-primary-glow transition-colors">
               {isLogin ? 'Chưa có tài khoản? Đăng ký' : 'Đã có tài khoản? Đăng nhập'}
             </button>
           </div>

@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@300;400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,87 +6,102 @@
 
 @layer base {
   :root {
-    --background: 210 15% 96%;
-    --foreground: 210 20% 10%;
+    --background: 220 30% 97%;
+    --foreground: 222 47% 11%;
     --card: 0 0% 100%;
-    --card-foreground: 210 20% 10%;
+    --card-foreground: 222 47% 11%;
     --popover: 0 0% 100%;
-    --popover-foreground: 210 20% 10%;
-    --primary: 210 78% 46%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 210 15% 92%;
-    --secondary-foreground: 210 20% 20%;
-    --muted: 210 12% 90%;
-    --muted-foreground: 210 10% 50%;
-    --accent: 210 78% 46%;
-    --accent-foreground: 0 0% 100%;
-    --destructive: 0 72% 51%;
+    --popover-foreground: 222 47% 11%;
+    --primary: 199 95% 48%;
+    --primary-foreground: 210 40% 98%;
+    --primary-glow: 187 92% 55%;
+    --secondary: 220 20% 94%;
+    --secondary-foreground: 222 47% 15%;
+    --muted: 220 20% 92%;
+    --muted-foreground: 220 12% 45%;
+    --accent: 187 92% 45%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 84% 55%;
     --destructive-foreground: 0 0% 100%;
-    --border: 210 15% 88%;
-    --input: 210 15% 88%;
-    --ring: 210 78% 46%;
-    --radius: 0.75rem;
+    --border: 220 20% 88%;
+    --input: 220 20% 88%;
+    --ring: 199 95% 48%;
+    --radius: 1rem;
 
-    /* Telegram custom tokens */
-    --tg-bg-chat: 210 15% 96%;
+    --tg-bg-chat: 220 30% 97%;
     --tg-bg-sidebar: 0 0% 100%;
-    --tg-bg-message-out: 210 78% 92%;
+    --tg-bg-message-out: 199 95% 92%;
     --tg-bg-message-in: 0 0% 100%;
-    --tg-bubble-shadow: 0 1px 2px 0 hsl(0 0% 0% / 0.05);
-    --tg-online: 142 70% 45%;
-    --tg-typing: 210 78% 46%;
-    --tg-unread: 210 78% 46%;
-    --tg-hover: 210 15% 94%;
+    --tg-bubble-shadow: 0 1px 3px 0 hsl(220 40% 20% / 0.06);
+    --tg-online: 152 82% 45%;
+    --tg-typing: 199 95% 48%;
+    --tg-unread: 199 95% 48%;
+    --tg-hover: 220 25% 95%;
+
+    --gradient-primary: linear-gradient(135deg, hsl(199 95% 48%), hsl(187 92% 55%));
+    --gradient-glow: radial-gradient(circle at 30% 20%, hsl(199 95% 48% / 0.15), transparent 60%),
+                     radial-gradient(circle at 70% 80%, hsl(263 85% 60% / 0.10), transparent 55%);
+    --gradient-mesh: linear-gradient(135deg, hsl(220 30% 97%) 0%, hsl(210 35% 95%) 100%);
+    --shadow-glow: 0 0 40px hsl(199 95% 48% / 0.25);
+    --shadow-elevated: 0 20px 50px -20px hsl(220 40% 20% / 0.15);
 
     --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 210 20% 10%;
-    --sidebar-primary: 210 78% 46%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 210 15% 94%;
-    --sidebar-accent-foreground: 210 20% 10%;
-    --sidebar-border: 210 15% 92%;
-    --sidebar-ring: 210 78% 46%;
+    --sidebar-foreground: 222 47% 11%;
+    --sidebar-primary: 199 95% 48%;
+    --sidebar-primary-foreground: 210 40% 98%;
+    --sidebar-accent: 220 25% 95%;
+    --sidebar-accent-foreground: 222 47% 11%;
+    --sidebar-border: 220 20% 90%;
+    --sidebar-ring: 199 95% 48%;
   }
 
   .dark {
-    --background: 60 18% 12%;
-    --foreground: 50 15% 88%;
-    --card: 60 16% 15%;
-    --card-foreground: 50 15% 88%;
-    --popover: 60 16% 15%;
-    --popover-foreground: 50 15% 88%;
-    --primary: 80 50% 45%;
-    --primary-foreground: 60 20% 8%;
-    --secondary: 60 14% 19%;
-    --secondary-foreground: 50 15% 80%;
-    --muted: 60 14% 19%;
-    --muted-foreground: 50 10% 55%;
-    --accent: 80 50% 45%;
-    --accent-foreground: 60 20% 8%;
-    --destructive: 0 62% 35%;
+    --background: 222 47% 5%;
+    --foreground: 210 40% 96%;
+    --card: 222 44% 8%;
+    --card-foreground: 210 40% 96%;
+    --popover: 222 44% 8%;
+    --popover-foreground: 210 40% 96%;
+    --primary: 189 94% 55%;
+    --primary-foreground: 222 47% 6%;
+    --primary-glow: 199 100% 65%;
+    --secondary: 222 40% 12%;
+    --secondary-foreground: 210 40% 92%;
+    --muted: 222 35% 13%;
+    --muted-foreground: 215 20% 60%;
+    --accent: 189 94% 55%;
+    --accent-foreground: 222 47% 6%;
+    --destructive: 0 72% 55%;
     --destructive-foreground: 0 0% 100%;
-    --border: 60 12% 22%;
-    --input: 60 12% 22%;
-    --ring: 80 50% 45%;
+    --border: 222 35% 16%;
+    --input: 222 35% 14%;
+    --ring: 189 94% 55%;
 
-    --tg-bg-chat: 60 18% 12%;
-    --tg-bg-sidebar: 60 16% 15%;
-    --tg-bg-message-out: 75 30% 22%;
-    --tg-bg-message-in: 60 14% 19%;
-    --tg-bubble-shadow: 0 1px 2px 0 hsl(0 0% 0% / 0.25);
-    --tg-online: 142 70% 45%;
-    --tg-typing: 80 50% 45%;
-    --tg-unread: 80 50% 45%;
-    --tg-hover: 60 14% 20%;
+    --tg-bg-chat: 222 47% 5%;
+    --tg-bg-sidebar: 222 44% 7%;
+    --tg-bg-message-out: 199 80% 22%;
+    --tg-bg-message-in: 222 40% 12%;
+    --tg-bubble-shadow: 0 2px 8px 0 hsl(0 0% 0% / 0.35);
+    --tg-online: 152 82% 50%;
+    --tg-typing: 189 94% 55%;
+    --tg-unread: 189 94% 55%;
+    --tg-hover: 222 40% 11%;
 
-    --sidebar-background: 60 16% 15%;
-    --sidebar-foreground: 50 15% 88%;
-    --sidebar-primary: 80 50% 45%;
-    --sidebar-primary-foreground: 60 20% 8%;
-    --sidebar-accent: 60 14% 20%;
-    --sidebar-accent-foreground: 50 15% 88%;
-    --sidebar-border: 60 12% 22%;
-    --sidebar-ring: 80 50% 45%;
+    --gradient-primary: linear-gradient(135deg, hsl(199 100% 55%), hsl(189 94% 60%));
+    --gradient-glow: radial-gradient(circle at 20% 15%, hsl(199 100% 50% / 0.18), transparent 55%),
+                     radial-gradient(circle at 85% 85%, hsl(263 85% 60% / 0.14), transparent 55%);
+    --gradient-mesh: linear-gradient(135deg, hsl(222 47% 5%) 0%, hsl(230 45% 7%) 100%);
+    --shadow-glow: 0 0 50px hsl(189 94% 55% / 0.35);
+    --shadow-elevated: 0 25px 60px -20px hsl(0 0% 0% / 0.6);
+
+    --sidebar-background: 222 44% 7%;
+    --sidebar-foreground: 210 40% 96%;
+    --sidebar-primary: 189 94% 55%;
+    --sidebar-primary-foreground: 222 47% 6%;
+    --sidebar-accent: 222 40% 11%;
+    --sidebar-accent-foreground: 210 40% 96%;
+    --sidebar-border: 222 35% 15%;
+    --sidebar-ring: 189 94% 55%;
   }
 }
 
@@ -95,10 +110,12 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground font-sans;
+    @apply bg-background text-foreground font-sans antialiased;
     font-family: 'Inter', system-ui, sans-serif;
     overscroll-behavior: none;
     -webkit-text-size-adjust: 100%;
+    background-image: var(--gradient-glow);
+    background-attachment: fixed;
   }
   html, body, #root {
     height: 100%;
@@ -106,22 +123,61 @@
   }
   h1, h2, h3, h4, h5, h6 {
     font-family: 'Space Grotesk', system-ui, sans-serif;
+    letter-spacing: -0.01em;
+  }
+  code, pre, .font-mono {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
   }
 }
 
 @layer utilities {
   .scrollbar-thin {
     scrollbar-width: thin;
-    scrollbar-color: hsl(var(--muted)) transparent;
+    scrollbar-color: hsl(var(--muted-foreground) / 0.4) transparent;
   }
-  .scrollbar-thin::-webkit-scrollbar {
-    width: 6px;
-  }
-  .scrollbar-thin::-webkit-scrollbar-track {
-    background: transparent;
-  }
+  .scrollbar-thin::-webkit-scrollbar { width: 6px; height: 6px; }
+  .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
   .scrollbar-thin::-webkit-scrollbar-thumb {
     background-color: hsl(var(--muted-foreground) / 0.3);
     border-radius: 20px;
   }
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background-color: hsl(var(--primary) / 0.5);
+  }
+
+  .gradient-primary { background: var(--gradient-primary); }
+  .text-gradient {
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+  }
+  .glow { box-shadow: var(--shadow-glow); }
+  .shadow-elevated { box-shadow: var(--shadow-elevated); }
+
+  .glass {
+    background-color: hsl(var(--card) / 0.6);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid hsl(var(--border) / 0.5);
+  }
+
+  .grid-bg {
+    background-image:
+      linear-gradient(hsl(var(--border) / 0.35) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(var(--border) / 0.35) 1px, transparent 1px);
+    background-size: 32px 32px;
+    background-position: -1px -1px;
+  }
+
+  .ring-glow {
+    box-shadow: 0 0 0 1px hsl(var(--primary) / 0.4), 0 0 24px hsl(var(--primary) / 0.35);
+  }
+
+  @keyframes pulse-glow {
+    0%, 100% { box-shadow: 0 0 20px hsl(var(--primary) / 0.35); }
+    50% { box-shadow: 0 0 40px hsl(var(--primary) / 0.55); }
+  }
+  .animate-pulse-glow { animation: pulse-glow 3s ease-in-out infinite; }
 }
