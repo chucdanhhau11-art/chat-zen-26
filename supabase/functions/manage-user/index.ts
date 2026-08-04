@@ -21,9 +21,9 @@ serve(async (req) => {
 
     // ---- Public action: auto-approve a freshly signed-up user if enabled ----
     if (action === "auto-approve-self") {
-      const { userId } = body;
-      if (!userId || typeof userId !== "string") {
-        return new Response(JSON.stringify({ error: "userId required" }), {
+      const { email } = body;
+      if (!email || typeof email !== "string") {
+        return new Response(JSON.stringify({ error: "email required" }), {
           status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
@@ -31,12 +31,17 @@ serve(async (req) => {
         .from("app_settings").select("value").eq("key", "auto_approve_signup").maybeSingle();
       const enabled = setting?.value === true || setting?.value === "true";
       if (enabled) {
-        await supabase.auth.admin.updateUserById(userId, { email_confirm: true });
+        const { data: list } = await supabase.auth.admin.listUsers({ perPage: 1000 });
+        const target = list?.users.find(u => u.email?.toLowerCase() === email.toLowerCase());
+        if (target && !target.email_confirmed_at) {
+          await supabase.auth.admin.updateUserById(target.id, { email_confirm: true });
+        }
       }
       return new Response(JSON.stringify({ approved: enabled }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
 
     // Verify the caller is an admin
     const authHeader = req.headers.get("Authorization")!;
