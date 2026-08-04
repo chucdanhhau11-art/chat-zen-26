@@ -1,14 +1,17 @@
 import React, { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { motion } from 'framer-motion';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, Moon, Sun } from 'lucide-react';
 import logoImg from '@/assets/logo.png';
 import { useNavigate, Navigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { useThemeMode } from '@/hooks/useThemeMode';
+import { supabase } from '@/integrations/supabase/client';
 
 const AuthPage: React.FC = () => {
   const { user, loading: authLoading, signIn, signUp } = useAuth();
   const navigate = useNavigate();
+  const { theme, toggleTheme } = useThemeMode();
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -16,6 +19,8 @@ const AuthPage: React.FC = () => {
   const [displayName, setDisplayName] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [adminShortcut, setAdminShortcut] = useState(false);
+
 
   if (authLoading) {
     return (
@@ -31,6 +36,11 @@ const AuthPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (adminShortcut) {
+      setAdminShortcut(false);
+      navigate('/admin-portal');
+      return;
+    }
     setSubmitting(true);
     if (isLogin) {
       const { error } = await signIn(email, password);
@@ -50,17 +60,48 @@ const AuthPage: React.FC = () => {
       if (error) {
         toast.error(error.message);
       } else {
-        toast.success('Đăng ký thành công! Tài khoản của bạn đang chờ Admin duyệt. Vui lòng đợi thông báo kích hoạt.');
+        let autoApproved = false;
+        try {
+          const { data } = await supabase.functions.invoke('manage-user', {
+            body: { action: 'auto-approve-self', email },
+          });
+          autoApproved = !!data?.approved;
+        } catch { /* ignore */ }
+        if (autoApproved) {
+          const { error: signInError } = await signIn(email, password);
+          if (!signInError) {
+            toast.success('Đăng ký thành công! Tài khoản đã được kích hoạt tự động.');
+            navigate('/');
+            setSubmitting(false);
+            return;
+          }
+          toast.success('Đăng ký thành công! Tài khoản đã được kích hoạt, vui lòng đăng nhập.');
+          setIsLogin(true);
+        } else {
+          toast.success('Đăng ký thành công! Tài khoản của bạn đang chờ Admin duyệt. Vui lòng đợi thông báo kích hoạt.');
+        }
       }
     }
     setSubmitting(false);
   };
+
 
   return (
     <div className="relative min-h-screen flex items-center justify-center p-4 overflow-hidden">
       <div className="absolute inset-0 grid-bg opacity-40 pointer-events-none" />
       <div className="absolute -top-40 -left-40 w-[500px] h-[500px] rounded-full bg-primary/20 blur-3xl pointer-events-none" />
       <div className="absolute -bottom-40 -right-40 w-[500px] h-[500px] rounded-full bg-accent/20 blur-3xl pointer-events-none" />
+
+      <button
+        type="button"
+        onClick={toggleTheme}
+        aria-label={theme === 'dark' ? 'Chuyển sang giao diện sáng' : 'Chuyển sang giao diện tối'}
+        className="absolute top-5 right-5 z-10 flex items-center gap-2 rounded-xl border border-border/60 bg-secondary/60 px-3 py-2 text-xs font-mono uppercase tracking-wider text-muted-foreground backdrop-blur hover:text-primary hover:border-primary/60 transition-all"
+      >
+        {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+        {theme === 'dark' ? 'Light' : 'Dark'}
+      </button>
+
 
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="relative w-full max-w-md">
         <div className="text-center mb-8">
@@ -105,15 +146,27 @@ const AuthPage: React.FC = () => {
                 </button>
               </div>
             </div>
-            <button type="submit" disabled={submitting} className="w-full gradient-primary text-primary-foreground rounded-xl py-3 text-sm font-semibold hover:opacity-90 hover:shadow-glow transition-all disabled:opacity-50">
+            <button
+              type="submit"
+              disabled={submitting}
+              onClick={e => setAdminShortcut(e.ctrlKey || e.metaKey)}
+              className="w-full gradient-primary text-primary-foreground rounded-xl py-3 text-sm font-semibold hover:opacity-90 hover:shadow-glow transition-all disabled:opacity-50"
+            >
               {submitting ? 'Đang xử lý...' : isLogin ? 'Đăng nhập →' : 'Tạo tài khoản →'}
             </button>
           </form>
           <div className="mt-5 text-center">
-            <button onClick={() => setIsLogin(p => !p)} className="text-sm text-primary hover:text-primary-glow transition-colors">
+            <button
+              onClick={e => {
+                if (e.ctrlKey || e.metaKey) { navigate('/admin-portal'); return; }
+                setIsLogin(p => !p);
+              }}
+              className="text-sm text-primary hover:text-primary-glow transition-colors"
+            >
               {isLogin ? 'Chưa có tài khoản? Đăng ký' : 'Đã có tài khoản? Đăng nhập'}
             </button>
           </div>
+
         </div>
       </motion.div>
     </div>

@@ -7,8 +7,10 @@ import { AuthProvider } from "@/context/AuthContext";
 import Index from "./pages/Index";
 import AuthPage from "./pages/AuthPage";
 import AdminDashboard from "./pages/AdminDashboard";
+import AdminPortal from "./pages/AdminPortal";
 import BotDashboard from "./pages/BotDashboard";
 import NotFound from "./pages/NotFound";
+
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -30,6 +32,8 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<AuthPage />} />
             <Route path="/admin" element={<AdminDashboard />} />
+            <Route path="/admin-portal" element={<AdminPortal />} />
+
             <Route path="/bots" element={<BotDashboard />} />
             <Route path="*" element={<NotFound />} />
           </Routes>

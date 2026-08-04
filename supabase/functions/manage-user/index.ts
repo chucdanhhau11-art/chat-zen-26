@@ -16,6 +16,33 @@ serve(async (req) => {
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
+    const body = await req.json();
+    const { action } = body;
+
+    // ---- Public action: auto-approve a freshly signed-up user if enabled ----
+    if (action === "auto-approve-self") {
+      const { email } = body;
+      if (!email || typeof email !== "string") {
+        return new Response(JSON.stringify({ error: "email required" }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const { data: setting } = await supabase
+        .from("app_settings").select("value").eq("key", "auto_approve_signup").maybeSingle();
+      const enabled = setting?.value === true || setting?.value === "true";
+      if (enabled) {
+        const { data: list } = await supabase.auth.admin.listUsers({ perPage: 1000 });
+        const target = list?.users.find(u => u.email?.toLowerCase() === email.toLowerCase());
+        if (target && !target.email_confirmed_at) {
+          await supabase.auth.admin.updateUserById(target.id, { email_confirm: true });
+        }
+      }
+      return new Response(JSON.stringify({ approved: enabled }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+
     // Verify the caller is an admin
     const authHeader = req.headers.get("Authorization")!;
     const anonClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!);
@@ -34,7 +61,7 @@ serve(async (req) => {
       .select("role")
       .eq("user_id", caller.id);
 
-    const isAdmin = roles?.some(r => r.role === "admin");
+    const isAdmin = roles?.some(r => r.role === "admin" || r.role === "super_admin");
     if (!isAdmin) {
       return new Response(JSON.stringify({ error: "Forbidden" }), {
         status: 403,
@@ -42,8 +69,25 @@ serve(async (req) => {
       });
     }
 
-    const body = await req.json();
-    const { action } = body;
+    if (action === "get-settings") {
+      const { data: setting } = await supabase
+        .from("app_settings").select("value").eq("key", "auto_approve_signup").maybeSingle();
+      return new Response(JSON.stringify({ autoApprove: setting?.value === true || setting?.value === "true" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (action === "set-auto-approve") {
+      const enabled = body.enabled === true;
+      await supabase.from("app_settings").upsert(
+        { key: "auto_approve_signup", value: enabled, updated_at: new Date().toISOString() },
+        { onConflict: "key" }
+      );
+      return new Response(JSON.stringify({ success: true, autoApprove: enabled }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
 
     // List pending (unconfirmed) users
     if (action === "list-pending") {
