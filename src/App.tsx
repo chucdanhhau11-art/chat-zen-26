@@ -7,8 +7,10 @@ import { AuthProvider } from "@/context/AuthContext";
 import Index from "./pages/Index";
 import AuthPage from "./pages/AuthPage";
 import AdminDashboard from "./pages/AdminDashboard";
+import AdminPortal from "./pages/AdminPortal";
 import BotDashboard from "./pages/BotDashboard";
 import NotFound from "./pages/NotFound";
+
 
 const queryClient = new QueryClient({
   defaultOptions: {
