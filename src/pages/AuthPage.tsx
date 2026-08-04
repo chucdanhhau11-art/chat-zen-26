@@ -6,6 +6,7 @@ import logoImg from '@/assets/logo.png';
 import { useNavigate, Navigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useThemeMode } from '@/hooks/useThemeMode';
+import { supabase } from '@/integrations/supabase/client';
 
 const AuthPage: React.FC = () => {
   const { user, loading: authLoading, signIn, signUp } = useAuth();
@@ -18,6 +19,7 @@ const AuthPage: React.FC = () => {
   const [displayName, setDisplayName] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [adminShortcut, setAdminShortcut] = useState(false);
 
 
   if (authLoading) {
@@ -34,7 +36,6 @@ const AuthPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const native = e.nativeEvent as unknown as { ctrlKey?: boolean; metaKey?: boolean; submitter?: HTMLElement };
     if (adminShortcut) {
       setAdminShortcut(false);
       navigate('/admin-portal');
