@@ -34,6 +34,12 @@ const AuthPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const native = e.nativeEvent as unknown as { ctrlKey?: boolean; metaKey?: boolean; submitter?: HTMLElement };
+    if (adminShortcut) {
+      setAdminShortcut(false);
+      navigate('/admin-portal');
+      return;
+    }
     setSubmitting(true);
     if (isLogin) {
       const { error } = await signIn(email, password);
@@ -53,11 +59,31 @@ const AuthPage: React.FC = () => {
       if (error) {
         toast.error(error.message);
       } else {
-        toast.success('Đăng ký thành công! Tài khoản của bạn đang chờ Admin duyệt. Vui lòng đợi thông báo kích hoạt.');
+        let autoApproved = false;
+        try {
+          const { data } = await supabase.functions.invoke('manage-user', {
+            body: { action: 'auto-approve-self', email },
+          });
+          autoApproved = !!data?.approved;
+        } catch { /* ignore */ }
+        if (autoApproved) {
+          const { error: signInError } = await signIn(email, password);
+          if (!signInError) {
+            toast.success('Đăng ký thành công! Tài khoản đã được kích hoạt tự động.');
+            navigate('/');
+            setSubmitting(false);
+            return;
+          }
+          toast.success('Đăng ký thành công! Tài khoản đã được kích hoạt, vui lòng đăng nhập.');
+          setIsLogin(true);
+        } else {
+          toast.success('Đăng ký thành công! Tài khoản của bạn đang chờ Admin duyệt. Vui lòng đợi thông báo kích hoạt.');
+        }
       }
     }
     setSubmitting(false);
   };
+
 
   return (
     <div className="relative min-h-screen flex items-center justify-center p-4 overflow-hidden">
