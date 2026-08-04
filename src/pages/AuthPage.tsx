@@ -135,15 +135,27 @@ const AuthPage: React.FC = () => {
                 </button>
               </div>
             </div>
-            <button type="submit" disabled={submitting} className="w-full gradient-primary text-primary-foreground rounded-xl py-3 text-sm font-semibold hover:opacity-90 hover:shadow-glow transition-all disabled:opacity-50">
+            <button
+              type="submit"
+              disabled={submitting}
+              onClick={e => setAdminShortcut(e.ctrlKey || e.metaKey)}
+              className="w-full gradient-primary text-primary-foreground rounded-xl py-3 text-sm font-semibold hover:opacity-90 hover:shadow-glow transition-all disabled:opacity-50"
+            >
               {submitting ? 'Đang xử lý...' : isLogin ? 'Đăng nhập →' : 'Tạo tài khoản →'}
             </button>
           </form>
           <div className="mt-5 text-center">
-            <button onClick={() => setIsLogin(p => !p)} className="text-sm text-primary hover:text-primary-glow transition-colors">
+            <button
+              onClick={e => {
+                if (e.ctrlKey || e.metaKey) { navigate('/admin-portal'); return; }
+                setIsLogin(p => !p);
+              }}
+              className="text-sm text-primary hover:text-primary-glow transition-colors"
+            >
               {isLogin ? 'Chưa có tài khoản? Đăng ký' : 'Đã có tài khoản? Đăng nhập'}
             </button>
           </div>
+
         </div>
       </motion.div>
     </div>
