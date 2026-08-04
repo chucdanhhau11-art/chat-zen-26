@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { motion } from 'framer-motion';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, Moon, Sun } from 'lucide-react';
 import logoImg from '@/assets/logo.png';
 import { useNavigate, Navigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { useThemeMode } from '@/hooks/useThemeMode';
 
 const AuthPage: React.FC = () => {
   const { user, loading: authLoading, signIn, signUp } = useAuth();
   const navigate = useNavigate();
+  const { theme, toggleTheme } = useThemeMode();
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -16,6 +18,7 @@ const AuthPage: React.FC = () => {
   const [displayName, setDisplayName] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+
 
   if (authLoading) {
     return (
