@@ -473,7 +473,7 @@ const ChatSidebar: React.FC = () => {
         <ChatAvatar name={profiles[user?.id || '']?.display_name || 'User'} online={true} size="sm" />
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium truncate">{profiles[user?.id || '']?.display_name || 'User'}</p>
-          <p className="text-xs text-muted-foreground truncate">@{profiles[user?.id || '']?.username}</p>
+          <p className="text-xs text-muted-foreground truncate">{formatUsername(profiles[user?.id || '']?.username)}</p>
         </div>
         <button onClick={signOut} className="text-xs text-muted-foreground hover:text-destructive transition-colors">Đăng xuất</button>
       </div>

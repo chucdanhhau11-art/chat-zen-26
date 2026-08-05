@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { formatUsername } from '@/lib/chatUtils';
 import { motion } from 'framer-motion';
 import { Shield, Moon, Sun, ArrowLeft, CheckCircle, XCircle, RefreshCw, LogOut, Users, MessageSquare, Hash } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -248,7 +249,7 @@ const AdminPortal: React.FC = () => {
                   <div key={u.id} className={`flex items-center gap-3 p-3 rounded-xl bg-secondary/50 hover:bg-secondary transition-colors ${processing === u.id ? 'opacity-50 pointer-events-none' : ''}`}>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate">{u.display_name}</p>
-                      <p className="text-xs text-muted-foreground">@{u.username} · {u.email}</p>
+                      <p className="text-xs text-muted-foreground">{formatUsername(u.username)} · {u.email}</p>
                       <p className="text-[10px] text-muted-foreground">
                         {new Date(u.created_at).toLocaleString('vi-VN')}
                       </p>
