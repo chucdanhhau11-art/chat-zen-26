@@ -3,6 +3,7 @@ import { Search, UserPlus, MessageCircle, UserMinus, Check, XCircle, Eye } from 
 import { useChatContext } from '@/context/ChatContext';
 import { useAuth } from '@/context/AuthContext';
 import ChatAvatar from './ChatAvatar';
+import { formatUsername } from '@/lib/chatUtils';
 import ProfileViewDialog from './ProfileViewDialog';
 import { cn } from '@/lib/utils';
 
@@ -81,7 +82,7 @@ const ContactsView: React.FC = () => {
                   <ChatAvatar name={f.display_name} online={f.online ?? false} size="md" />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">{f.display_name}</p>
-                    <p className="text-xs text-muted-foreground truncate">@{f.username}</p>
+                    <p className="text-xs text-muted-foreground truncate">{formatUsername(f.username)}</p>
                   </div>
                   <div className="flex items-center gap-1">
                     <button onClick={() => handleChat(f.id)} className="p-2 rounded-lg hover:bg-secondary transition-colors" title="Nhắn tin">
@@ -110,7 +111,7 @@ const ContactsView: React.FC = () => {
                       <ChatAvatar name={p.display_name} size="md" />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium truncate">{p.display_name}</p>
-                        <p className="text-xs text-muted-foreground">@{p.username}</p>
+                        <p className="text-xs text-muted-foreground">{formatUsername(p.username)}</p>
                       </div>
                       <div className="flex items-center gap-1">
                         <button onClick={() => acceptFriendRequest(r.id)} className="p-1.5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors">
@@ -136,7 +137,7 @@ const ContactsView: React.FC = () => {
                       <ChatAvatar name={p.display_name} size="md" />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium truncate">{p.display_name}</p>
-                        <p className="text-xs text-muted-foreground">@{p.username}</p>
+                        <p className="text-xs text-muted-foreground">{formatUsername(p.username)}</p>
                       </div>
                       <button onClick={() => cancelFriendRequest(r.id)} className="px-2.5 py-1 rounded-lg bg-muted text-muted-foreground text-xs hover:bg-destructive/10 hover:text-destructive transition-colors">
                         Huỷ
@@ -167,7 +168,7 @@ const ContactsView: React.FC = () => {
                     <ChatAvatar name={p.display_name} online={p.online ?? false} size="md" />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate">{p.display_name}</p>
-                      <p className="text-xs text-muted-foreground">@{p.username}</p>
+                      <p className="text-xs text-muted-foreground">{formatUsername(p.username)}</p>
                     </div>
                     <div className="flex items-center gap-1">
                       {status === 'none' && (

@@ -416,7 +416,7 @@ const ChatSidebar: React.FC = () => {
                   <ChatAvatar name={p.display_name} online={p.online ?? false} size="md" />
                   <div className="flex-1 min-w-0 mr-1">
                     <p className="text-sm font-medium truncate">{p.display_name}</p>
-                    <p className="text-xs text-muted-foreground truncate">@{p.username}</p>
+                    <p className="text-xs text-muted-foreground truncate">{formatUsername(p.username)}</p>
                   </div>
                   <div className="flex items-center gap-1 flex-shrink-0">
                     {status === 'none' && (
@@ -528,7 +528,7 @@ const ChatSidebar: React.FC = () => {
                         <ChatAvatar name={p.display_name} size="sm" />
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium truncate">{p.display_name}</p>
-                          <p className="text-xs text-muted-foreground">@{p.username}</p>
+                          <p className="text-xs text-muted-foreground">{formatUsername(p.username)}</p>
                         </div>
                         <button
                           onClick={() => unblockUser(uid)}

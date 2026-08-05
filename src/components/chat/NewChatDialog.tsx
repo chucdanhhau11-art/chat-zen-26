@@ -3,6 +3,7 @@ import { X, Users, MessageCircle, UserPlus, Check, Clock } from 'lucide-react';
 import { useChatContext } from '@/context/ChatContext';
 import { useAuth } from '@/context/AuthContext';
 import ChatAvatar from './ChatAvatar';
+import { formatUsername } from '@/lib/chatUtils';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 
@@ -121,7 +122,7 @@ const NewChatDialog: React.FC<NewChatDialogProps> = ({ onClose, defaultTab = 'pr
                     <ChatAvatar name={p.display_name} online={p.online ?? false} size="sm" />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate">{p.display_name}</p>
-                      <p className="text-xs text-muted-foreground">@{p.username}</p>
+                      <p className="text-xs text-muted-foreground">{formatUsername(p.username)}</p>
                     </div>
                     <button
                       onClick={() => acceptFriendRequest(req.id)}
@@ -186,7 +187,7 @@ const NewChatDialog: React.FC<NewChatDialogProps> = ({ onClose, defaultTab = 'pr
                     <ChatAvatar name={p.display_name} online={p.online ?? false} size="sm" />
                     <div className="flex-1 text-left min-w-0">
                       <p className="text-sm font-medium truncate">{p.display_name}</p>
-                      <p className="text-xs text-muted-foreground">@{p.username}</p>
+                      <p className="text-xs text-muted-foreground">{formatUsername(p.username)}</p>
                     </div>
                   </button>
                 ))
@@ -210,7 +211,7 @@ const NewChatDialog: React.FC<NewChatDialogProps> = ({ onClose, defaultTab = 'pr
                     <ChatAvatar name={p.display_name} online={p.online ?? false} size="sm" />
                     <div className="flex-1 text-left min-w-0">
                       <p className="text-sm font-medium truncate">{p.display_name}</p>
-                      <p className="text-xs text-muted-foreground">@{p.username}</p>
+                      <p className="text-xs text-muted-foreground">{formatUsername(p.username)}</p>
                     </div>
                     {selectedMembers.includes(p.id) && (
                       <span className="text-primary text-sm">✓</span>
