@@ -233,8 +233,50 @@ const ChatSidebar: React.FC = () => {
     return 0;
   });
 
+  const savedConv = sorted.find(c => c.name === 'Saved Messages');
+  const otherConvs = sorted.filter(c => c.name !== 'Saved Messages');
+
+  const renderConversationRow = (c: ConversationWithDetails, pinned = false) => (
+    <motion.div
+      key={c.id}
+      layout
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      onClick={() => setActiveConversation(c.id)}
+      className={cn(
+        'flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors',
+        c.id === activeConversationId ? 'bg-primary/10' : 'hover:bg-tg-hover',
+        pinned && 'bg-primary/5'
+      )}
+    >
+      <ChatAvatar name={c.name === 'Saved Messages' ? 'Saved' : getConversationName(c).replace('📌 ', '').replace('👥 ', '').replace('📢 ', '')} online={getOtherMemberOnline(c)} size="md" isBot={c.type === 'private' && c.name !== 'Saved Messages' && !!c.members.find(m => m.user_id !== user?.id && profiles[m.user_id]?.is_bot)} />
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center justify-between">
+          <span className="font-medium text-sm truncate">
+            {c.type === 'group' && c.name !== 'Saved Messages' ? '👥 ' : c.type === 'channel' ? '📢 ' : ''}
+            {getConversationName(c)}
+          </span>
+          {c.lastMessage && (
+            <span className="text-xs text-muted-foreground flex-shrink-0 ml-2">
+              {formatTime(new Date(c.lastMessage.created_at))}
+            </span>
+          )}
+        </div>
+        <p className="text-xs text-muted-foreground truncate mt-0.5">
+          {c.lastMessage?.content || 'Chưa có tin nhắn'}
+        </p>
+      </div>
+      {c.unreadCount > 0 && (
+        <span className="bg-tg-unread text-primary-foreground text-xs font-medium rounded-full min-w-[20px] h-5 flex items-center justify-center px-1.5">
+          {c.unreadCount}
+        </span>
+      )}
+    </motion.div>
+  );
+
   return (
-    <div className="flex flex-col h-full bg-tg-sidebar border-r border-border">
+    <div className="flex flex-col h-full bg-tg-sidebar dots-bg-soft border-r border-border">
       {/* Header */}
       <div className="flex items-center gap-2 px-4 py-3 border-b border-border">
         <div className="relative">
@@ -250,44 +292,19 @@ const ChatSidebar: React.FC = () => {
                 transition={{ duration: 0.12 }}
                 className="absolute top-full left-0 mt-1 w-56 bg-popover border border-border rounded-xl shadow-lg z-50 overflow-hidden"
               >
-                <button onClick={() => { setShowMenu(false); setShowEditProfile(true); }} className="flex items-center gap-3 w-full px-4 py-2.5 text-sm hover:bg-tg-hover transition-colors text-left">
-                  <User className="h-4 w-4 text-primary" />
-                  <span>Chỉnh sửa Profile</span>
+                <button onClick={() => { setShowMenu(false); setShowNewGroup(true); }} className="flex items-center gap-3 w-full px-4 py-2.5 text-sm hover:bg-tg-hover transition-colors text-left">
+                  <Users className="h-4 w-4 text-primary" />
+                  <span>Tạo nhóm mới</span>
                 </button>
-                <button onClick={async () => { setShowMenu(false); await ensureSavedMessages(); }} className="flex items-center gap-3 w-full px-4 py-2.5 text-sm hover:bg-tg-hover transition-colors text-left">
-                  <Bookmark className="h-4 w-4 text-primary" />
-                  <span>Saved Messages</span>
+                <button onClick={() => { setShowMenu(false); setShowContacts(true); }} className="flex items-center gap-3 w-full px-4 py-2.5 text-sm hover:bg-tg-hover transition-colors text-left">
+                  <BookUser className="h-4 w-4 text-primary" />
+                  <span>Danh bạ</span>
+                  {friends.length > 0 && <span className="text-[10px] text-muted-foreground ml-auto">{friends.length}</span>}
                 </button>
-                <a href="/bots" onClick={() => setShowMenu(false)} className="flex items-center gap-3 w-full px-4 py-2.5 text-sm hover:bg-tg-hover transition-colors text-left">
-                  <Bot className="h-4 w-4 text-primary" />
-                  <span>Bot Management</span>
-                </a>
-                <button onClick={async () => { setShowMenu(false); await openBotFatherChat(); }} className="flex items-center gap-3 w-full px-4 py-2.5 text-sm hover:bg-tg-hover transition-colors text-left">
-                  <Bot className="h-4 w-4 text-primary" />
-                  <span>🤖 BotFather</span>
-                </button>
-                {isAdmin && (
-                  <>
-                    <div className="border-t border-border" />
-                    <button onClick={() => { setShowMenu(false); setShowEmailApproval(true); }} className="flex items-center gap-3 w-full px-4 py-2.5 text-sm hover:bg-tg-hover transition-colors text-left">
-                      <Mail className="h-4 w-4 text-primary" />
-                      <span>Duyệt email đăng ký</span>
-                    </button>
-                    <a href="/admin" onClick={() => setShowMenu(false)} className="flex items-center gap-3 w-full px-4 py-2.5 text-sm hover:bg-tg-hover transition-colors text-left">
-                      <Shield className="h-4 w-4 text-primary" />
-                      <span>Admin Dashboard</span>
-                    </a>
-                  </>
-                )}
                 <div className="border-t border-border" />
-                <button onClick={() => { setShowMenu(false); setShowBlockedList(true); }} className="flex items-center gap-3 w-full px-4 py-2.5 text-sm hover:bg-tg-hover transition-colors text-left">
-                  <Ban className="h-4 w-4 text-destructive" />
-                  <span>Người dùng đã chặn</span>
-                  {blockedUsers.length > 0 && <span className="text-[10px] text-muted-foreground ml-auto">{blockedUsers.length}</span>}
-                </button>
-                <button onClick={() => { toggleDarkMode(); setShowMenu(false); }} className="flex items-center gap-3 w-full px-4 py-2.5 text-sm hover:bg-tg-hover transition-colors text-left">
-                  {darkMode ? <Sun className="h-4 w-4 text-muted-foreground" /> : <Moon className="h-4 w-4 text-muted-foreground" />}
-                  <span>{darkMode ? 'Chế độ sáng' : 'Chế độ tối'}</span>
+                <button onClick={() => { setShowMenu(false); setShowSettings(true); }} className="flex items-center gap-3 w-full px-4 py-2.5 text-sm hover:bg-tg-hover transition-colors text-left">
+                  <SettingsIcon className="h-4 w-4 text-primary" />
+                  <span>Cài đặt</span>
                 </button>
               </motion.div>
             )}
@@ -316,12 +333,34 @@ const ChatSidebar: React.FC = () => {
         </button>
       </div>
 
-      {/* New Chat Button */}
-      <div className="px-4 py-2">
-        <button onClick={() => setShowNewChat(true)} className="w-full flex items-center gap-2 px-3 py-2 rounded-xl bg-primary/10 text-primary text-sm font-medium hover:bg-primary/20 transition-colors">
-          <Plus className="h-4 w-4" /> Cuộc trò chuyện mới
+      {/* Pinned: Saved Messages */}
+      {savedConv && (
+        <div className="border-b border-border">
+          {renderConversationRow(savedConv, true)}
+        </div>
+      )}
+
+      {/* Pending friend requests entry */}
+      {receivedRequests.length > 0 && (
+        <button
+          onClick={() => setShowPendingRequests(true)}
+          className="flex items-center gap-3 px-4 py-3 w-full text-left border-b border-border hover:bg-tg-hover transition-colors"
+        >
+          <div className="h-10 w-10 rounded-full bg-primary/15 flex items-center justify-center flex-shrink-0">
+            <UserPlus className="h-5 w-5 text-primary" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium truncate">Lời mời kết bạn</p>
+            <p className="text-xs text-muted-foreground truncate">
+              {receivedRequests.length} người đang chờ phản hồi
+            </p>
+          </div>
+          <span className="bg-tg-unread text-primary-foreground text-xs font-medium rounded-full min-w-[20px] h-5 flex items-center justify-center px-1.5">
+            {receivedRequests.length}
+          </span>
         </button>
-      </div>
+      )}
+
 
       {/* Conversation List */}
       <div className="flex-1 overflow-y-auto scrollbar-thin">
