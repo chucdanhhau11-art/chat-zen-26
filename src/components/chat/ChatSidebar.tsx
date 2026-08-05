@@ -51,7 +51,14 @@ const ChatSidebar: React.FC = () => {
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [userSearchQuery, setUserSearchQuery] = useState('');
   const [localSearch, setLocalSearch] = useState('');
+  const [showNewGroup, setShowNewGroup] = useState(false);
+  const [showContacts, setShowContacts] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [showPendingRequests, setShowPendingRequests] = useState(false);
   const notifIdCounter = useRef(0);
+
+  const receivedRequests = pendingRequests.filter(r => r.addressee_id === user?.id);
+
 
   // Listen for unread count changes to generate notifications
   const prevUnreadRef = useRef<Record<string, number>>({});
