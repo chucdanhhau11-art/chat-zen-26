@@ -1,9 +1,9 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { Search, Menu, Moon, Sun, Plus, Shield, Mail, User, Bookmark, Bell, Bot, UserPlus, Check, Clock, MessageCircle, UserMinus, XCircle, Ban, Eye, X } from 'lucide-react';
+import { Search, Menu, Moon, Sun, Plus, Shield, Mail, User, Bookmark, Bell, Bot, UserPlus, Check, Clock, MessageCircle, UserMinus, XCircle, Ban, Eye, X, Users, BookUser, Settings as SettingsIcon } from 'lucide-react';
 import { useChatContext } from '@/context/ChatContext';
 import { useAuth } from '@/context/AuthContext';
 import ChatAvatar from './ChatAvatar';
-import { formatTime } from '@/lib/chatUtils';
+import { formatTime, formatUsername } from '@/lib/chatUtils';
 import { cn } from '@/lib/utils';
 
 import { motion, AnimatePresence } from 'framer-motion';
@@ -12,7 +12,10 @@ import NewChatDialog from './NewChatDialog';
 import AdminEmailApproval from './AdminEmailApproval';
 import EditProfileDialog from './EditProfileDialog';
 import ProfileViewDialog from './ProfileViewDialog';
+import SettingsDialog from './SettingsDialog';
+import ContactsDialog from './ContactsDialog';
 import NotificationPanel, { type NotificationItem } from './NotificationPanel';
+
 
 type ConversationMember = Tables<'conversation_members'>;
 type Profile = Tables<'profiles'>;
