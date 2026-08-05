@@ -8,12 +8,13 @@ import { toast } from 'sonner';
 
 interface NewChatDialogProps {
   onClose: () => void;
+  defaultTab?: 'private' | 'group';
 }
 
-const NewChatDialog: React.FC<NewChatDialogProps> = ({ onClose }) => {
+const NewChatDialog: React.FC<NewChatDialogProps> = ({ onClose, defaultTab = 'private' }) => {
   const { allProfiles, createPrivateChat, createGroup, setActiveConversation, friends, getFriendshipWith, sendFriendRequest, pendingRequests, acceptFriendRequest, declineFriendRequest } = useChatContext();
   const { user } = useAuth();
-  const [tab, setTab] = useState<'private' | 'group'>('private');
+  const [tab, setTab] = useState<'private' | 'group'>(defaultTab);
   const [groupName, setGroupName] = useState('');
   const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
   const [search, setSearch] = useState('');
