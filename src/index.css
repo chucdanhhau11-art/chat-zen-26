@@ -171,6 +171,20 @@
     background-position: -1px -1px;
   }
 
+  /* Polka-dot tech background */
+  .dots-bg {
+    background-image:
+      radial-gradient(circle at 1px 1px, hsl(var(--primary) / 0.22) 1px, transparent 0),
+      radial-gradient(circle at 12px 12px, hsl(var(--foreground) / 0.06) 1px, transparent 0);
+    background-size: 24px 24px, 24px 24px;
+  }
+
+  .dots-bg-soft {
+    background-image: radial-gradient(circle at 1px 1px, hsl(var(--foreground) / 0.10) 1px, transparent 0);
+    background-size: 22px 22px;
+  }
+
+
   .ring-glow {
     box-shadow: 0 0 0 1px hsl(var(--primary) / 0.4), 0 0 24px hsl(var(--primary) / 0.35);
   }
