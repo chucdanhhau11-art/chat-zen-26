@@ -479,9 +479,20 @@ const ChatSidebar: React.FC = () => {
       </div>
 
       {showNewChat && <NewChatDialog onClose={() => setShowNewChat(false)} />}
+      {showNewGroup && <NewChatDialog defaultTab="group" onClose={() => setShowNewGroup(false)} />}
+      {showContacts && <ContactsDialog onClose={() => setShowContacts(false)} />}
+      {showPendingRequests && <ContactsDialog onClose={() => setShowPendingRequests(false)} />}
+      {showSettings && (
+        <SettingsDialog
+          onClose={() => setShowSettings(false)}
+          onEditProfile={() => setShowEditProfile(true)}
+          onEmailApproval={() => setShowEmailApproval(true)}
+        />
+      )}
       {showEmailApproval && <AdminEmailApproval onClose={() => setShowEmailApproval(false)} />}
       {showEditProfile && <EditProfileDialog onClose={() => setShowEditProfile(false)} />}
       {viewProfileUserId && <ProfileViewDialog userId={viewProfileUserId} onClose={() => setViewProfileUserId(null)} />}
+
       <AnimatePresence>
         {showNotifications && (
           <NotificationPanel
