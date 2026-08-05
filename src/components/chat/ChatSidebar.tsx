@@ -224,13 +224,22 @@ const ChatSidebar: React.FC = () => {
     if (convId) setActiveConversation(convId);
   };
 
+  const seenPrivatePeers = new Set<string>();
   const filtered = conversations.filter(c => {
     if (!getConversationName(c).toLowerCase().includes(searchQuery.toLowerCase())) return false;
-    if (c.type === 'private' && c.name !== 'Saved Messages' && !c.lastMessage) {
-      if (c.created_by !== user?.id) return false;
+    if (c.type === 'private' && c.name !== 'Saved Messages') {
+      // Ẩn chat 1-1 chưa có tin nhắn (tránh hiện hàng loạt hộp thoại rỗng)
+      if (!c.lastMessage) return false;
+      // Loại bỏ chat trùng với cùng một người
+      const other = c.members.find(m => m.user_id !== user?.id);
+      if (other) {
+        if (seenPrivatePeers.has(other.user_id)) return false;
+        seenPrivatePeers.add(other.user_id);
+      }
     }
     return true;
   });
+
 
   // Sort: Saved Messages always first, then pinned, then rest
   const sorted = [...filtered].sort((a, b) => {
