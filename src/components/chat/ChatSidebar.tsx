@@ -368,51 +368,16 @@ const ChatSidebar: React.FC = () => {
           <div className="flex items-center justify-center py-8">
             <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full" />
           </div>
-        ) : sorted.length === 0 ? (
+        ) : otherConvs.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground text-sm">
             {searchQuery ? 'Không tìm thấy' : 'Chưa có cuộc trò chuyện'}
           </div>
         ) : (
           <AnimatePresence>
-            {sorted.map(c => (
-              <motion.div
-                key={c.id}
-                layout
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                onClick={() => setActiveConversation(c.id)}
-                className={cn(
-                  'flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors',
-                  c.id === activeConversationId ? 'bg-primary/10' : 'hover:bg-tg-hover'
-                )}
-              >
-                <ChatAvatar name={c.name === 'Saved Messages' ? 'Saved' : getConversationName(c).replace('📌 ', '').replace('👥 ', '').replace('📢 ', '')} online={getOtherMemberOnline(c)} size="md" isBot={c.type === 'private' && c.name !== 'Saved Messages' && !!c.members.find(m => m.user_id !== user?.id && profiles[m.user_id]?.is_bot)} />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium text-sm truncate">
-                      {c.type === 'group' && c.name !== 'Saved Messages' ? '👥 ' : c.type === 'channel' ? '📢 ' : ''}
-                      {getConversationName(c)}
-                    </span>
-                    {c.lastMessage && (
-                      <span className="text-xs text-muted-foreground flex-shrink-0 ml-2">
-                        {formatTime(new Date(c.lastMessage.created_at))}
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-xs text-muted-foreground truncate mt-0.5">
-                    {c.lastMessage?.content || 'Chưa có tin nhắn'}
-                  </p>
-                </div>
-                {c.unreadCount > 0 && (
-                  <span className="bg-tg-unread text-primary-foreground text-xs font-medium rounded-full min-w-[20px] h-5 flex items-center justify-center px-1.5">
-                    {c.unreadCount}
-                  </span>
-                )}
-              </motion.div>
-            ))}
+            {otherConvs.map(c => renderConversationRow(c))}
           </AnimatePresence>
         )}
+
 
         {/* User search results */}
         {searchQuery.trim().length >= 2 && searchedUsers.length > 0 && (
