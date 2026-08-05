@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { formatUsername } from '@/lib/chatUtils';
 import { motion } from 'framer-motion';
 import { Shield, Moon, Sun, ArrowLeft, CheckCircle, XCircle, RefreshCw, LogOut, Users, MessageSquare, Hash } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -128,7 +129,7 @@ const AdminPortal: React.FC = () => {
   if (!authed) {
     return (
       <div className="relative min-h-screen flex items-center justify-center p-4 overflow-hidden bg-background">
-        <div className="absolute inset-0 grid-bg opacity-40 pointer-events-none" />
+        <div className="absolute inset-0 dots-bg opacity-70 pointer-events-none" />
         <div className="absolute -top-40 -right-40 w-[500px] h-[500px] rounded-full bg-primary/20 blur-3xl pointer-events-none" />
         <div className="absolute top-5 right-5 z-10">{themeButton}</div>
         <button
@@ -248,7 +249,7 @@ const AdminPortal: React.FC = () => {
                   <div key={u.id} className={`flex items-center gap-3 p-3 rounded-xl bg-secondary/50 hover:bg-secondary transition-colors ${processing === u.id ? 'opacity-50 pointer-events-none' : ''}`}>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate">{u.display_name}</p>
-                      <p className="text-xs text-muted-foreground">@{u.username} · {u.email}</p>
+                      <p className="text-xs text-muted-foreground">{formatUsername(u.username)} · {u.email}</p>
                       <p className="text-[10px] text-muted-foreground">
                         {new Date(u.created_at).toLocaleString('vi-VN')}
                       </p>

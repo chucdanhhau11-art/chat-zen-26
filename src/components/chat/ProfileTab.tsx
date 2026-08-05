@@ -3,6 +3,7 @@ import { Edit2 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useChatContext } from '@/context/ChatContext';
 import ChatAvatar from './ChatAvatar';
+import { formatUsername } from '@/lib/chatUtils';
 import EditProfileDialog from './EditProfileDialog';
 
 const ProfileTab: React.FC = () => {
@@ -21,7 +22,7 @@ const ProfileTab: React.FC = () => {
         <div className="flex flex-col items-center px-6 py-8">
           <ChatAvatar name={p?.display_name || 'U'} online={true} size="lg" />
           <h3 className="font-display font-semibold text-lg mt-4">{p?.display_name || 'User'}</h3>
-          <p className="text-sm text-muted-foreground">@{p?.username}</p>
+          <p className="text-sm text-muted-foreground">{formatUsername(p?.username)}</p>
           {p?.bio && <p className="text-sm text-muted-foreground mt-2 text-center">{p.bio}</p>}
           {(p as any)?.phone_number && (
             <p className="text-sm text-muted-foreground mt-1">📞 {(p as any).phone_number}</p>

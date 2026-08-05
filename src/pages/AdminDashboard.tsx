@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { formatUsername } from '@/lib/chatUtils';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
@@ -157,7 +158,7 @@ const AdminDashboard: React.FC = () => {
                   <ChatAvatar name={u.display_name} online={u.online ?? false} size="sm" />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">{u.display_name}</p>
-                    <p className="text-xs text-muted-foreground">@{u.username}</p>
+                    <p className="text-xs text-muted-foreground">{formatUsername(u.username)}</p>
                   </div>
                   <span className={`text-xs px-2 py-0.5 rounded-full ${u.online ? 'bg-tg-online/20 text-tg-online' : 'bg-muted text-muted-foreground'}`}>
                     {u.online ? 'Online' : 'Offline'}

@@ -4,7 +4,7 @@ import { useChatContext } from '@/context/ChatContext';
 import { useAuth } from '@/context/AuthContext';
 import ChatAvatar from './ChatAvatar';
 import { motion } from 'framer-motion';
-import { formatLastSeen } from '@/lib/chatUtils';
+import {formatLastSeen, formatUsername } from '@/lib/chatUtils';
 
 interface Props {
   userId: string;
@@ -56,7 +56,7 @@ const ProfileViewDialog: React.FC<Props> = ({ userId, onClose }) => {
         <div className="flex flex-col items-center">
           <ChatAvatar name={profile.display_name} avatar={profile.avatar_url || undefined} online={profile.online ?? false} size="lg" />
           <h3 className="mt-3 text-lg font-display font-semibold">{profile.display_name}</h3>
-          <p className="text-sm text-muted-foreground">@{profile.username}</p>
+          <p className="text-sm text-muted-foreground">{formatUsername(profile.username)}</p>
           <p className={`text-xs mt-1 ${profile.online ? 'text-tg-online' : 'text-muted-foreground'}`}>
             {profile.online ? 'Online' : profile.last_seen ? formatLastSeen(new Date(profile.last_seen)) : 'Offline'}
           </p>
@@ -162,7 +162,7 @@ const ProfileViewDialog: React.FC<Props> = ({ userId, onClose }) => {
           <div className="mt-4 w-full space-y-2 text-sm">
             <div className="flex justify-between px-2 py-1.5 rounded-lg bg-secondary/50">
               <span className="text-muted-foreground">Username</span>
-              <span>@{profile.username}</span>
+              <span>{formatUsername(profile.username)}</span>
             </div>
             <div className="flex justify-between px-2 py-1.5 rounded-lg bg-secondary/50">
               <span className="text-muted-foreground">Tham gia / Joined</span>

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { formatUsername } from '@/lib/chatUtils';
 import { X, Bell, Trash2, Users, Image, FileText, LogOut, UserPlus } from 'lucide-react';
 import { useChatContext } from '@/context/ChatContext';
 import { useAuth } from '@/context/AuthContext';
@@ -162,7 +163,7 @@ const InfoPanel: React.FC = () => {
                               <ChatAvatar name={f.display_name} online={f.online ?? false} size="sm" />
                               <div className="flex-1 text-left min-w-0">
                                 <p className="text-xs font-medium truncate">{f.display_name}</p>
-                                <p className="text-[10px] text-muted-foreground">@{f.username}</p>
+                                <p className="text-[10px] text-muted-foreground">{formatUsername(f.username)}</p>
                               </div>
                               <UserPlus className="h-3.5 w-3.5 text-primary" />
                             </button>

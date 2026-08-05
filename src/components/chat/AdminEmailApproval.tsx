@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { formatUsername } from '@/lib/chatUtils';
 import { X, CheckCircle, XCircle, Mail } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -100,7 +101,7 @@ const AdminEmailApproval: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                   <ChatAvatar name={u.display_name} online={false} size="sm" />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">{u.display_name}</p>
-                    <p className="text-xs text-muted-foreground">@{u.username}</p>
+                    <p className="text-xs text-muted-foreground">{formatUsername(u.username)}</p>
                     <p className="text-[10px] text-primary/70">{u.email}</p>
                     <p className="text-[10px] text-muted-foreground">
                       {new Date(u.created_at).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}

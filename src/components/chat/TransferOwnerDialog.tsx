@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { formatUsername } from '@/lib/chatUtils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import ChatAvatar from './ChatAvatar';
@@ -49,7 +50,7 @@ const TransferOwnerDialog: React.FC<TransferOwnerDialogProps> = ({ open, onClose
                 size="sm"
               />
               <span className="font-medium">{m.profile?.display_name || 'User'}</span>
-              <span className="text-muted-foreground text-xs">@{m.profile?.username || '?'}</span>
+              <span className="text-muted-foreground text-xs">{formatUsername(m.profile?.username) || '?'}</span>
             </button>
           ))}
         </div>

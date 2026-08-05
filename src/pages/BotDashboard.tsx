@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { formatUsername } from '@/lib/chatUtils';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
@@ -256,7 +257,7 @@ const BotDashboard: React.FC = () => {
                         <h3 className="font-semibold text-sm truncate">{bot.profiles?.display_name}</h3>
                         <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary font-bold uppercase tracking-wider">BOT</span>
                       </div>
-                      <p className="text-xs text-muted-foreground">@{bot.profiles?.username}</p>
+                      <p className="text-xs text-muted-foreground">{formatUsername(bot.profiles?.username)}</p>
                       {bot.description && <p className="text-xs text-muted-foreground mt-0.5 truncate">{bot.description}</p>}
                     </div>
                     <span className={`text-xs px-2 py-1 rounded-full font-medium ${bot.status === 'active' ? 'bg-tg-online/20 text-tg-online' : 'bg-destructive/10 text-destructive'}`}>
@@ -311,7 +312,7 @@ const BotDashboard: React.FC = () => {
                     <h2 className="text-xl font-display font-bold">{selectedBot.profiles?.display_name}</h2>
                     <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary font-bold uppercase tracking-wider">BOT</span>
                   </div>
-                  <p className="text-sm text-muted-foreground">@{selectedBot.profiles?.username}</p>
+                  <p className="text-sm text-muted-foreground">{formatUsername(selectedBot.profiles?.username)}</p>
                 </div>
               </div>
 

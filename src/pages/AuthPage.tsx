@@ -88,7 +88,7 @@ const AuthPage: React.FC = () => {
 
   return (
     <div className="relative min-h-screen flex items-center justify-center p-4 overflow-hidden">
-      <div className="absolute inset-0 grid-bg opacity-40 pointer-events-none" />
+      <div className="absolute inset-0 dots-bg opacity-70 pointer-events-none" />
       <div className="absolute -top-40 -left-40 w-[500px] h-[500px] rounded-full bg-primary/20 blur-3xl pointer-events-none" />
       <div className="absolute -bottom-40 -right-40 w-[500px] h-[500px] rounded-full bg-accent/20 blur-3xl pointer-events-none" />
 
