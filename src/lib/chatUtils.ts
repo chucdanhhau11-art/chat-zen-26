@@ -22,3 +22,12 @@ export const formatLastSeen = (date: Date): string => {
 export const getInitials = (name: string): string => {
   return name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
 };
+
+/** Hiển thị username dạng @handle, bỏ phần domain nếu username là email */
+export const formatUsername = (username?: string | null): string => {
+  if (!username) return '';
+  const clean = username.replace(/^@+/, '');
+  const handle = clean.includes('@') ? clean.split('@')[0] : clean;
+  return `@${handle}`;
+};
+
