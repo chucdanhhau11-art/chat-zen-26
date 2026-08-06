@@ -66,7 +66,11 @@ const CallScreen: React.FC<CallScreenProps> = ({
         exit={{ opacity: 0 }}
         className="fixed inset-0 z-[100] bg-black/95 flex flex-col items-center justify-center"
       >
+        {/* Remote audio (always mounted so voice calls have sound) */}
+        <audio ref={remoteAudioRef} autoPlay playsInline className="hidden" />
+
         {/* Video views */}
+
         {isVideo && isConnected && (
           <>
             {/* Remote video (full screen) */}
