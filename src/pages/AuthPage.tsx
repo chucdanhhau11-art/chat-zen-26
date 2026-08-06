@@ -56,7 +56,7 @@ const AuthPage: React.FC = () => {
       }
     } else {
       if (!username.trim() || !displayName.trim()) { toast.error('Vui lòng điền đầy đủ thông tin'); setSubmitting(false); return; }
-      const { error } = await signUp(email, password, username, displayName);
+      const { error } = await signUp(email, password, username.trim().replace(/^@+/, '').split('@')[0], displayName);
       if (error) {
         toast.error(error.message);
       } else {

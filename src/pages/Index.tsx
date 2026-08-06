@@ -138,7 +138,9 @@ const ChatLayout: React.FC = () => {
         isVideoOff={webrtc.isVideoOff}
         localVideoRef={webrtc.localVideoRef}
         remoteVideoRef={webrtc.remoteVideoRef}
+        remoteAudioRef={webrtc.remoteAudioRef}
         remoteStream={webrtc.remoteStream}
+
         onAnswer={webrtc.answerCall}
         onReject={webrtc.rejectCall}
         onEnd={webrtc.endCall}
