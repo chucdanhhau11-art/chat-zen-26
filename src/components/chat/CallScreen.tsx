@@ -15,7 +15,9 @@ interface CallScreenProps {
   isVideoOff: boolean;
   localVideoRef: React.RefObject<HTMLVideoElement>;
   remoteVideoRef: React.RefObject<HTMLVideoElement>;
+  remoteAudioRef: React.RefObject<HTMLAudioElement>;
   remoteStream: MediaStream;
+
   onAnswer: () => void;
   onReject: () => void;
   onEnd: () => void;
