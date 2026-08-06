@@ -34,17 +34,24 @@ const formatDuration = (seconds: number) => {
 const CallScreen: React.FC<CallScreenProps> = ({
   callState, callType, remoteName, remoteAvatarUrl,
   callDuration, isMuted, isVideoOff,
-  localVideoRef, remoteVideoRef, remoteStream,
+  localVideoRef, remoteVideoRef, remoteAudioRef, remoteStream,
   onAnswer, onReject, onEnd, onToggleMute, onToggleVideo,
 }) => {
-  // Attach remote stream to video element
+  // Attach remote stream to media elements
   useEffect(() => {
-    if (remoteVideoRef.current && remoteStream) {
-      remoteVideoRef.current.srcObject = remoteStream;
+    if (!remoteStream) return;
+    if (remoteAudioRef.current && remoteAudioRef.current.srcObject !== remoteStream) {
+      remoteAudioRef.current.srcObject = remoteStream;
+      remoteAudioRef.current.play().catch(() => {});
     }
-  }, [remoteStream, remoteVideoRef, callState]);
+    if (remoteVideoRef.current && remoteVideoRef.current.srcObject !== remoteStream) {
+      remoteVideoRef.current.srcObject = remoteStream;
+      remoteVideoRef.current.play().catch(() => {});
+    }
+  }, [remoteStream, remoteVideoRef, remoteAudioRef, callState]);
 
   if (callState === 'idle') return null;
+
 
   const isVideo = callType === 'video';
   const isReceiving = callState === 'receiving';
