@@ -944,7 +944,7 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
 
   if (!activeConversation) {
     return (
-      <div className="flex-1 flex items-center justify-center bg-tg-chat dots-bg">
+      <div className="flex-1 h-full min-h-0 flex items-center justify-center bg-tg-chat dots-bg">
         <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="text-center">
           <img src={logoImg} alt="Chim Cu Gáy" className="w-16 h-16 mx-auto mb-6 drop-shadow-lg rounded-full" />
           <h2 className="text-xl font-display font-semibold mb-2">Chim Cu Gáy</h2>
