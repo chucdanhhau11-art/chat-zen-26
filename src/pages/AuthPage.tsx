@@ -108,7 +108,7 @@ const AuthPage: React.FC = () => {
           <div className="relative w-16 h-16 mx-auto mb-4">
             <div className="absolute inset-0 gradient-primary rounded-2xl blur-lg opacity-60 animate-pulse-glow" />
             <div className="relative w-16 h-16 gradient-primary rounded-2xl flex items-center justify-center shadow-elevated">
-              <img src={logoImg} alt="Chim Cu Gáy" className="w-10 h-10 rounded-full" />
+              <img src={logoImg} alt="Chim Cu Gáy" className="w-10 h-10 object-contain" />
             </div>
           </div>
           <h1 className="text-3xl font-display font-bold tracking-tight">
