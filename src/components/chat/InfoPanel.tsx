@@ -10,11 +10,12 @@ import TransferOwnerDialog from './TransferOwnerDialog';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const InfoPanel: React.FC = () => {
-  const { activeConversation, showInfoPanel, toggleInfoPanel, profiles, deleteConversation, leaveGroup, messages, friends, addMemberToGroup } = useChatContext();
+  const { activeConversation, showInfoPanel, toggleInfoPanel, profiles, deleteConversation, leaveGroup, messages, friends, addMemberToGroup, transferOwnership } = useChatContext();
   const { user } = useAuth();
   const [viewProfileId, setViewProfileId] = useState<string | null>(null);
   const [galleryTab, setGalleryTab] = useState<'media' | 'files' | null>(null);
   const [showTransferDialog, setShowTransferDialog] = useState(false);
+  const [showHandoverDialog, setShowHandoverDialog] = useState(false);
   const [showAddMember, setShowAddMember] = useState(false);
   const [addMemberSearch, setAddMemberSearch] = useState('');
 
