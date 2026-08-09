@@ -282,9 +282,9 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const { data } = await supabase.from('profiles').select('*');
       if (data) {
         const map: Record<string, Profile> = {};
-        data.forEach(p => { map[p.id] = p; });
+        data.forEach(p => { map[p.id] = withPresence(p); });
         setProfiles(map);
-        setAllProfiles(data);
+        setAllProfiles(data.map(withPresence));
       }
     };
     fetchProfiles();
