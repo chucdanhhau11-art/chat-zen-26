@@ -103,8 +103,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     setOnline();
     
-    // Heartbeat every 30s
-    const interval = setInterval(setOnline, 30000);
+    // Heartbeat every 20s (phải nhỏ hơn ngưỡng 45s để chấm xanh chính xác)
+    const interval = setInterval(setOnline, 20000);
     
     const handleBeforeUnload = () => {
       // Use sendBeacon for reliable offline update
