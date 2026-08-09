@@ -4,6 +4,11 @@ import { useAuth } from '@/context/AuthContext';
 import type { Tables } from '@/integrations/supabase/types';
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import { toast } from 'sonner';
+import { computeOnline } from '@/lib/chatUtils';
+
+const withPresence = <T extends { online?: boolean | null; last_seen?: string | null }>(p: T): T =>
+  ({ ...p, online: computeOnline(p) });
+
 
 const playNotificationSound = () => {
   try {
