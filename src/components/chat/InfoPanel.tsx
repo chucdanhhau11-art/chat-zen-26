@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { formatUsername } from '@/lib/chatUtils';
-import { X, Bell, Trash2, Users, Image, FileText, LogOut, UserPlus } from 'lucide-react';
+import { X, Bell, Trash2, Users, Image, FileText, LogOut, UserPlus, Crown } from 'lucide-react';
 import { useChatContext } from '@/context/ChatContext';
 import { useAuth } from '@/context/AuthContext';
 import ChatAvatar from './ChatAvatar';
