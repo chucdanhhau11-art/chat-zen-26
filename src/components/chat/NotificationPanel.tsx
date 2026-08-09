@@ -56,15 +56,11 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({
           </div>
           <div className="flex items-center gap-1">
             {notifications.length > 0 && (
-              <>
-                <button onClick={onMarkAllRead} className="text-[11px] text-primary hover:underline px-2 py-1">
-                  Đánh dấu đã đọc
-                </button>
-                <button onClick={onClear} className="text-[11px] text-muted-foreground hover:text-destructive px-2 py-1">
-                  Xoá tất cả
-                </button>
-              </>
+              <button onClick={onMarkAllRead} className="text-[11px] text-primary hover:underline px-2 py-1">
+                Đánh dấu đã đọc
+              </button>
             )}
+
             <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-tg-hover transition-colors">
               <X className="h-4 w-4 text-muted-foreground" />
             </button>
