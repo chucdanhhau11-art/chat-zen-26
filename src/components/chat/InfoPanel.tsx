@@ -195,6 +195,15 @@ const InfoPanel: React.FC = () => {
             )}
 
             <div className="mt-auto px-2 pb-4 pt-4 space-y-1">
+              {activeConversation.type !== 'private' && isOwner && otherMembers.length > 0 && (
+                <button
+                  onClick={() => setShowHandoverDialog(true)}
+                  className="flex items-center gap-3 w-full px-4 py-2.5 rounded-lg hover:bg-primary/10 text-primary transition-colors text-sm"
+                >
+                  <Crown className="h-4 w-4" />
+                  <span>Nhường nhóm trưởng / Transfer ownership</span>
+                </button>
+              )}
               {activeConversation.type !== 'private' && (
                 <button
                   onClick={handleLeaveGroup}
@@ -225,6 +234,16 @@ const InfoPanel: React.FC = () => {
               onTransferAndLeave={handleTransferAndLeave}
             />
           )}
+          {showHandoverDialog && (
+            <TransferOwnerDialog
+              open={showHandoverDialog}
+              onClose={() => setShowHandoverDialog(false)}
+              members={otherMembers}
+              keepMembership
+              onTransferAndLeave={async (newOwnerId) => { await transferOwnership(activeConversation.id, newOwnerId); }}
+            />
+          )}
+
           </motion.div>
         </>
       )}
