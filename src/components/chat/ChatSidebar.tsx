@@ -48,7 +48,12 @@ const ChatSidebar: React.FC = () => {
   const [showBlockedList, setShowBlockedList] = useState(false);
   const [viewProfileUserId, setViewProfileUserId] = useState<string | null>(null);
   const [confirmAction, setConfirmAction] = useState<{ type: 'unfriend' | 'block'; userId: string; name: string } | null>(null);
-  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [notifications, setNotifications] = useState<NotificationItem[]>(() => {
+    try {
+      const raw = localStorage.getItem('chat-notifications');
+      return raw ? (JSON.parse(raw) as NotificationItem[]) : [];
+    } catch { return []; }
+  });
   const [userSearchQuery, setUserSearchQuery] = useState('');
   const [localSearch, setLocalSearch] = useState('');
   const [showNewGroup, setShowNewGroup] = useState(false);
@@ -77,7 +82,7 @@ const ChatSidebar: React.FC = () => {
         const senderName = profiles[req.requester_id]?.display_name || 'Unknown';
         notifIdCounter.current++;
         const newNotif: NotificationItem = {
-          id: `notif-fr-${notifIdCounter.current}-${Date.now()}`,
+          id: `notif-fr-${req.id}`,
           conversationId: '',
           conversationName: '👥 Lời mời kết bạn / Friend Request',
           senderName,
@@ -88,7 +93,7 @@ const ChatSidebar: React.FC = () => {
           friendRequestId: req.id,
           requesterId: req.requester_id,
         };
-        setNotifications(prev => [newNotif, ...prev].slice(0, 50));
+        setNotifications(prev => prev.some(n => n.id === newNotif.id) ? prev : [newNotif, ...prev].slice(0, 100));
         // Sound
         try {
           const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -160,14 +165,14 @@ const ChatSidebar: React.FC = () => {
   const handleAcceptFriend = useCallback(async (notif: NotificationItem) => {
     if (notif.friendRequestId) {
       await acceptFriendRequest(notif.friendRequestId);
-      setNotifications(prev => prev.map(n => n.id === notif.id ? { ...n, read: true, friendRequestId: undefined, content: '✅ Đã chấp nhận / Accepted' } : n));
+      setNotifications(prev => prev.map(n => n.id === notif.id ? { ...n, read: true, friendRequestId: undefined, handled: 'accepted' as const } : n));
     }
   }, [acceptFriendRequest]);
 
   const handleRejectFriend = useCallback(async (notif: NotificationItem) => {
     if (notif.friendRequestId) {
       await declineFriendRequest(notif.friendRequestId);
-      setNotifications(prev => prev.map(n => n.id === notif.id ? { ...n, read: true, friendRequestId: undefined, content: '❌ Đã từ chối / Declined' } : n));
+      setNotifications(prev => prev.map(n => n.id === notif.id ? { ...n, read: true, friendRequestId: undefined, handled: 'declined' as const } : n));
     }
   }, [declineFriendRequest]);
 
@@ -175,9 +180,15 @@ const ChatSidebar: React.FC = () => {
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
   }, []);
 
+  // Giữ lại lịch sử thông báo (không xoá) giữa các phiên
+  useEffect(() => {
+    try { localStorage.setItem('chat-notifications', JSON.stringify(notifications.slice(0, 100))); } catch {}
+  }, [notifications]);
+
   const handleClearNotifications = useCallback(() => {
-    setNotifications([]);
+    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
   }, []);
+
 
   const getConversationName = (conv: ConversationWithDetails) => {
     if (conv.name === 'Saved Messages') return '📌 Saved Messages';
@@ -269,7 +280,7 @@ const ChatSidebar: React.FC = () => {
         pinned && 'bg-primary/5'
       )}
     >
-      <ChatAvatar name={c.name === 'Saved Messages' ? 'Saved' : getConversationName(c).replace('📌 ', '').replace('👥 ', '').replace('📢 ', '')} online={getOtherMemberOnline(c)} size="md" isBot={c.type === 'private' && c.name !== 'Saved Messages' && !!c.members.find(m => m.user_id !== user?.id && profiles[m.user_id]?.is_bot)} />
+      <ChatAvatar name={c.name === 'Saved Messages' ? 'Saved' : getConversationName(c).replace('📌 ', '').replace('👥 ', '').replace('📢 ', '')} online={getOtherMemberOnline(c)} size="md" isGroup={c.type !== 'private'} isBot={c.type === 'private' && c.name !== 'Saved Messages' && !!c.members.find(m => m.user_id !== user?.id && profiles[m.user_id]?.is_bot)} />
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between">
           <span className="font-medium text-sm truncate">

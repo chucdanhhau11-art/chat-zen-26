@@ -4,6 +4,11 @@ import { useAuth } from '@/context/AuthContext';
 import type { Tables } from '@/integrations/supabase/types';
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import { toast } from 'sonner';
+import { computeOnline } from '@/lib/chatUtils';
+
+const withPresence = <T extends { online?: boolean | null; last_seen?: string | null }>(p: T): T =>
+  ({ ...p, online: computeOnline(p) });
+
 
 const playNotificationSound = () => {
   try {
@@ -128,6 +133,7 @@ interface ChatContextType {
   cancelFriendRequest: (friendshipId: string) => Promise<void>;
   getFriendshipWith: (userId: string) => Friendship | null;
   addMemberToGroup: (convId: string, userId: string) => Promise<void>;
+  transferOwnership: (convId: string, newOwnerId: string) => Promise<void>;
   // Block
   blockUser: (userId: string) => Promise<void>;
   unblockUser: (userId: string) => Promise<void>;
@@ -277,9 +283,9 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const { data } = await supabase.from('profiles').select('*');
       if (data) {
         const map: Record<string, Profile> = {};
-        data.forEach(p => { map[p.id] = p; });
+        data.forEach(p => { map[p.id] = withPresence(p); });
         setProfiles(map);
-        setAllProfiles(data);
+        setAllProfiles(data.map(withPresence));
       }
     };
     fetchProfiles();
@@ -660,7 +666,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles' },
         (payload: RealtimePostgresChangesPayload<Profile>) => {
           if (payload.eventType === 'UPDATE') {
-            const updated = payload.new as Profile;
+            const updated = withPresence(payload.new as Profile);
             setProfiles(prev => ({ ...prev, [updated.id]: updated }));
             setAllProfiles(prev => prev.map(p => p.id === updated.id ? updated : p));
           }
@@ -668,21 +674,36 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => { supabase.removeChannel(channel); };
   }, []);
 
-  // Profile polling fallback (every 30s instead of 15s to reduce load)
+  // Profile polling fallback + re-evaluate presence freshness
   useEffect(() => {
     if (!user) return;
     const pollProfiles = async () => {
       const { data } = await supabase.from('profiles').select('*');
       if (data) {
         const map: Record<string, Profile> = {};
-        data.forEach(p => { map[p.id] = p; });
+        data.forEach(p => { map[p.id] = withPresence(p); });
         setProfiles(map);
-        setAllProfiles(data);
+        setAllProfiles(data.map(withPresence));
       }
     };
-    const interval = setInterval(pollProfiles, 30000);
-    return () => clearInterval(interval);
+    const interval = setInterval(pollProfiles, 20000);
+    // Local re-check so stale "online" flags expire between polls
+    const tick = setInterval(() => {
+      setProfiles(prev => {
+        let changed = false;
+        const next: Record<string, Profile> = {};
+        Object.entries(prev).forEach(([id, p]) => {
+          const on = computeOnline(p);
+          if (on !== p.online) changed = true;
+          next[id] = on === p.online ? p : { ...p, online: on };
+        });
+        return changed ? next : prev;
+      });
+      setAllProfiles(prev => prev.map(p => computeOnline(p) === p.online ? p : { ...p, online: computeOnline(p) }));
+    }, 10000);
+    return () => { clearInterval(interval); clearInterval(tick); };
   }, [user]);
+
 
   const sendMessage = useCallback(async (text: string) => {
     if (!activeConversationId || !user || !text.trim()) return;
@@ -999,6 +1020,39 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     fetchConversations(false);
   }, [user, fetchConversations]);
 
+  const transferOwnership = useCallback(async (convId: string, newOwnerId: string) => {
+    if (!user) return;
+    try {
+      const { error: e1 } = await supabase.from('conversation_members')
+        .update({ role: 'owner' as const })
+        .eq('conversation_id', convId).eq('user_id', newOwnerId);
+      if (e1) throw e1;
+      const { error: e2 } = await supabase.from('conversation_members')
+        .update({ role: 'admin' as const })
+        .eq('conversation_id', convId).eq('user_id', user.id);
+      if (e2) throw e2;
+      await supabase.from('conversations').update({ created_by: newOwnerId }).eq('id', convId);
+
+      // Thông báo trong nhóm để người được nhường quyền nhận được
+      const fromName = profiles[user.id]?.display_name || 'Ai đó';
+      const toName = profiles[newOwnerId]?.display_name || 'thành viên';
+      await supabase.from('messages').insert({
+        conversation_id: convId,
+        sender_id: user.id,
+        content: `👑 ${fromName} đã nhường quyền nhóm trưởng cho ${toName}`,
+        message_type: 'text',
+      });
+      await supabase.from('conversations').update({ updated_at: new Date().toISOString() }).eq('id', convId);
+
+      await fetchConversations(false);
+      toast.success('Đã nhường quyền nhóm trưởng');
+    } catch (err: any) {
+      toast.error('Lỗi nhường quyền: ' + (err.message || 'Unknown'));
+    }
+  }, [user, profiles, fetchConversations]);
+
+
+
   return (
     <ChatContext.Provider value={{
       conversations, activeConversationId, setActiveConversation,
@@ -1011,7 +1065,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       openBotFatherChat, isBotFatherConversation,
       friendships, friends, pendingRequests,
       sendFriendRequest, acceptFriendRequest, declineFriendRequest,
-      removeFriend, cancelFriendRequest, getFriendshipWith, addMemberToGroup,
+      removeFriend, cancelFriendRequest, getFriendshipWith, addMemberToGroup, transferOwnership,
       blockUser, unblockUser, isBlocked, isBlockedBy, blockedUsers,
     }}>
       {children}

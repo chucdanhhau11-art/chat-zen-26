@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { formatUsername } from '@/lib/chatUtils';
-import { X, Bell, Trash2, Users, Image, FileText, LogOut, UserPlus } from 'lucide-react';
+import { X, Bell, Trash2, Users, Image, FileText, LogOut, UserPlus, Crown } from 'lucide-react';
 import { useChatContext } from '@/context/ChatContext';
 import { useAuth } from '@/context/AuthContext';
 import ChatAvatar from './ChatAvatar';
@@ -10,11 +10,12 @@ import TransferOwnerDialog from './TransferOwnerDialog';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const InfoPanel: React.FC = () => {
-  const { activeConversation, showInfoPanel, toggleInfoPanel, profiles, deleteConversation, leaveGroup, messages, friends, addMemberToGroup } = useChatContext();
+  const { activeConversation, showInfoPanel, toggleInfoPanel, profiles, deleteConversation, leaveGroup, messages, friends, addMemberToGroup, transferOwnership } = useChatContext();
   const { user } = useAuth();
   const [viewProfileId, setViewProfileId] = useState<string | null>(null);
   const [galleryTab, setGalleryTab] = useState<'media' | 'files' | null>(null);
   const [showTransferDialog, setShowTransferDialog] = useState(false);
+  const [showHandoverDialog, setShowHandoverDialog] = useState(false);
   const [showAddMember, setShowAddMember] = useState(false);
   const [addMemberSearch, setAddMemberSearch] = useState('');
 
@@ -101,7 +102,7 @@ const InfoPanel: React.FC = () => {
             </div>
 
             <div className="flex flex-col items-center py-6 px-4">
-              <ChatAvatar name={getConvName()} online={getOtherOnline()} size="lg" />
+              <ChatAvatar name={getConvName()} online={getOtherOnline()} isGroup={activeConversation.type !== 'private'} size="lg" />
               <h4 className="mt-3 font-semibold text-lg">{getConvName()}</h4>
               {activeConversation.type !== 'private' && (
                 <p className="text-sm text-muted-foreground mt-1">{activeConversation.members.length} thành viên / members</p>
@@ -194,6 +195,15 @@ const InfoPanel: React.FC = () => {
             )}
 
             <div className="mt-auto px-2 pb-4 pt-4 space-y-1">
+              {activeConversation.type !== 'private' && isOwner && otherMembers.length > 0 && (
+                <button
+                  onClick={() => setShowHandoverDialog(true)}
+                  className="flex items-center gap-3 w-full px-4 py-2.5 rounded-lg hover:bg-primary/10 text-primary transition-colors text-sm"
+                >
+                  <Crown className="h-4 w-4" />
+                  <span>Nhường nhóm trưởng / Transfer ownership</span>
+                </button>
+              )}
               {activeConversation.type !== 'private' && (
                 <button
                   onClick={handleLeaveGroup}
@@ -224,6 +234,16 @@ const InfoPanel: React.FC = () => {
               onTransferAndLeave={handleTransferAndLeave}
             />
           )}
+          {showHandoverDialog && (
+            <TransferOwnerDialog
+              open={showHandoverDialog}
+              onClose={() => setShowHandoverDialog(false)}
+              members={otherMembers}
+              keepMembership
+              onTransferAndLeave={async (newOwnerId) => { await transferOwnership(activeConversation.id, newOwnerId); }}
+            />
+          )}
+
           </motion.div>
         </>
       )}

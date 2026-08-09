@@ -14,6 +14,8 @@ export interface NotificationItem {
   type?: 'message' | 'friend_request';
   friendRequestId?: string;
   requesterId?: string;
+  /** Trạng thái đã tương tác (giữ lại thông báo, không xoá) */
+  handled?: 'accepted' | 'declined';
 }
 
 interface NotificationPanelProps {
@@ -54,15 +56,11 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({
           </div>
           <div className="flex items-center gap-1">
             {notifications.length > 0 && (
-              <>
-                <button onClick={onMarkAllRead} className="text-[11px] text-primary hover:underline px-2 py-1">
-                  Đánh dấu đã đọc
-                </button>
-                <button onClick={onClear} className="text-[11px] text-muted-foreground hover:text-destructive px-2 py-1">
-                  Xoá tất cả
-                </button>
-              </>
+              <button onClick={onMarkAllRead} className="text-[11px] text-primary hover:underline px-2 py-1">
+                Đánh dấu đã đọc
+              </button>
             )}
+
             <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-tg-hover transition-colors">
               <X className="h-4 w-4 text-muted-foreground" />
             </button>
@@ -105,22 +103,32 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({
                     <p className={`text-xs mt-0.5 truncate ${!n.read ? 'text-foreground/80' : 'text-muted-foreground'}`}>
                       {n.content}
                     </p>
-                    {n.type === 'friend_request' && n.friendRequestId && (
-                      <div className="flex items-center gap-2 mt-2">
-                        <button
-                          onClick={(e) => { e.stopPropagation(); onAcceptFriend?.(n); }}
-                          className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors"
-                        >
-                          <Check className="h-3 w-3" /> Chấp nhận
-                        </button>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); onRejectFriend?.(n); }}
-                          className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-destructive/10 text-destructive text-xs font-medium hover:bg-destructive/20 transition-colors"
-                        >
-                          <XCircle className="h-3 w-3" /> Từ chối
-                        </button>
-                      </div>
+                    {n.type === 'friend_request' && (
+                      n.handled ? (
+                        <span className={`inline-flex items-center gap-1 mt-2 px-2 py-1 rounded-md text-[11px] font-medium ${
+                          n.handled === 'accepted' ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'
+                        }`}>
+                          {n.handled === 'accepted' ? <Check className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
+                          {n.handled === 'accepted' ? 'Đã chấp nhận' : 'Đã từ chối'}
+                        </span>
+                      ) : n.friendRequestId ? (
+                        <div className="flex items-center gap-2 mt-2">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); onAcceptFriend?.(n); }}
+                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors"
+                          >
+                            <Check className="h-3 w-3" /> Chấp nhận
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); onRejectFriend?.(n); }}
+                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-destructive/10 text-destructive text-xs font-medium hover:bg-destructive/20 transition-colors"
+                          >
+                            <XCircle className="h-3 w-3" /> Từ chối
+                          </button>
+                        </div>
+                      ) : null
                     )}
+
                   </div>
                   {!n.read && (
                     <div className="mt-2 w-2 h-2 rounded-full bg-primary flex-shrink-0" />

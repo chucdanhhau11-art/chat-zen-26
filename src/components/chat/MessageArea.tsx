@@ -1026,7 +1026,7 @@ const MessageArea: React.FC<MessageAreaProps> = ({ onStartCall }) => {
           <ArrowLeft className="h-5 w-5 text-muted-foreground" />
         </button>
         <div className="cursor-pointer flex-shrink-0" onClick={handleAvatarClick}>
-          <ChatAvatar name={getConvName()} online={getOtherOnline()} size="sm" isBot={(() => {
+          <ChatAvatar name={getConvName()} online={getOtherOnline()} size="sm" isGroup={activeConversation.type !== 'private'} isBot={(() => {
             if (activeConversation.type === 'private' && user) {
               const other = activeConversation.members.find(m => m.user_id !== user.id);
               return other ? !!profiles[other.user_id]?.is_bot : false;

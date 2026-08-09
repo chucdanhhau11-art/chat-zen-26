@@ -8,6 +8,8 @@ interface ChatAvatarProps {
   online?: boolean;
   size?: 'sm' | 'md' | 'lg';
   isBot?: boolean;
+  /** Nhóm/kênh dùng hình lục giác */
+  isGroup?: boolean;
 }
 
 const sizeClasses = {
@@ -33,14 +35,16 @@ const getColorFromName = (name: string) => {
   return bgColors[Math.abs(hash) % bgColors.length];
 };
 
-const ChatAvatar: React.FC<ChatAvatarProps> = ({ name, avatar, online, size = 'md', isBot }) => {
+const ChatAvatar: React.FC<ChatAvatarProps> = ({ name, avatar, online, size = 'md', isBot, isGroup }) => {
+  const shapeClass = isGroup ? 'hex-avatar' : 'rounded-full';
   return (
     <div className="relative flex-shrink-0">
       {avatar ? (
-        <img src={avatar} alt={name} className={cn('rounded-full object-cover', sizeClasses[size])} />
+        <img src={avatar} alt={name} className={cn('object-cover', shapeClass, sizeClasses[size])} />
       ) : (
         <div className={cn(
-          'rounded-full flex items-center justify-center font-semibold text-primary-foreground',
+          'flex items-center justify-center font-semibold text-primary-foreground',
+          shapeClass,
           sizeClasses[size],
           getColorFromName(name)
         )}>

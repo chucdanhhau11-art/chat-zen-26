@@ -23,11 +23,20 @@ export const getInitials = (name: string): string => {
   return name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
 };
 
-/** Hiển thị username dạng @handle, bỏ phần domain nếu username là email */
+/** Hiển thị username đúng như trong hệ thống, bỏ ký tự @ và phần domain nếu là email */
 export const formatUsername = (username?: string | null): string => {
   if (!username) return '';
   const clean = username.replace(/^@+/, '');
-  const handle = clean.includes('@') ? clean.split('@')[0] : clean;
-  return `@${handle}`;
+  return clean.includes('@') ? clean.split('@')[0] : clean;
 };
+
+/** Ngưỡng coi là online: có cờ online và last_seen còn mới */
+export const ONLINE_THRESHOLD_MS = 45_000;
+
+export const computeOnline = (p: { online?: boolean | null; last_seen?: string | null }): boolean => {
+  if (!p?.online) return false;
+  if (!p.last_seen) return false;
+  return Date.now() - new Date(p.last_seen).getTime() < ONLINE_THRESHOLD_MS;
+};
+
 
