@@ -1020,6 +1020,39 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     fetchConversations(false);
   }, [user, fetchConversations]);
 
+  const transferOwnership = useCallback(async (convId: string, newOwnerId: string) => {
+    if (!user) return;
+    try {
+      const { error: e1 } = await supabase.from('conversation_members')
+        .update({ role: 'owner' as const })
+        .eq('conversation_id', convId).eq('user_id', newOwnerId);
+      if (e1) throw e1;
+      const { error: e2 } = await supabase.from('conversation_members')
+        .update({ role: 'admin' as const })
+        .eq('conversation_id', convId).eq('user_id', user.id);
+      if (e2) throw e2;
+      await supabase.from('conversations').update({ created_by: newOwnerId }).eq('id', convId);
+
+      // Thông báo trong nhóm để người được nhường quyền nhận được
+      const fromName = profiles[user.id]?.display_name || 'Ai đó';
+      const toName = profiles[newOwnerId]?.display_name || 'thành viên';
+      await supabase.from('messages').insert({
+        conversation_id: convId,
+        sender_id: user.id,
+        content: `👑 ${fromName} đã nhường quyền nhóm trưởng cho ${toName}`,
+        message_type: 'text',
+      });
+      await supabase.from('conversations').update({ updated_at: new Date().toISOString() }).eq('id', convId);
+
+      await fetchConversations(false);
+      toast.success('Đã nhường quyền nhóm trưởng');
+    } catch (err: any) {
+      toast.error('Lỗi nhường quyền: ' + (err.message || 'Unknown'));
+    }
+  }, [user, profiles, fetchConversations]);
+
+
+
   return (
     <ChatContext.Provider value={{
       conversations, activeConversationId, setActiveConversation,
