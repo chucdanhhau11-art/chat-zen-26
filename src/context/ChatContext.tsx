@@ -665,7 +665,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles' },
         (payload: RealtimePostgresChangesPayload<Profile>) => {
           if (payload.eventType === 'UPDATE') {
-            const updated = payload.new as Profile;
+            const updated = withPresence(payload.new as Profile);
             setProfiles(prev => ({ ...prev, [updated.id]: updated }));
             setAllProfiles(prev => prev.map(p => p.id === updated.id ? updated : p));
           }
@@ -673,21 +673,36 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => { supabase.removeChannel(channel); };
   }, []);
 
-  // Profile polling fallback (every 30s instead of 15s to reduce load)
+  // Profile polling fallback + re-evaluate presence freshness
   useEffect(() => {
     if (!user) return;
     const pollProfiles = async () => {
       const { data } = await supabase.from('profiles').select('*');
       if (data) {
         const map: Record<string, Profile> = {};
-        data.forEach(p => { map[p.id] = p; });
+        data.forEach(p => { map[p.id] = withPresence(p); });
         setProfiles(map);
-        setAllProfiles(data);
+        setAllProfiles(data.map(withPresence));
       }
     };
-    const interval = setInterval(pollProfiles, 30000);
-    return () => clearInterval(interval);
+    const interval = setInterval(pollProfiles, 20000);
+    // Local re-check so stale "online" flags expire between polls
+    const tick = setInterval(() => {
+      setProfiles(prev => {
+        let changed = false;
+        const next: Record<string, Profile> = {};
+        Object.entries(prev).forEach(([id, p]) => {
+          const on = computeOnline(p);
+          if (on !== p.online) changed = true;
+          next[id] = on === p.online ? p : { ...p, online: on };
+        });
+        return changed ? next : prev;
+      });
+      setAllProfiles(prev => prev.map(p => computeOnline(p) === p.online ? p : { ...p, online: computeOnline(p) }));
+    }, 10000);
+    return () => { clearInterval(interval); clearInterval(tick); };
   }, [user]);
+
 
   const sendMessage = useCallback(async (text: string) => {
     if (!activeConversationId || !user || !text.trim()) return;
