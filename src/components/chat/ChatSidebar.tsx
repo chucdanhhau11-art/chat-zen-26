@@ -269,7 +269,7 @@ const ChatSidebar: React.FC = () => {
         pinned && 'bg-primary/5'
       )}
     >
-      <ChatAvatar name={c.name === 'Saved Messages' ? 'Saved' : getConversationName(c).replace('📌 ', '').replace('👥 ', '').replace('📢 ', '')} online={getOtherMemberOnline(c)} size="md" isBot={c.type === 'private' && c.name !== 'Saved Messages' && !!c.members.find(m => m.user_id !== user?.id && profiles[m.user_id]?.is_bot)} />
+      <ChatAvatar name={c.name === 'Saved Messages' ? 'Saved' : getConversationName(c).replace('📌 ', '').replace('👥 ', '').replace('📢 ', '')} online={getOtherMemberOnline(c)} size="md" isGroup={c.type !== 'private'} isBot={c.type === 'private' && c.name !== 'Saved Messages' && !!c.members.find(m => m.user_id !== user?.id && profiles[m.user_id]?.is_bot)} />
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between">
           <span className="font-medium text-sm truncate">
