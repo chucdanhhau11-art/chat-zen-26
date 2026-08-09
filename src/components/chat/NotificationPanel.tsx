@@ -14,6 +14,8 @@ export interface NotificationItem {
   type?: 'message' | 'friend_request';
   friendRequestId?: string;
   requesterId?: string;
+  /** Trạng thái đã tương tác (giữ lại thông báo, không xoá) */
+  handled?: 'accepted' | 'declined';
 }
 
 interface NotificationPanelProps {
