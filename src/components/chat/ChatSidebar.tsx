@@ -82,7 +82,7 @@ const ChatSidebar: React.FC = () => {
         const senderName = profiles[req.requester_id]?.display_name || 'Unknown';
         notifIdCounter.current++;
         const newNotif: NotificationItem = {
-          id: `notif-fr-${notifIdCounter.current}-${Date.now()}`,
+          id: `notif-fr-${req.id}`,
           conversationId: '',
           conversationName: '👥 Lời mời kết bạn / Friend Request',
           senderName,
@@ -93,7 +93,7 @@ const ChatSidebar: React.FC = () => {
           friendRequestId: req.id,
           requesterId: req.requester_id,
         };
-        setNotifications(prev => [newNotif, ...prev].slice(0, 50));
+        setNotifications(prev => prev.some(n => n.id === newNotif.id) ? prev : [newNotif, ...prev].slice(0, 100));
         // Sound
         try {
           const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
