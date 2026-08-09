@@ -14,17 +14,24 @@ interface TransferOwnerDialogProps {
   onClose: () => void;
   members: Member[];
   onTransferAndLeave: (newOwnerId: string) => Promise<void>;
+  /** true = chỉ nhường quyền, không rời nhóm */
+  keepMembership?: boolean;
 }
 
-const TransferOwnerDialog: React.FC<TransferOwnerDialogProps> = ({ open, onClose, members, onTransferAndLeave }) => {
+const TransferOwnerDialog: React.FC<TransferOwnerDialogProps> = ({ open, onClose, members, onTransferAndLeave, keepMembership }) => {
   const [selected, setSelected] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+
+  const selectedMember = members.find(m => m.user_id === selected);
 
   const handleConfirm = async () => {
     if (!selected) return;
+    if (keepMembership && !confirming) { setConfirming(true); return; }
     setLoading(true);
     await onTransferAndLeave(selected);
     setLoading(false);
+    setConfirming(false);
     onClose();
   };
 
@@ -32,9 +39,14 @@ const TransferOwnerDialog: React.FC<TransferOwnerDialogProps> = ({ open, onClose
     <Dialog open={open} onOpenChange={v => !v && onClose()}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Chuyển quyền nhóm trưởng</DialogTitle>
-          <DialogDescription>Bạn là nhóm trưởng. Hãy chọn thành viên để chuyển quyền trước khi rời nhóm.</DialogDescription>
+          <DialogTitle>{keepMembership ? 'Nhường quyền nhóm trưởng' : 'Chuyển quyền nhóm trưởng'}</DialogTitle>
+          <DialogDescription>
+            {keepMembership
+              ? 'Chọn thành viên để nhường quyền nhóm trưởng. Bạn vẫn ở lại nhóm với vai trò quản trị viên.'
+              : 'Bạn là nhóm trưởng. Hãy chọn thành viên để chuyển quyền trước khi rời nhóm.'}
+          </DialogDescription>
         </DialogHeader>
+
         <div className="space-y-1 max-h-60 overflow-y-auto">
           {members.map(m => (
             <button
