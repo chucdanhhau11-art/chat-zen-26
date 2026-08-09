@@ -133,6 +133,7 @@ interface ChatContextType {
   cancelFriendRequest: (friendshipId: string) => Promise<void>;
   getFriendshipWith: (userId: string) => Friendship | null;
   addMemberToGroup: (convId: string, userId: string) => Promise<void>;
+  transferOwnership: (convId: string, newOwnerId: string) => Promise<void>;
   // Block
   blockUser: (userId: string) => Promise<void>;
   unblockUser: (userId: string) => Promise<void>;
