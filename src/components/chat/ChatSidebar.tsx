@@ -165,14 +165,14 @@ const ChatSidebar: React.FC = () => {
   const handleAcceptFriend = useCallback(async (notif: NotificationItem) => {
     if (notif.friendRequestId) {
       await acceptFriendRequest(notif.friendRequestId);
-      setNotifications(prev => prev.map(n => n.id === notif.id ? { ...n, read: true, friendRequestId: undefined, content: '✅ Đã chấp nhận / Accepted' } : n));
+      setNotifications(prev => prev.map(n => n.id === notif.id ? { ...n, read: true, friendRequestId: undefined, handled: 'accepted' as const } : n));
     }
   }, [acceptFriendRequest]);
 
   const handleRejectFriend = useCallback(async (notif: NotificationItem) => {
     if (notif.friendRequestId) {
       await declineFriendRequest(notif.friendRequestId);
-      setNotifications(prev => prev.map(n => n.id === notif.id ? { ...n, read: true, friendRequestId: undefined, content: '❌ Đã từ chối / Declined' } : n));
+      setNotifications(prev => prev.map(n => n.id === notif.id ? { ...n, read: true, friendRequestId: undefined, handled: 'declined' as const } : n));
     }
   }, [declineFriendRequest]);
 
@@ -180,9 +180,15 @@ const ChatSidebar: React.FC = () => {
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
   }, []);
 
+  // Giữ lại lịch sử thông báo (không xoá) giữa các phiên
+  useEffect(() => {
+    try { localStorage.setItem('chat-notifications', JSON.stringify(notifications.slice(0, 100))); } catch {}
+  }, [notifications]);
+
   const handleClearNotifications = useCallback(() => {
-    setNotifications([]);
+    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
   }, []);
+
 
   const getConversationName = (conv: ConversationWithDetails) => {
     if (conv.name === 'Saved Messages') return '📌 Saved Messages';
