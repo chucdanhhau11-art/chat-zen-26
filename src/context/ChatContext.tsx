@@ -1065,7 +1065,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       openBotFatherChat, isBotFatherConversation,
       friendships, friends, pendingRequests,
       sendFriendRequest, acceptFriendRequest, declineFriendRequest,
-      removeFriend, cancelFriendRequest, getFriendshipWith, addMemberToGroup,
+      removeFriend, cancelFriendRequest, getFriendshipWith, addMemberToGroup, transferOwnership,
       blockUser, unblockUser, isBlocked, isBlockedBy, blockedUsers,
     }}>
       {children}
