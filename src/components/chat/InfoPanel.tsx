@@ -102,7 +102,7 @@ const InfoPanel: React.FC = () => {
             </div>
 
             <div className="flex flex-col items-center py-6 px-4">
-              <ChatAvatar name={getConvName()} online={getOtherOnline()} size="lg" />
+              <ChatAvatar name={getConvName()} online={getOtherOnline()} isGroup={activeConversation.type !== 'private'} size="lg" />
               <h4 className="mt-3 font-semibold text-lg">{getConvName()}</h4>
               {activeConversation.type !== 'private' && (
                 <p className="text-sm text-muted-foreground mt-1">{activeConversation.members.length} thành viên / members</p>
