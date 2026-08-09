@@ -8,6 +8,8 @@ interface ChatAvatarProps {
   online?: boolean;
   size?: 'sm' | 'md' | 'lg';
   isBot?: boolean;
+  /** Nhóm/kênh dùng hình lục giác */
+  isGroup?: boolean;
 }
 
 const sizeClasses = {
