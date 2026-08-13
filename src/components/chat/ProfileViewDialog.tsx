@@ -15,13 +15,14 @@ interface Props {
 }
 
 const ProfileViewDialog: React.FC<Props> = ({ userId, onClose }) => {
-  const { profiles, getFriendshipWith, sendFriendRequest, acceptFriendRequest, removeFriend, cancelFriendRequest, declineFriendRequest, createPrivateChat, setActiveConversation, blockUser, isBlocked } = useChatContext();
+  const { profiles, getFriendshipWith, sendFriendRequest, acceptFriendRequest, removeFriend, cancelFriendRequest, declineFriendRequest, createPrivateChat, setActiveConversation, setMobileShowingChat, blockUser, isBlocked } = useChatContext();
   const { user } = useAuth();
   const profile = profiles[userId];
   const friendship = getFriendshipWith(userId);
   const isMe = user?.id === userId;
   const blocked = isBlocked(userId);
   const [showConfirm, setShowConfirm] = useState<'unfriend' | 'block' | null>(null);
+  const [opening, setOpening] = useState(false);
 
   if (!profile) return null;
 
@@ -36,21 +37,37 @@ const ProfileViewDialog: React.FC<Props> = ({ userId, onClose }) => {
   const status = getFriendStatus();
 
   const handleMessage = async () => {
-    const convId = await createPrivateChat(userId);
-    if (convId) {
-      setActiveConversation(convId);
-      onClose();
+    if (opening) return;
+    setOpening(true);
+    try {
+      const convId = await createPrivateChat(userId);
+      if (convId) {
+        setActiveConversation(convId);
+        setMobileShowingChat(true);
+        onClose();
+      } else {
+        toast.error('Không mở được cuộc trò chuyện');
+      }
+    } finally {
+      setOpening(false);
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/60 backdrop-blur-sm" onClick={onClose}>
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-background/60 backdrop-blur-sm"
+      onMouseDown={e => { if (e.target === e.currentTarget) onClose(); }}
+      onClick={e => e.stopPropagation()}
+    >
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
+        onMouseDown={e => e.stopPropagation()}
+        onPointerDown={e => e.stopPropagation()}
         onClick={e => e.stopPropagation()}
         className="bg-card rounded-2xl border border-border shadow-xl w-full max-w-sm p-6"
       >
+
         <div className="flex justify-end mb-2">
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-tg-hover transition-colors">
             <X className="h-4 w-4 text-muted-foreground" />
