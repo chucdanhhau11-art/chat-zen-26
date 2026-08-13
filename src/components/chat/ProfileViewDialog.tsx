@@ -197,8 +197,10 @@ const ProfileViewDialog: React.FC<Props> = ({ userId, onClose }) => {
           </div>
         </div>
       </motion.div>
-    </div>
+    </div>,
+    document.body
   );
+
 };
 
 export default ProfileViewDialog;
