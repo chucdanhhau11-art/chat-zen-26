@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { X, UserPlus, Check, Clock, UserMinus, MessageCircle, Ban, XCircle } from 'lucide-react';
 import { useChatContext } from '@/context/ChatContext';
 import { useAuth } from '@/context/AuthContext';
 import ChatAvatar from './ChatAvatar';
 import { motion } from 'framer-motion';
+import { toast } from 'sonner';
 import {formatLastSeen, formatUsername } from '@/lib/chatUtils';
+
 
 interface Props {
   userId: string;
