@@ -97,8 +97,8 @@ Quyền:
 |---|---|---|
 | `/` | Mọi tài khoản đã đăng nhập | Màn hình chat chính |
 | `/auth` | Khách | Đăng nhập / Đăng ký |
-| `/admin-portal` | Chỉ `admin`, `super_admin` | Cổng quản trị chuyên dụng: duyệt đăng ký mới, bật/tắt “tự động duyệt”. Mở nhanh bằng **Ctrl + Click** vào nút Đăng nhập/Đăng ký ở trang `/auth` |
-| `/admin` | Chỉ `admin`, `super_admin` | Admin Dashboard: thống kê, danh sách người dùng, tạo tài khoản, khoá tài khoản, quản lý quyền |
+| [`/admin-portal`](https://chat-zen-26.lovable.app/admin-portal) | Chỉ `admin`, `super_admin` | Cổng quản trị chuyên dụng: duyệt đăng ký mới, bật/tắt “tự động duyệt”. Mở nhanh bằng **Ctrl + Click** vào nút Đăng nhập/Đăng ký ở trang `/auth` |
+| [`/admin`](https://chat-zen-26.lovable.app/admin) | Chỉ `admin`, `super_admin` | Admin Dashboard: thống kê, danh sách người dùng, tạo tài khoản, khoá tài khoản, quản lý quyền |
 | `/bots` | Mọi tài khoản | Bot Dashboard: quản lý bot do chính mình tạo |
 
 Nguyên tắc bảo mật: các trang trên đều kiểm tra role ở phía máy chủ (Edge Function `manage-user` xác thực token và role trước khi thao tác). Việc gõ tay URL `/admin` khi không phải admin sẽ bị chặn.
